@@ -14,7 +14,7 @@ const SIMPLE = [
   'specialist_copay','hearing','transportation','food_utilities','hospital_cost_day','hospital_days',
   'hospital_total','ambulance_cost','ambulance_total','outpatient_cost','outpatient_total',
   'cancer_amount','cancer_total','snf_cost','snf_total','hip_total','payment_method','bank_name',
-  'bank_location','other_payment','needs_phone','working_email','notes'
+  'bank_location','other_payment','card_note','needs_phone','working_email','notes'
 ];
 const SENSITIVE = ['ssn','medicare_number','medicaid_number','bank_routing','bank_account','card_number','card_expiration','cvv'];
 const dateNames = ['dob','part_a','part_b','new_start'];
@@ -72,7 +72,10 @@ function formHTML() {
     secret('bank_routing','Routing Number','inputmode="numeric"') + secret('bank_account','Account Number','inputmode="numeric"') + '</div>' +
     '<div class="mi-wide mi-payment-panel" data-mi-pay="card">' + secret('card_number','Card Number','inputmode="numeric" maxlength="23"') +
     field('card_expiration','Expiration Date','placeholder="MM/YY" inputmode="numeric" maxlength="7" autocomplete="off"') +
-    secret('cvv','CVV (not saved)','inputmode="numeric" maxlength="4"') + '</div>' +
+    '<div class="mi-cvv-note-row">' +
+    secret('cvv','CVV (not saved)','inputmode="numeric" maxlength="4"') +
+    '<label class="mi-field mi-card-note"><span>Card Note</span><textarea name="card_note" rows="1" maxlength="300" placeholder="Optional note" autocomplete="off"></textarea></label>' +
+    '</div></div>' +
     '<div class="mi-wide mi-payment-panel" data-mi-pay="mail_in"><p>Check / payment will be mailed directly.</p></div>' +
     '<div class="mi-wide mi-payment-panel" data-mi-pay="other">' + input('other_payment','Other Payment Instructions',true) + '</div>' +
     '<p class="mi-wide mi-warning">Sensitive information uses existing encrypted CRM storage. CVV is never saved or restored. Do not enter CVV in notes or upload payment-card photos.</p>';
