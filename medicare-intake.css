@@ -82,6 +82,15 @@
 #medicare-intake-host .mi-list-filter{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;max-width:550px;margin-bottom:15px}
 #medicare-intake-host .mi-saved-row{width:100%;display:grid;align-items:center;grid-template-columns:minmax(160px,2fr) minmax(120px,1fr) minmax(145px,1fr) 68px;gap:10px;text-align:left;margin-bottom:9px;padding:16px;border:1px solid #d0dfe7;background:#fff;border-radius:12px;color:#213b51}
 #medicare-intake-host .mi-saved-row:hover{border-color:#3d718c;background:#f0f8fb}
+#medicare-intake-host .mi-saved-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;gap:9px;margin-bottom:9px}
+#medicare-intake-host .mi-saved-entry .mi-saved-row{margin-bottom:0}
+#medicare-intake-host .mi-delete-form{background:#fff4f3;color:#9e2e2a;border:1px solid #e1aaa7;border-radius:9px;font-size:13px;font-weight:800}
+#medicare-intake-host .mi-delete-form:hover{background:#fde4e2;border-color:#cb7771;color:#85201e}
+#medicare-intake-host .mi-delete-form:disabled{opacity:.55;cursor:wait}
+#medicare-intake-host .mi-delete-list{min-width:78px;padding:10px 13px}
+#medicare-intake-host .mi-delete-status{margin:0 0 9px;line-height:1.45;font-size:13px}
+#medicare-intake-host .mi-delete-status:empty{display:none}
+
 #medicare-intake-host .mi-saved-row small{color:#567286}
 #medicare-intake-host .mi-saved-row b{color:#255d80;text-align:right}
 #medicare-intake-host .mi-empty{padding:24px;border:1px solid #3b5568;border-radius:10px;color:#bacbd5}
@@ -93,6 +102,9 @@
  #medicare-intake-host .mi-home-actions{grid-template-columns:1fr}
  #medicare-intake-host .mi-grid,#medicare-intake-host .mi-dependent,#medicare-intake-host .mi-payment-panel{grid-template-columns:1fr}
  #medicare-intake-host .mi-saved-row{grid-template-columns:1fr auto;gap:5px}
+ #medicare-intake-host .mi-saved-entry{grid-template-columns:minmax(0,1fr) auto;gap:6px}
+ #medicare-intake-host .mi-delete-list{min-width:66px;padding:6px 8px;font-size:12px}
+ #medicare-intake-host .mi-editor-buttons .mi-delete-form{flex:1 1 100%}
  #medicare-intake-host .mi-saved-row strong{grid-column:1}
  #medicare-intake-host .mi-saved-row span{grid-column:1}
  #medicare-intake-host .mi-saved-row small{grid-column:1}
