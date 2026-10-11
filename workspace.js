@@ -34,7 +34,8 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   }
   const now = new Date();
   const calendarMonthKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  const calendarSessionKey = key => `mig-calendar:${key}`;
+  // Never display a previous agent's cached appointments after account switching.
+  const calendarSessionKey = key => `mig-calendar:${repository.user?.id || 'anonymous'}:${key}`;
   function readCalendarSession(key) {
     try {
       const cached = JSON.parse(sessionStorage.getItem(calendarSessionKey(key)) || 'null');
@@ -252,7 +253,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       } else if (state.calendarLoadedKey !== key) {
         state.events = [];
       }
-      drawCalendar({ force: true });
+      drawCalendar({ force: !cached || Date.now() - (cached.loadedAt || 0) > 5 * 60 * 1000 });
     });
     host.querySelectorAll('[data-day]').forEach(button => button.onclick = () => openDay('day', button.dataset.day));
     host.querySelectorAll('[data-queue]').forEach(button => button.onclick = () => openDay(button.dataset.queue, todayKey()));
@@ -265,6 +266,10 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     const key = calendarMonthKey(state.month);
     host.innerHTML = calendarMarkup(state.month, state.events, connected, agents);
     bindCalendarHost(host);
+    if (connected && state.calendarLoadedKey !== key) {
+      const status = host.querySelector('.calendar-status');
+      if (status) status.textContent = 'Loading appointments…';
+    }
 
     if (!connected) return;
 
@@ -303,7 +308,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
         includeToday: true,
         includeReschedule: true
       });
-      if (token !== state.calendarToken || !host.isConnected || calendarMonthKey(state.month) !== key) return;
+      if (token !== state.calendarToken || calendarMonthKey(state.month) !== key) return;
       if (!Array.isArray(events)) throw new Error('Calendar returned an invalid response.');
 
       state.events = events;
@@ -311,11 +316,16 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       state.calendarLoadedAt = Date.now();
       writeCalendarSession(key, events);
 
-      host.innerHTML = calendarMarkup(state.month, events, connected, agents);
-      bindCalendarHost(host);
+      // A user may navigate away and back while the request is in flight.
+      // Always update the CURRENT host, not the detached host from request start.
+      const visibleHost = root.querySelector('#calendar-host');
+      if (visibleHost?.isConnected) {
+        visibleHost.innerHTML = calendarMarkup(state.month, events, connected, agents);
+        bindCalendarHost(visibleHost);
+      }
     } catch (e) {
-      if (!background && token === state.calendarToken && host.isConnected) {
-        const status = host.querySelector('.calendar-status');
+      if (!background && token === state.calendarToken && calendarMonthKey(state.month) === key) {
+        const status = root.querySelector('#calendar-host .calendar-status');
         if (status) status.textContent = e.message || 'Calendar could not load. Try another month or Today to retry.';
       }
     } finally {
@@ -763,9 +773,15 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   };
   const applyCalendarRefresh = event => {
     if (state.destroyed || !root.querySelector('#calendar-host')) return;
-    const events = event?.detail?.events;
+    const detail = event?.detail;
+    const events = detail?.events;
     if (!Array.isArray(events)) return;
+    const days = monthDays(state.month.getFullYear(), state.month.getMonth());
+    if (detail.start !== isoDate(days[0]) || detail.end !== isoDate(days.at(-1))) return;
     state.events = events;
+    state.calendarLoadedKey = calendarMonthKey(state.month);
+    state.calendarLoadedAt = Date.now();
+    writeCalendarSession(state.calendarLoadedKey, events);
     drawCalendar();
   };
 
