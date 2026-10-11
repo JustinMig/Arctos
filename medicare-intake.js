@@ -16,7 +16,7 @@ const SIMPLE = [
   'cancer_amount','cancer_total','snf_cost','snf_total','hip_total','payment_method','bank_name',
   'bank_location','other_payment','card_note','needs_phone','working_email','notes'
 ];
-const SENSITIVE = ['ssn','medicare_number','medicaid_number','bank_routing','bank_account','card_number','card_expiration','cvv'];
+const SENSITIVE = ['ssn','medicare_number','medicaid_number','bank_routing','bank_account','card_number','card_expiration'];
 const dateNames = ['dob','part_a','part_b','new_start'];
 const moneyNames = ['hospital_cost_day','hospital_total','ambulance_cost','ambulance_total','outpatient_cost','outpatient_total','cancer_amount','cancer_total','snf_cost','snf_total','hip_total'];
 const field = (name, label, attr = '', wide = false) =>
@@ -72,13 +72,11 @@ function formHTML() {
     secret('bank_routing','Routing Number','inputmode="numeric"') + secret('bank_account','Account Number','inputmode="numeric"') + '</div>' +
     '<div class="mi-wide mi-payment-panel" data-mi-pay="card">' + secret('card_number','Card Number','inputmode="numeric" maxlength="23"') +
     field('card_expiration','Expiration Date','placeholder="MM/YY" inputmode="numeric" maxlength="7" autocomplete="off"') +
-    '<div class="mi-cvv-note-row">' +
-    secret('cvv','CVV (not saved)','inputmode="numeric" maxlength="4"') +
-    '<label class="mi-field mi-card-note"><span>Card Note</span><textarea name="card_note" rows="1" maxlength="300" placeholder="Optional note" autocomplete="off"></textarea></label>' +
-    '</div></div>' +
+    '<label class="mi-field mi-card-note mi-wide"><span>Card Note</span><textarea name="card_note" rows="1" maxlength="300" placeholder="Optional note" autocomplete="off"></textarea></label>' +
+    '</div>' +
     '<div class="mi-wide mi-payment-panel" data-mi-pay="mail_in"><p>Check / payment will be mailed directly.</p></div>' +
     '<div class="mi-wide mi-payment-panel" data-mi-pay="other">' + input('other_payment','Other Payment Instructions',true) + '</div>' +
-    '<p class="mi-wide mi-warning">Sensitive information uses existing encrypted CRM storage. CVV is never saved or restored. Do not enter CVV in notes or upload payment-card photos.</p>';
+    '<p class="mi-wide mi-warning">Sensitive information uses existing encrypted CRM storage. Do not include card security codes (CVV) in notes or uploaded payment-card photos.</p>';
   return '<div class="mi-editor-head"><div><strong data-mi-editor-title>New Medicare Intake</strong><p>All 13 steps are on one page. Open a section, collect the information, then continue.</p></div>' +
     '<div class="mi-editor-buttons"><button type="button" class="btn secondary" data-mi-back>Saved Forms</button><button type="button" class="btn primary" data-mi-save>Save Form</button></div></div>' +
     '<form class="mi-form" autocomplete="off" novalidate>' +
@@ -356,7 +354,6 @@ export function createMedicareIntakeFeature() {
       }
       await uploadFiles();
       dirty = false;
-      const cvv = host.querySelector('[name="cvv"]'); if (cvv) cvv.value = '';
       host.querySelector('[data-mi-editor-title]').textContent = 'Edit Intake — ' + row.client_name;
       setStatus('Saved successfully. Reopen this same form under Saved Forms to make changes.');
     } catch(e) {
@@ -456,7 +453,6 @@ export function createMedicareIntakeFeature() {
     }
     if (!t.closest('.mi-form')) return;
     if (t.matches('[data-mi-date]')) t.value = dateMask(t.value);
-    if (t.name === 'cvv') t.value = paymentDigits(t.value).slice(0,4);
     if (t.name === 'card_number') t.value = paymentDigits(t.value).slice(0,19);
     if (t.name === 'card_expiration') {
       const d = paymentDigits(t.value).slice(0,4); t.value = d.slice(0,2) + (d.length > 2 ? '/' + d.slice(2) : '');
