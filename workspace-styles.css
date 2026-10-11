@@ -38,6 +38,7 @@
 @import "./communications-ui.css";
 @import "./mobile-bottom-toolbar.css";
 @import "./ma-plans.css";
+@import "./medicare-intake.css";
 
 
 /* Appointment day cards */
@@ -152,4 +153,3 @@
   .appointment-overview { display: grid; }
   .appointment-actions .btn { flex: 1 1 100%; }
 }
-@import "./medicare-intake.css";
