@@ -75,7 +75,12 @@ test('deceased filter uses status rather than products',async()=>{
 });
 test('query values are quoted and formatted phone lookup uses digits',async()=>{
   const f=fakeDb(); await makeClientSearch(f.db)({query:'O\'Brien, ("Jr")'});
-  assert.ok(f.calls.find(x=>x[0]==='or')[1].includes('full_name.ilike.'+JSON.stringify('%O\'Brien, ("Jr")%')));
+  const clauses = f.calls.filter(x => x[0] === 'or').map(x => x[1]);
+  // Search now treats each word as a required token, allowing middle initials
+  // and extra words while still safely quoting punctuation.
+  assert.equal(clauses.length, 2);
+  assert.ok(clauses[0].includes('full_name.ilike.'+JSON.stringify("%O'Brien,%")));
+  assert.ok(clauses[1].includes('full_name.ilike.'+JSON.stringify('%("Jr")%')));
   const p=fakeDb(); await makeClientSearch(p.db)({query:'(662) 555-0123'});
   assert.ok(p.calls.find(x=>x[0]==='or')[1].includes('phone_digits.ilike."%6625550123%"'));
 });
