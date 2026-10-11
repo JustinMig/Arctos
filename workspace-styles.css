@@ -152,3 +152,4 @@
   .appointment-overview { display: grid; }
   .appointment-actions .btn { flex: 1 1 100%; }
 }
+@import "./medicare-intake.css";
