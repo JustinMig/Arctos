@@ -25,8 +25,28 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     return campaignModule;
   }
   const now = new Date();
+  const calendarMonthKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  const calendarSessionKey = key => `mig-calendar:${key}`;
+  function readCalendarSession(key) {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(calendarSessionKey(key)) || 'null');
+      if (!cached || !Array.isArray(cached.events)) return null;
+      return cached;
+    } catch { return null; }
+  }
+  function writeCalendarSession(key, events) {
+    try {
+      sessionStorage.setItem(calendarSessionKey(key), JSON.stringify({ events, loadedAt: Date.now() }));
+    } catch {}
+  }
+  const initialCalendarKey = calendarMonthKey(new Date(now.getFullYear(), now.getMonth(), 1, 12));
+  const initialCalendarCache = readCalendarSession(initialCalendarKey);
   const state = {
-    route: 'dashboard', month: new Date(now.getFullYear(), now.getMonth(), 1, 12), events: [], calendarToken: 0,
+    route: 'dashboard', month: new Date(now.getFullYear(), now.getMonth(), 1, 12),
+    events: initialCalendarCache?.events || [], calendarToken: 0,
+    calendarLoadedKey: initialCalendarCache ? initialCalendarKey : '',
+    calendarLoadedAt: initialCalendarCache?.loadedAt || 0,
+    calendarLoadingKey: '',
     search: { query: '', product: '', agent: '', sortBy: 'name', sortDirection: 'asc', applied: null, loading: false, rows: null, error: '', message: '', token: 0, cursor: null, nextCursor: null },
     destroyed: false
   };
@@ -203,37 +223,96 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     return d;
   }
 
-  function drawCalendar() {
-    const host = root.querySelector('#calendar-host');
-    if (!host) return;
-    host.innerHTML = calendarMarkup(state.month, state.events, connected, agents);
+  function bindCalendarHost(host) {
     host.querySelectorAll('[data-month]').forEach(button => button.onclick = () => {
-      state.month = button.dataset.month === 'today' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12) : new Date(state.month.getFullYear(), state.month.getMonth() + Number(button.dataset.month), 1, 12);
-      drawCalendar();
+      state.month = button.dataset.month === 'today'
+        ? new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12)
+        : new Date(state.month.getFullYear(), state.month.getMonth() + Number(button.dataset.month), 1, 12);
+      const key = calendarMonthKey(state.month);
+      const cached = readCalendarSession(key);
+      if (cached) {
+        state.events = cached.events;
+        state.calendarLoadedKey = key;
+        state.calendarLoadedAt = cached.loadedAt || 0;
+      } else if (state.calendarLoadedKey !== key) {
+        state.events = [];
+      }
+      drawCalendar({ force: true });
     });
     host.querySelectorAll('[data-day]').forEach(button => button.onclick = () => openDay('day', button.dataset.day));
     host.querySelectorAll('[data-queue]').forEach(button => button.onclick = () => openDay(button.dataset.queue, todayKey()));
-    host.querySelector('[data-new-appointment]').onclick = () => openAppointment();
-    if (connected) loadEvents(host);
+    host.querySelector('[data-new-appointment]')?.addEventListener('click', () => openAppointment());
   }
-  async function loadEvents(host) {
+
+  function drawCalendar({ force = false } = {}) {
+    const host = root.querySelector('#calendar-host');
+    if (!host) return;
+    const key = calendarMonthKey(state.month);
+    host.innerHTML = calendarMarkup(state.month, state.events, connected, agents);
+    bindCalendarHost(host);
+
+    if (!connected) return;
+
+    const hasCurrentMonth = state.calendarLoadedKey === key;
+    const stale = !state.calendarLoadedAt || Date.now() - state.calendarLoadedAt > 5 * 60 * 1000;
+
+    // Returning to Dashboard should be instant. Do not refetch a month we already have.
+    if (hasCurrentMonth && !force) {
+      if (stale) {
+        const refresh = () => {
+          if (state.route === 'dashboard' || state.route === 'appointments') {
+            void loadEvents(root.querySelector('#calendar-host'), { background: true });
+          }
+        };
+        if ('requestIdleCallback' in window) requestIdleCallback(refresh, { timeout: 1500 });
+        else setTimeout(refresh, 250);
+      }
+      return;
+    }
+
+    void loadEvents(host, { background: hasCurrentMonth });
+  }
+
+  async function loadEvents(host, { background = false } = {}) {
+    if (!host?.isConnected) return;
+    const key = calendarMonthKey(state.month);
+    if (state.calendarLoadingKey === key) return;
+
     const token = ++state.calendarToken;
+    state.calendarLoadingKey = key;
     const days = monthDays(state.month.getFullYear(), state.month.getMonth());
     try {
-      const events = await repository.listEvents({ start: isoDate(days[0]), end: isoDate(days.at(-1)), includeToday: true, includeReschedule: true });
-      if (token !== state.calendarToken || !host.isConnected) return;
-      if (!Array.isArray(events)) throw new Error('Calendar returned an invalid response.');
-      state.events = events;
-      // Do not call drawCalendar here, which would initiate another read.
-      host.innerHTML = calendarMarkup(state.month, events, connected, agents);
-      host.querySelectorAll('[data-month]').forEach(b => b.onclick = () => {
-        state.month = b.dataset.month === 'today' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12) : new Date(state.month.getFullYear(), state.month.getMonth() + Number(b.dataset.month), 1, 12); drawCalendar();
+      const events = await repository.listEvents({
+        start: isoDate(days[0]),
+        end: isoDate(days.at(-1)),
+        includeToday: true,
+        includeReschedule: true
       });
-      host.querySelectorAll('[data-day]').forEach(b => b.onclick = () => openDay('day', b.dataset.day));
-      host.querySelectorAll('[data-queue]').forEach(b => b.onclick = () => openDay(b.dataset.queue, todayKey()));
-      host.querySelector('[data-new-appointment]').onclick = () => openAppointment();
+      if (token !== state.calendarToken || !host.isConnected || calendarMonthKey(state.month) !== key) return;
+      if (!Array.isArray(events)) throw new Error('Calendar returned an invalid response.');
+
+      state.events = events;
+      state.calendarLoadedKey = key;
+      state.calendarLoadedAt = Date.now();
+      writeCalendarSession(key, events);
+
+      host.innerHTML = calendarMarkup(state.month, events, connected, agents);
+      bindCalendarHost(host);
     } catch (e) {
-      if (token === state.calendarToken && host.isConnected) host.querySelector('.calendar-status').textContent = e.message || 'Calendar could not load. Try another month or Today to retry.';
+      if (!background && token === state.calendarToken && host.isConnected) {
+        const status = host.querySelector('.calendar-status');
+        if (status) status.textContent = e.message || 'Calendar could not load. Try another month or Today to retry.';
+      }
+    } finally {
+      if (state.calendarLoadingKey === key) state.calendarLoadingKey = '';
+    }
+  }
+
+  function persistVisibleCalendar() {
+    const key = calendarMonthKey(state.month);
+    if (state.calendarLoadedKey === key) {
+      state.calendarLoadedAt = Date.now();
+      writeCalendarSession(key, state.events);
     }
   }
 
@@ -255,6 +334,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
         const index = state.events.findIndex(item => item.id === saved.id);
         if (index >= 0) state.events[index] = saved;
         else state.events.push(saved);
+        persistVisibleCalendar();
         renderCards();
       }
     });
@@ -356,6 +436,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
           const index = state.events.findIndex(item => item.id === saved.id);
           if (index >= 0) state.events[index] = saved;
           else state.events.push(saved);
+          persistVisibleCalendar();
           renderCards();
           void loadClients();
         });
@@ -373,6 +454,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
           const saved = await repository.completeEvent(appointment.id);
           const index = state.events.findIndex(item => item.id === appointment.id);
           if (index >= 0) state.events[index] = saved || { ...appointment, status: 'completed' };
+          persistVisibleCalendar();
           drawCalendar();
           renderCards();
         } catch (error) {
@@ -389,6 +471,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
           const saved = await repository.rescheduleEvent(appointment.id, note.trim());
           const index = state.events.findIndex(item => item.id === appointment.id);
           if (index >= 0) state.events[index] = saved || { ...appointment, status: 'needs_reschedule', reschedule_note: note.trim() };
+          persistVisibleCalendar();
           drawCalendar();
           renderCards();
         } catch (error) {
@@ -403,6 +486,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
           setStatus('Deleting appointment…');
           await repository.deleteEvent(appointment.id);
           state.events = state.events.filter(item => item.id !== appointment.id);
+          persistVisibleCalendar();
           drawCalendar();
           renderCards();
         } catch (error) {
@@ -655,7 +739,8 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   };
   const refreshVisibleCalendar = () => {
     if (state.destroyed || !root.querySelector('#calendar-host')) return;
-    drawCalendar();
+    state.calendarLoadedAt = 0;
+    drawCalendar({ force: true });
   };
   const applyCalendarRefresh = event => {
     if (state.destroyed || !root.querySelector('#calendar-host')) return;
