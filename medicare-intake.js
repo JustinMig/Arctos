@@ -262,6 +262,13 @@ export function createMedicareIntakeFeature() {
     try {
       calc();
       const value = readEditor(), sec = getSecrets();
+      const payment = value.payment_method;
+      if (payment === 'bank' && (sec.bank_routing || sec.bank_account) &&
+          (!value.bank_name || !sec.bank_routing || !sec.bank_account))
+        throw new Error('Step 11: Complete the bank name, routing number and account number before saving bank details.');
+      if (payment === 'card' && (sec.card_number || sec.card_expiration) &&
+          (paymentDigits(sec.card_number).length < 12 || !sec.card_expiration))
+        throw new Error('Step 11: Complete the card number and expiration before saving card details.');
       const { data: auth,error: authError } = await supabase.auth.getUser();
       if (authError || !auth.user) throw new Error('Please sign in again to save.');
       const clientInfo = {
@@ -270,14 +277,34 @@ export function createMedicareIntakeFeature() {
         state:value.state || null,zip_code:value.zip || null,county:value.county || null,
         gender:value.gender || null, veteran: value.veteran ? value.veteran === 'yes' : null
       };
+      let createdClient = false;
       if (!row?.client_id) {
-        const { data: client,error } = await supabase.from('clients').insert({
-          ...clientInfo,assigned_agent_id:auth.user.id,products:['medicare']
-        }).select('id').single();
-        if (error) throw error;
-        row = { client_id:client.id };
-      } else {
-        const { error } = await supabase.from('clients').update(clientInfo).eq('id',row.client_id);
+        let matched = null;
+        // Respect the CRM's duplicate-client workflow: prefer linking exact name plus DOB/phone.
+        if (value.dob || value.phone) {
+          const {data:candidates,error:matchError} = await supabase.from('clients')
+            .select('id,first_name,last_name,date_of_birth,phone')
+            .ilike('first_name',value.first_name).ilike('last_name',value.last_name).limit(15);
+          if (matchError) throw matchError;
+          matched = (candidates || []).find(x =>
+            (value.dob && x.date_of_birth === value.dob) ||
+            (value.phone && paymentDigits(x.phone) && paymentDigits(x.phone) === paymentDigits(value.phone)));
+        }
+        if (matched && window.confirm('A matching CRM client already exists. Save this Medicare intake under that client instead of creating a duplicate?')) {
+          row = {client_id:matched.id};
+        } else {
+          const { data: client,error } = await supabase.from('clients').insert({
+            ...clientInfo,assigned_agent_id:auth.user.id,products:['medicare']
+          }).select('id').single();
+          if (error) throw error;
+          row = { client_id:client.id };
+          createdClient = true;
+        }
+      }
+      if (!createdClient) {
+        // On an existing client, do not erase established demographic fields for an incomplete draft.
+        const changed = Object.fromEntries(Object.entries(clientInfo).filter(([,v]) => v !== null));
+        const { error } = await supabase.from('clients').update(changed).eq('id',row.client_id);
         if (error) throw error;
       }
       const payload = { client_id:row.client_id,client_name:value.first_name + ' ' + value.last_name,
