@@ -330,10 +330,10 @@ export function createMedicareIntakeFeature() {
       calc();
       const value = readEditor(), sec = getSecrets();
       const payment = value.payment_method;
-      if (payment === 'bank' && (sec.bank_routing || sec.bank_account) &&
+      if (!isSkipped(11) && payment === 'bank' && (sec.bank_routing || sec.bank_account) &&
           (!value.bank_name || !sec.bank_routing || !sec.bank_account))
         throw new Error('Step 11: Complete the bank name, routing number and account number before saving bank details.');
-      if (payment === 'card' && (sec.card_number || sec.card_expiration) &&
+      if (!isSkipped(11) && payment === 'card' && (sec.card_number || sec.card_expiration) &&
           (paymentDigits(sec.card_number).length < 12 || !sec.card_expiration))
         throw new Error('Step 11: Complete the card number and expiration before saving card details.');
       const { data: auth,error: authError } = await supabase.auth.getUser();
@@ -345,6 +345,11 @@ export function createMedicareIntakeFeature() {
         gender:value.gender || null, veteran: value.veteran ? value.veteran === 'yes' : null
       };
       let createdClient = false;
+      if (!row?.client_id && isSkipped(1) && linkedClient) {
+        // Skipped demographics must link an existing CRM client, never
+        // create a new empty record or rewrite their saved information.
+        row = {client_id:linkedClient.id};
+      }
       if (!row?.client_id) {
         let matched = null;
         // Respect the CRM's duplicate-client workflow: prefer linking exact name plus DOB/phone.
@@ -368,11 +373,13 @@ export function createMedicareIntakeFeature() {
           createdClient = true;
         }
       }
-      if (!createdClient) {
-        // On an existing client, do not erase established demographic fields for an incomplete draft.
+      if (!createdClient && !isSkipped(1)) {
+        // A skipped section is NEVER allowed to overwrite existing CRM demographics.
         const changed = Object.fromEntries(Object.entries(clientInfo).filter(([,v]) => v !== null));
-        const { error } = await supabase.from('clients').update(changed).eq('id',row.client_id);
-        if (error) throw error;
+        if (Object.keys(changed).length) {
+          const { error } = await supabase.from('clients').update(changed).eq('id',row.client_id);
+          if (error) throw error;
+        }
       }
       const payload = { client_id:row.client_id,client_name:value.first_name + ' ' + value.last_name,
         client_phone:value.phone || null,intake_data:value,updated_at:new Date().toISOString() };
@@ -389,19 +396,23 @@ export function createMedicareIntakeFeature() {
         row = data;
       }
       // Reuse encrypted identity vault. Preserve any existing driver's license, which is not part of this form.
-      if (sec.ssn || sec.medicare_number || sec.medicaid_number || value.has_medicaid === 'no') {
+      const saveIdentity = (!isSkipped(1) && sec.ssn) || (!isSkipped(3) && sec.medicare_number) ||
+        (!isSkipped(4) && (sec.medicaid_number || value.has_medicaid === 'no'));
+      if (saveIdentity) {
         const current = await invoke('client-sensitive',{action:'get',client_id:row.client_id});
         const old = current.sensitive || {};
         await invoke('client-sensitive',{action:'save',client_id:row.client_id,sensitive:{
-          ssn:sec.ssn || old.ssn || '', medicare_number:sec.medicare_number || old.medicare_number || '',
-          medicaid_number:value.has_medicaid === 'no' ? '' : (sec.medicaid_number || old.medicaid_number || ''),
+          ssn:!isSkipped(1) && sec.ssn ? sec.ssn : old.ssn || '',
+          medicare_number:!isSkipped(3) && sec.medicare_number ? sec.medicare_number : old.medicare_number || '',
+          medicaid_number:isSkipped(4) ? old.medicaid_number || '' :
+            value.has_medicaid === 'no' ? '' : sec.medicaid_number || old.medicaid_number || '',
           drivers_license_number:old.drivers_license_number || ''
         }});
       }
       const bankType = value.payment_method;
       const bankReady = bankType === 'bank' && value.bank_name && sec.bank_routing && sec.bank_account;
       const cardReady = bankType === 'card' && paymentDigits(sec.card_number).length >= 12 && sec.card_expiration;
-      if (bankReady || cardReady || bankType === 'mail_in') {
+      if (!isSkipped(11) && (bankReady || cardReady || bankType === 'mail_in')) {
         await invoke('client-banking',{action:'save',client_id:row.client_id,banking:{
           payment_method:bankType,bank_name:bankType === 'bank' ? value.bank_name : '',
           routing_number:bankType === 'bank' ? paymentDigits(sec.bank_routing) : '',
@@ -410,14 +421,19 @@ export function createMedicareIntakeFeature() {
           card_expiration:bankType === 'card' ? sec.card_expiration : ''
         }});
       }
-      if (value.part_a || value.part_b || value.medicaid_level) {
-        const {error} = await supabase.from('medicare_details').upsert({
-          client_id:row.client_id,part_a_date:value.part_a || null,part_b_date:value.part_b || null,
-          medicaid_level:value.has_medicaid === 'no' ? null : value.medicaid_level || null
-        },{onConflict:'client_id'});
+      const medical = {client_id:row.client_id};
+      if (!isSkipped(3) && (value.part_a || value.part_b)) {
+        medical.part_a_date = value.part_a || null;
+        medical.part_b_date = value.part_b || null;
+      }
+      if (!isSkipped(4) && (value.has_medicaid || value.medicaid_level)) {
+        medical.medicaid_level = value.has_medicaid === 'no' ? null : value.medicaid_level || null;
+      }
+      if (Object.keys(medical).length > 1) {
+        const {error} = await supabase.from('medicare_details').upsert(medical,{onConflict:'client_id'});
         if (error) throw error;
       }
-      await uploadFiles();
+      if (!isSkipped(7)) await uploadFiles();
       dirty = false;
       host.querySelector('[data-mi-editor-title]').textContent = 'Edit Intake — ' + row.client_name;
       setStatus('Saved successfully. Reopen this same form under Saved Forms to make changes.');
@@ -478,6 +494,23 @@ export function createMedicareIntakeFeature() {
     if (target.matches('[data-mi-saved],[data-mi-back]')) return void savedForms();
     if (target.matches('[data-mi-open]')) return void openSaved(target.dataset.miOpen);
     if (target.matches('[data-mi-save]')) return void save();
+    if (target.matches('[data-mi-client-select]')) {
+      const results = host.querySelector('[data-mi-client-results]');
+      const client = results?._miClients?.find(c => String(c.id) === target.dataset.miClientSelect);
+      if (!client || !isSkipped(1)) return;
+      linkedClient = client;
+      const form = host.querySelector('.mi-form');
+      for (const [fieldName,value] of [['first_name',client.first_name],['last_name',client.last_name],
+        ['phone',client.phone],['dob',client.date_of_birth]]) {
+        const input = form.elements.namedItem(fieldName);
+        if (input) input.value = fieldName === 'dob' && value ? dateText(value) : fmt(value);
+      }
+      if (results) results.replaceChildren();
+      showSkipSections();
+      dirty = true;
+      setStatus('CRM client selected. This intake will link to that client when saved.');
+      return;
+    }
     if (target.matches('[data-mi-next]')) {
       const n = Number(target.dataset.miNext);
       if (n === 13) return void save();
@@ -517,6 +550,14 @@ export function createMedicareIntakeFeature() {
       return;
     }
     if (!t.closest('.mi-form')) return;
+    if (t.matches('[data-mi-client-search]')) {
+      linkedClient = null;
+      ++clientSearchToken;
+      showSkipSections();
+      clearTimeout(clientSearchTimer);
+      clientSearchTimer = setTimeout(() => void searchExistingClients(t.value), 220);
+      return;
+    }
     if (t.matches('[data-mi-date]')) t.value = dateMask(t.value);
     if (t.name === 'card_number') t.value = paymentDigits(t.value).slice(0,19);
     if (t.name === 'card_expiration') {
@@ -526,6 +567,16 @@ export function createMedicareIntakeFeature() {
     if (moneyNames.includes(t.name) || t.name === 'hospital_days') calc();
     if (['has_medicaid','soa_signed','needs_phone','payment_method'].includes(t.name)) showDependencies();
     setStatus('Unsaved changes.');
+  }
+  function onStepChange(e) {
+    const checkbox = e.target.closest('[data-mi-skip-toggle]');
+    if (checkbox && host?.contains(checkbox)) {
+      const step = checkbox.closest('.mi-step');
+      if (checkbox.checked && step) step.open = true;
+      showSkipSections();
+      dirty = true;
+      setStatus('Section status changed. Save the intake to keep this selection.');
+    }
   }
   function onFiles(e) {
     if (!e.target.matches('[data-mi-photo],[data-mi-upload]')) return;
@@ -542,9 +593,10 @@ export function createMedicareIntakeFeature() {
     host.addEventListener('click',onClick);
     host.addEventListener('input',onInput);
     host.addEventListener('change',onFiles);
+    host.addEventListener('change',onStepChange);
     host.addEventListener('change',e => {if(e.target.closest('.mi-form')) {showDependencies();dirty=true;}});
     host.addEventListener('toggle',e => {if(e.target.matches('.mi-step') && e.target.open) host.querySelectorAll('.mi-step').forEach(d => {if(d!==e.target)d.open=false;});},true);
   }
-  function unmount() { ++epoch; if(host){host.removeEventListener('click',onClick);host.removeEventListener('input',onInput);host.removeEventListener('change',onFiles);} host=null;reset(); }
+  function unmount() { ++epoch; if(host){host.removeEventListener('click',onClick);host.removeEventListener('input',onInput);host.removeEventListener('change',onFiles);host.removeEventListener('change',onStepChange);} host=null;reset(); }
   return {mount,unmount,canLeave,destroy:unmount};
 }
