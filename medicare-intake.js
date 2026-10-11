@@ -55,14 +55,18 @@ function formHTML() {
     ['specialist_copay','Specialist Copay'],['hearing','Hearing Benefit'],['transportation','Transportation'],
     ['food_utilities','Food / Utilities Amount']
   ].map(x => input(x[0],x[1],false,'placeholder="Amount / frequency / details"')).join('');
+  // First row: in-hospital daily cost and length of stay. Hospital total is calculated below.
+  // Each remaining cost and its total price share one row on desktop and tablet.
+  // Only the five *total price* fields are included in Total HIP Amount.
   const hip = amount('hospital_cost_day','In-Hospital Cost Per Day') +
     field('hospital_days','Number of Hospital Days','type="number" inputmode="numeric" min="0" step="1"') +
-    field('hospital_total','Hospital Total Price','type="number" min="0" step="0.01" readonly') +
+    field('hospital_total','Hospital Total Price (Cost × Days)','type="number" min="0" step="0.01" readonly',true) +
     amount('ambulance_cost','Ambulance Ride Cost') + amount('ambulance_total','Ambulance Total Price') +
     amount('outpatient_cost','Outpatient Cost') + amount('outpatient_total','Outpatient Total Price') +
     amount('cancer_amount','Cancer Coverage Amount') + amount('cancer_total','Cancer Total Price') +
     amount('snf_cost','Skilled Nursing Cost') + amount('snf_total','Skilled Nursing Total Price') +
-    '<div class="mi-total mi-wide"><span>Total HIP Amount</span><output data-mi-total>$0.00</output><input name="hip_total" type="hidden"></div>';
+    '<div class="mi-total mi-wide"><span>Total HIP Amount</span><output data-mi-total>$0.00</output><input name="hip_total" type="hidden"></div>' +
+    '<p class="mi-wide mi-muted mi-hip-note">Calculated from the five Total Price fields only: Hospital, Ambulance, Outpatient, Cancer, and Skilled Nursing.</p>';
   const banking = choice('payment_method','Payment Method',[['bank','Bank Account'],['card','Credit / Debit Card'],['mail_in','Check / Direct Mail'],['other','Other']]) +
     '<div class="mi-wide mi-payment-panel" data-mi-pay="bank">' + input('bank_name','Bank Name') + input('bank_location','Bank City / State') +
     secret('bank_routing','Routing Number','inputmode="numeric"') + secret('bank_account','Account Number','inputmode="numeric"') + '</div>' +
