@@ -8,6 +8,14 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   if (!(root instanceof HTMLElement)) throw new TypeError('M&H CRM needs an application root.');
   const dialogs = new Dialogs();
   let campaignFeature = null, campaignModule = null;
+  let intakeFeature = null, intakeModule = null;
+  async function medicareIntake() {
+    if (!intakeModule) intakeModule = import('./medicare-intake.js').then(({ createMedicareIntakeFeature }) => {
+      intakeFeature = createMedicareIntakeFeature();
+      return intakeFeature;
+    }).catch(error => { intakeModule = null; throw error; });
+    return intakeModule;
+  }
   let maPlansFeature = null, maPlansModule = null;
   async function maPlans() {
     if (!maPlansModule) maPlansModule = import('./ma-plans-ui.js?v=ma-plans-6').then(({ createMAPlansFeature }) => {
@@ -59,6 +67,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (route === 'dashboard') return `<div id="calendar-host"></div><div class="metric-grid">${['Clients', 'Appointments', 'Notifications', 'Documents'].map(label => `<div class="metric-card"><span>${label}</span><strong>—</strong><small>${connected ? 'Summary not loaded' : 'Not connected'}</small></div>`).join('')}</div><section class="panel-card dark-card"><h2>Quick Actions</h2><div class="quick-actions"><button type="button" class="btn secondary" data-add-client>Client Information</button><a class="btn secondary" href="#/clients">Search Clients</a><button type="button" class="btn secondary" data-new-appointment>Set Appointment</button><a class="btn secondary" href="#/communications">Communications</a></div></section>`;
     if (route === 'campaigns') return '<div id="campaigns-host"><p class="subtle">Loading campaigns…</p></div>';
     if (route === 'ma-plans') return '<div id="ma-plans-host"><p class="subtle">Loading 2027 Mississippi MA plans…</p></div>';
+    if (route === 'medicare-intake') return '<div id="medicare-intake-host"><p class="subtle">Opening Medicare intake…</p></div>';
     if (route === 'clients') return clientSearchMarkup(state.search, agents);
     if (route === 'appointments') return '<div id="calendar-host"></div>';
     if (route === 'communications') return `<div class="panel-card dark-card"><h2>Communications</h2><div class="integration-grid">${['RingCentral Voice', 'Client Text Messages', 'Call Recordings'].map(x => `<div><h3>${x}</h3><span class="tag">Not connected</span></div>`).join('')}</div>${empty('No conversation selected', 'Calls, texts, and recordings are not connected to this framework.')}</div>`;
@@ -69,6 +78,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   function render(route) {
     campaignFeature?.unmount();
     maPlansFeature?.unmount();
+    intakeFeature?.unmount();
     state.route = route;
     root.innerHTML = shell(route, connected, pageBody(route));
     root.querySelectorAll('[data-tool]').forEach(button => button.onclick = () => openTool(button.dataset.tool));
@@ -83,6 +93,11 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (route === 'campaigns') {
       const host = root.querySelector('#campaigns-host');
       campaigns().then(feature => { if (host.isConnected && !state.destroyed) feature.mount(host); }).catch(error => { if (host.isConnected) host.innerHTML = empty('Campaigns unavailable', error.message); });
+    }
+    if (route === 'medicare-intake') {
+      const host = root.querySelector('#medicare-intake-host');
+      medicareIntake().then(feature => { if (host.isConnected && !state.destroyed) feature.mount(host); })
+        .catch(error => { if (host.isConnected) host.innerHTML = empty('Medicare Intake unavailable', error.message); });
     }
     if (route === 'ma-plans') {
       const host = root.querySelector('#ma-plans-host');
@@ -719,6 +734,10 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     const isLegacyClient = requested === 'client';
     const removedSection = ['medicare', 'life', 'retirement', 'documents'].includes(requested);
     const next = NAV.some(([id]) => id === requested) ? requested : (isLegacyClient || removedSection ? 'clients' : 'dashboard');
+    if (state.route === 'medicare-intake' && next !== 'medicare-intake' && intakeFeature && !intakeFeature.canLeave()) {
+      history.replaceState(null, '', '#/medicare-intake');
+      return;
+    }
     if (dialogs.stack.length) {
       routing = true;
       history.replaceState(null, '', `#/${state.route}`);
@@ -759,6 +778,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     state.destroyed = true;
     campaignFeature?.destroy();
     maPlansFeature?.destroy();
+    intakeFeature?.destroy();
     dialogs.destroy();
     window.removeEventListener('hashchange', changeRoute);
     window.removeEventListener('keydown', escapeMenu);
