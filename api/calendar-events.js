@@ -23,8 +23,9 @@ async function proxyCalendar(request) {
       body,
       cache: 'no-store', signal: AbortSignal.timeout(25000)
     });
-    const text = await response.text();
-    return new Response(text, {
+    // Stream the upstream response directly; buffering its complete JSON
+    // body before replying adds latency and unnecessary server memory use.
+    return new Response(response.body, {
       status: response.status,
       headers: { 'Content-Type': response.headers.get('content-type') || 'application/json', 'Cache-Control': 'private, no-store' }
     });
