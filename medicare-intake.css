@@ -14,6 +14,28 @@
 #medicare-intake-host .mi-step{background:#fff;border:1px solid #ccdae4;border-radius:13px;margin-bottom:11px;overflow:hidden;color:#193044}
 #medicare-intake-host .mi-step>summary{list-style:none;display:flex;align-items:center;gap:14px;padding:15px 17px;cursor:pointer;font-size:15px;font-weight:800;min-height:59px}
 #medicare-intake-host .mi-step>summary::-webkit-details-marker{display:none}
+/* Per-step skip control remains visible even when its accordion is closed. */
+#medicare-intake-host .mi-step{position:relative}
+#medicare-intake-host .mi-step>summary{padding-right:207px}
+#medicare-intake-host .mi-step-label{min-width:0;overflow-wrap:anywhere}
+#medicare-intake-host .mi-step .mi-chevron{position:absolute;top:17px;right:15px;margin-left:0}
+#medicare-intake-host .mi-already-in-crm{position:absolute;z-index:2;top:15px;right:48px;display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid #d5e1e8;border-radius:8px;background:#f6fafc;color:#334f63;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;user-select:none}
+#medicare-intake-host .mi-already-in-crm input{accent-color:#287058;width:18px;height:18px;margin:0;cursor:pointer}
+#medicare-intake-host .mi-skipped .mi-already-in-crm{background:#e7f7ed;border-color:#80b99a;color:#175a3b}
+#medicare-intake-host .mi-skipped>summary{background:#f3faf5}
+#medicare-intake-host .mi-step-fields[hidden],#medicare-intake-host .mi-skip-panel[hidden],#medicare-intake-host .mi-skip-client[hidden]{display:none!important}
+#medicare-intake-host .mi-skip-panel{border:1px solid #cbded6;border-radius:12px;background:#f6fbf8;padding:15px;color:#28523d}
+#medicare-intake-host .mi-skip-message{display:grid;gap:6px;font-size:13px;line-height:1.5}
+#medicare-intake-host .mi-skip-message strong{font-size:15px;color:#1b6143}
+#medicare-intake-host .mi-skip-panel .mi-step-next{margin-top:14px;border-color:#d4e6db}
+#medicare-intake-host .mi-skip-client{margin-top:16px;padding:13px;border:1px solid #d0e1d7;border-radius:10px;background:#fff}
+#medicare-intake-host .mi-skip-client .mi-field{max-width:540px}
+#medicare-intake-host .mi-client-results{display:grid;gap:6px;margin-top:9px}
+#medicare-intake-host .mi-client-result{background:#f6fafc;border:1px solid #cbdde8;border-radius:8px;min-height:42px;padding:10px 12px;display:flex;gap:8px;align-items:center;justify-content:space-between;color:#28475a;text-align:left}
+#medicare-intake-host .mi-client-result:hover{border-color:#427e9f;background:#eef7fc}
+#medicare-intake-host .mi-client-result small{color:#547187}
+#medicare-intake-host .mi-client-linked{font-size:13px;color:#1e6547;font-weight:800;margin-top:7px}
+
 #medicare-intake-host .mi-step>summary:hover{background:#f3f8fb}
 #medicare-intake-host .mi-step[open]>summary{border-bottom:1px solid #d8e3eb;background:#edf4f8}
 #medicare-intake-host .mi-step-n{width:34px;height:34px;flex:none;display:grid;place-items:center;background:#e0ebf2;border-radius:9px;color:#2b5068;font-size:12px}
@@ -76,7 +98,10 @@
  #medicare-intake-host .mi-saved-row small{grid-column:1}
  #medicare-intake-host .mi-saved-row b{grid-column:2;grid-row:1 / span 3}
  #medicare-intake-host .mi-step-inner{padding:13px}
- #medicare-intake-host .mi-step>summary{padding:13px}
+ #medicare-intake-host .mi-step>summary{padding:13px 186px 13px 13px;min-height:70px;gap:9px}
+ #medicare-intake-host .mi-step .mi-chevron{top:24px}
+ #medicare-intake-host .mi-already-in-crm{right:43px;top:22px;gap:5px;padding:4px 5px;font-size:11px}
+ #medicare-intake-host .mi-skip-panel .mi-step-next .btn{width:100%}
  #medicare-intake-host .mi-step-next .btn{width:100%}
  #medicare-intake-host .mi-editor-footer{flex-direction:column;align-items:stretch;padding:12px}
  #medicare-intake-host .mi-editor-footer .btn{width:100%}
