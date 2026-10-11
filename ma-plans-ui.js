@@ -31,7 +31,7 @@ const ROWS = Object.freeze([
 export function createMAPlansFeature({ dialogs }) {
   let host = null;
   const selected = new Set();
-  let carrierFilters = ['', '', '', ''];
+  let carrierFilters = [];
   let medicaidFilter = 'ALL';
   let zipCode = '';
   let zipCounty = null;
@@ -46,6 +46,13 @@ export function createMAPlansFeature({ dialogs }) {
 
   function chosenCarriers() {
     return [...new Set(carrierFilters.filter(Boolean))];
+  }
+
+  function toggleCarrier(carrier) {
+    carrierFilters = carrierFilters.includes(carrier)
+      ? carrierFilters.filter(value => value !== carrier)
+      : [...carrierFilters, carrier];
+    render();
   }
 
   function matchesMedicaid(plan) {
@@ -154,14 +161,16 @@ export function createMAPlansFeature({ dialogs }) {
             <input data-ma-zip value="${esc(zipCode)}" inputmode="numeric" maxlength="5" placeholder="Example: 38834" autocomplete="postal-code">
             <small data-ma-zip-status>${zipLoading ? 'Checking 2027 CMS plan availability…' : zipError ? esc(zipError) : zipCounty ? `${esc(zipCounty.county)} County, Mississippi` : 'Enter a 5-digit Mississippi ZIP'}</small>
           </label>
-          ${carrierFilters.map((value, index) => `
-            <label>
-              <span>Carrier ${index + 1}</span>
-              <select data-ma-carrier-slot="${index}">
-                <option value="">Select carrier</option>
-                ${MA_CARRIERS.map(carrier => `<option value="${esc(carrier)}"${value === carrier ? ' selected' : ''}>${esc(carrier === 'UnitedHealthcare' ? 'UHC / UnitedHealthcare' : carrier)}</option>`).join('')}
-              </select>
-            </label>`).join('')}
+          <div class="ma-carrier-picker">
+            <span class="ma-filter-label">Carriers</span>
+            <div class="ma-carrier-buttons" role="group" aria-label="Select Medicare Advantage carriers">
+              ${MA_CARRIERS.map(carrier => {
+                const active = carrierFilters.includes(carrier);
+                const label = carrier === 'UnitedHealthcare' ? 'UHC' : carrier;
+                return `<button type="button" class="ma-carrier-toggle${active ? ' active' : ''}" data-ma-carrier-toggle="${esc(carrier)}" aria-pressed="${String(active)}">${esc(label)}</button>`;
+              }).join('')}
+            </div>
+          </div>
           <label>
             <span>Medicaid level</span>
             <select data-ma-medicaid-filter>
@@ -255,12 +264,8 @@ export function createMAPlansFeature({ dialogs }) {
         render();
       });
     });
-    host.querySelectorAll('[data-ma-carrier-slot]').forEach(select => {
-      select.addEventListener('change', event => {
-        const index = Number(event.target.dataset.maCarrierSlot);
-        carrierFilters[index] = event.target.value;
-        render();
-      });
+    host.querySelectorAll('[data-ma-carrier-toggle]').forEach(button => {
+      button.addEventListener('click', () => toggleCarrier(button.dataset.maCarrierToggle));
     });
     const zipInput = host.querySelector('[data-ma-zip]');
     if (zipInput) {
