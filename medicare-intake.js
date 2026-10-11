@@ -31,8 +31,8 @@ function choice(name, label, values, wide = false) {
 const yesNo = (name,label) => choice(name,label,[['yes','Yes'],['no','No']]);
 const amount = (name,label) => field(name,label,'type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"');
 const block = (number,title,body) =>
-  '<details class="mi-step" data-mi-step="' + number + '"><summary><span class="mi-step-n">' + String(number).padStart(2,'0') + '</span><span class="mi-step-label">' + esc(title) + '</span><span class="mi-chevron" aria-hidden="true">⌄</span></summary>' +
-  '<label class="mi-already-in-crm"><input type="checkbox" data-mi-skip-toggle="' + number + '" aria-label="Step ' + number + ': Already in CRM"><span>Already in CRM</span></label>' +
+  '<details class="mi-step" data-mi-step="' + number + '"><summary><span class="mi-step-n">' + String(number).padStart(2,'0') + '</span><span class="mi-step-label">' + esc(title) + '</span>' +
+  '<label class="mi-already-in-crm"><input type="checkbox" data-mi-skip-toggle="' + number + '" aria-label="Step ' + number + ': Already in CRM"><span>Already in CRM</span></label><span class="mi-chevron" aria-hidden="true">⌄</span></summary>' +
   '<div class="mi-step-inner"><div class="mi-step-fields"><div class="mi-grid">' + body + '</div><div class="mi-step-next"><button type="button" class="btn secondary" data-mi-next="' + number + '">' + (number === 13 ? 'Finish & Save' : 'Continue to Step ' + (number + 1)) + '</button></div></div>' +
   '<div class="mi-skip-panel" data-mi-skip-panel hidden><div class="mi-skip-message"><strong>✓ Already in CRM</strong><span>This section is marked to skip. Uncheck the box to enter or change information.</span></div>' +
   (number === 1 ? '<div class="mi-skip-client" data-mi-client-lookup><label class="mi-field"><span>Find existing CRM client</span><input type="search" data-mi-client-search placeholder="Search name or phone" autocomplete="off"></label><div class="mi-client-results" data-mi-client-results></div><div class="mi-client-linked" data-mi-client-linked></div></div>' : '') +
