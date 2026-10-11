@@ -10,7 +10,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   let campaignFeature = null, campaignModule = null;
   let maPlansFeature = null, maPlansModule = null;
   async function maPlans() {
-    if (!maPlansModule) maPlansModule = import('./ma-plans-ui.js?v=ma-plans-5').then(({ createMAPlansFeature }) => {
+    if (!maPlansModule) maPlansModule = import('./ma-plans-ui.js?v=ma-plans-6').then(({ createMAPlansFeature }) => {
       maPlansFeature = createMAPlansFeature({ dialogs });
       return maPlansFeature;
     }).catch(error => { maPlansModule = null; throw error; });
