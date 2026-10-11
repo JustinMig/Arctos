@@ -1,6 +1,6 @@
 /** Pure helpers and an explicit disconnected boundary. No legacy CRM requests or local persistence. */
 export const NAV = Object.freeze([
-  ['dashboard', 'Dashboard'], ['clients', 'Clients'], ['medicare-intake', 'Medicare Intake'], ['ma-plans', 'MA Plans'], ['campaigns', 'Campaigns'], ['communications', 'Communications'], ['carriers', 'Carriers'],
+  ['dashboard', 'Dashboard'], ['clients', 'Clients'], ['medicare-intake', 'Medicare Reviews'], ['ma-plans', 'MA Plans'], ['campaigns', 'Campaigns'], ['communications', 'Communications'], ['carriers', 'Carriers'],
   ['agents', 'Agents & Admin'], ['settings', 'Settings']
 ]);
 export const CLIENT_TABS = Object.freeze([
