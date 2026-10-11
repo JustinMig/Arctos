@@ -62,10 +62,22 @@ export function clientForm(connected, agents = []) {
 export function calendarMarkup(month, events = [], connected = false, agents = []) {
   const days = monthDays(month.getFullYear(), month.getMonth());
   const today = todayKey();
-  const todayCount = events.filter(e => e.event_date === today && e.status !== 'completed' && e.status !== 'needs_reschedule').length;
-  const pendingCount = events.filter(e => e.status === 'needs_reschedule').length;
+  // Index the events once. Filtering the entire list for every calendar day
+  // makes rendering increasingly slow as appointment history grows.
+  const eventsByDate = new Map();
+  let todayCount = 0;
+  let pendingCount = 0;
+  for (const event of events) {
+    if (event.status === 'needs_reschedule') { pendingCount++; continue; }
+    if (event.event_date === today && event.status !== 'completed') todayCount++;
+    const date = event.event_date;
+    if (!date) continue;
+    let dayEvents = eventsByDate.get(date);
+    if (!dayEvents) { dayEvents = []; eventsByDate.set(date, dayEvents); }
+    dayEvents.push(event);
+  }
   return `<section class="dashboard-calendar"><div class="calendar-queues"><button class="today-queue" type="button" data-queue="today">TODAY’S APPOINTMENTS <span>${connected ? todayCount : '—'}</span></button><button class="reschedule-queue" type="button" data-queue="reschedule">RESCHEDULE <span>${connected ? pendingCount : '—'}</span></button></div><div class="calendar-card"><div class="calendar-head"><div><h2>Calendar</h2><p class="calendar-legend">${agents.length ? agents.map(a => `<span><i></i>${esc(a.full_name)}</span>`).join('') : 'Appointments & activities'}</p></div><div class="calendar-actions"><button type="button" class="btn primary" data-new-appointment>+ ADD APPOINTMENT / ACTIVITY</button><div class="calendar-controls"><button type="button" class="btn secondary" data-month="-1" aria-label="Previous month">‹</button><button type="button" class="btn secondary" data-month="today">Today</button><button type="button" class="btn secondary" data-month="1" aria-label="Next month">›</button></div></div></div><h3 class="calendar-month" aria-live="polite">${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3><p class="calendar-status" role="status">${connected ? '' : 'Calendar layout is ready. Scheduling is not connected yet.'}</p><div class="calendar-grid">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => `<div class="calendar-weekday">${day}</div>`).join('')}${days.map(day => {
-    const key = isoDate(day), entries = events.filter(e => e.event_date === key && e.status !== 'needs_reschedule');
+    const key = isoDate(day), entries = eventsByDate.get(key) || [];
     return `<button type="button" class="calendar-day${day.getMonth() !== month.getMonth() ? ' outside' : ''}${key === today ? ' today' : ''}" data-day="${key}" aria-label="${longDate(key)}${connected ? `, ${entries.length} items` : ''}"${key === today ? ' aria-current="date"' : ''}><span class="day-number">${day.getDate()}</span><span class="day-events">${entries.slice(0, 3).map(e => `<span class="calendar-event"><small>${esc(timeLabel(e.start_time))}</small><strong>${esc(e.title)}</strong></span>`).join('')}${entries.length > 3 ? `<small>+${entries.length - 3} more</small>` : ''}</span><span class="day-dots">${entries.slice(0, 4).map(() => '<i></i>').join('')}</span></button>`;
   }).join('')}</div></div></section>`;
 }
