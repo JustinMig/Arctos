@@ -72,3 +72,11 @@
 .ma-filter-bar select:focus,.ma-filter-bar input:focus{outline:2px solid rgba(24,63,84,.28);outline-offset:1px}
 @media(max-width:980px){.ma-filter-bar-expanded{grid-template-columns:repeat(2,minmax(180px,1fr))}}
 @media(max-width:620px){.ma-filter-bar-expanded{grid-template-columns:1fr}}
+
+.ma-carrier-picker{display:grid;gap:6px;grid-column:span 2}
+.ma-filter-label{font-size:.82rem;font-weight:800;color:#000}
+.ma-carrier-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.ma-carrier-toggle{min-height:42px;border:1px solid rgba(0,0,0,.22);border-radius:9px;background:#fff;padding:8px 14px;font-weight:800;color:#000;cursor:pointer}
+.ma-carrier-toggle:hover{background:#f4f6f7}
+.ma-carrier-toggle.active{background:#183f54;color:#fff;border-color:#183f54}
+@media(max-width:620px){.ma-carrier-picker{grid-column:1}}
