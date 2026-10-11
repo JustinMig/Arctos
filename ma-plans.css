@@ -80,3 +80,45 @@
 .ma-carrier-toggle:hover{background:#f4f6f7}
 .ma-carrier-toggle.active{background:#183f54;color:#fff;border-color:#183f54}
 @media(max-width:620px){.ma-carrier-picker{grid-column:1}}
+
+/* Carrier brand tints — keep plan text black and backgrounds intentionally light. */
+.ma-carrier-section[data-ma-carrier="Aetna"]{
+  background:#f7f1f9;
+  border-color:rgba(125,63,152,.32)
+}
+.ma-carrier-section[data-ma-carrier="Aetna"] .ma-carrier-head{background:#eee4f2}
+.ma-carrier-section[data-ma-carrier="Aetna"] .ma-plan-row{background:rgba(255,255,255,.58)}
+.ma-carrier-section[data-ma-carrier="Aetna"] .ma-plan-row:hover{background:#f1e7f4}
+.ma-carrier-section[data-ma-carrier="Aetna"] .ma-plan-row.selected{background:#e8d9ee}
+
+.ma-carrier-section[data-ma-carrier="Humana"]{
+  background:#f3f8ec;
+  border-color:rgba(92,154,27,.34)
+}
+.ma-carrier-section[data-ma-carrier="Humana"] .ma-carrier-head{background:#e8f2dc}
+.ma-carrier-section[data-ma-carrier="Humana"] .ma-plan-row{background:rgba(255,255,255,.58)}
+.ma-carrier-section[data-ma-carrier="Humana"] .ma-plan-row:hover{background:#edf5e3}
+.ma-carrier-section[data-ma-carrier="Humana"] .ma-plan-row.selected{background:#dfeecf}
+
+.ma-carrier-section[data-ma-carrier="Devoted"]{
+  background:#eef7f1;
+  border-color:rgba(40,126,82,.32)
+}
+.ma-carrier-section[data-ma-carrier="Devoted"] .ma-carrier-head{background:#e1f0e7}
+.ma-carrier-section[data-ma-carrier="Devoted"] .ma-plan-row{background:rgba(255,255,255,.58)}
+.ma-carrier-section[data-ma-carrier="Devoted"] .ma-plan-row:hover{background:#e7f3eb}
+.ma-carrier-section[data-ma-carrier="Devoted"] .ma-plan-row.selected{background:#d7eadf}
+
+.ma-carrier-section[data-ma-carrier="UnitedHealthcare"]{
+  background:#eef3fb;
+  border-color:rgba(0,38,119,.28)
+}
+.ma-carrier-section[data-ma-carrier="UnitedHealthcare"] .ma-carrier-head{background:#e1e9f8}
+.ma-carrier-section[data-ma-carrier="UnitedHealthcare"] .ma-plan-row{background:rgba(255,255,255,.58)}
+.ma-carrier-section[data-ma-carrier="UnitedHealthcare"] .ma-plan-row:hover{background:#e8eef9}
+.ma-carrier-section[data-ma-carrier="UnitedHealthcare"] .ma-plan-row.selected{background:#d8e3f5}
+
+.ma-carrier-toggle[data-ma-carrier-toggle="Aetna"].active{background:#7d3f98;border-color:#7d3f98;color:#fff}
+.ma-carrier-toggle[data-ma-carrier-toggle="Humana"].active{background:#5c9a1b;border-color:#5c9a1b;color:#fff}
+.ma-carrier-toggle[data-ma-carrier-toggle="Devoted"].active{background:#287e52;border-color:#287e52;color:#fff}
+.ma-carrier-toggle[data-ma-carrier-toggle="UnitedHealthcare"].active{background:#002677;border-color:#002677;color:#fff}
