@@ -48,7 +48,7 @@ const repeatRow = (kind, index, row = {}) => {
 const fmt = v => v == null ? '' : String(v);
 const safe = v => esc(fmt(v));
 const num = v => { const n = Number(v); return v === '' || v == null || !Number.isFinite(n) || n < 0 ? 0 : n; };
-function formHTML() {
+function formHTML(savedIntake = null) {
   const docs = '<div class="mi-repeat" data-mi-repeat="doctor"></div><button class="btn secondary mi-add" type="button" data-mi-add="doctor">+ Add Another Doctor</button>';
   const pharma = '<div class="mi-repeat" data-mi-repeat="pharmacy"></div><button class="btn secondary mi-add" type="button" data-mi-add="pharmacy">+ Add Another Pharmacy</button>' +
     '<div class="mi-photo-area"><label class="mi-upload">📷 Take Pharmacy Photo<input type="file" accept="image/*" capture="environment" data-mi-photo hidden></label>' +
@@ -82,7 +82,10 @@ function formHTML() {
     '<div class="mi-wide mi-payment-panel" data-mi-pay="other">' + input('other_payment','Other Payment Instructions',true) + '</div>' +
     '<p class="mi-wide mi-warning">Sensitive information uses existing encrypted CRM storage. Do not include card security codes (CVV) in notes or uploaded payment-card photos.</p>';
   return '<div class="mi-editor-head"><div><strong data-mi-editor-title>New Medicare Intake</strong><p>All 13 steps are on one page. Open a section, collect the information, then continue.</p></div>' +
-    '<div class="mi-editor-buttons"><button type="button" class="btn secondary" data-mi-back>Saved Forms</button><button type="button" class="btn primary" data-mi-save>Save Form</button></div></div>' +
+    '<div class="mi-editor-buttons"><button type="button" class="btn secondary" data-mi-back>Saved Forms</button>' +
+    (savedIntake?.id ? '<button type="button" class="btn mi-delete-form" data-mi-delete="' + safe(savedIntake.id) +
+      '" data-mi-updated="' + safe(savedIntake.updated_at || '') + '">Delete Form</button>' : '') +
+    '<button type="button" class="btn primary" data-mi-save>Save Form</button></div></div>' +
     '<form class="mi-form" autocomplete="off" novalidate>' +
     block(1,'Client Information',input('first_name','First Name') + input('last_name','Last Name') +
       date('dob','Date of Birth') + input('phone','Phone Number',false,'type="tel" inputmode="tel"') +
@@ -231,7 +234,7 @@ export function createMedicareIntakeFeature() {
   }
   function renderEditor(data = {}, sensitive = {}, banking = {}) {
     currentMode = 'edit'; dirty = false;
-    host.innerHTML = formHTML();
+    host.innerHTML = formHTML(row);
     const f = host.querySelector('.mi-form');
     for (const k of SIMPLE) {
       const el = f.elements.namedItem(k);
@@ -445,8 +448,8 @@ export function createMedicareIntakeFeature() {
       host?.querySelectorAll('[data-mi-save]').forEach(b => b.disabled = false);
     }
   }
-  async function savedForms() {
-    if (!canLeave()) return;
+  async function savedForms({ skipLeaveCheck = false } = {}) {
+    if (!skipLeaveCheck && !canLeave()) return;
     const request = ++epoch; reset(); currentMode = 'list';
     host.innerHTML = '<div class="mi-list-head"><button type="button" class="btn primary" data-mi-new>+ New Form</button><h2>Saved Medicare Intakes</h2></div><p class="mi-muted">Loading your saved forms…</p>';
     try {
@@ -456,11 +459,57 @@ export function createMedicareIntakeFeature() {
       if (request !== epoch || !host?.isConnected) return;
       host.innerHTML = '<div class="mi-list-head"><button type="button" class="btn primary" data-mi-new>+ New Form</button><h2>Saved Medicare Intakes <small>(' + data.length + ')</small></h2></div>' +
         '<label class="mi-list-filter">Search Forms<input type="search" data-mi-filter placeholder="Search name or phone number" autocomplete="off"></label>' +
-        '<div data-mi-list>' + (data.length ? data.map(f => '<button type="button" class="mi-saved-row" data-mi-open="' + safe(f.id) + '"><strong>' + safe(f.client_name) +
-          '</strong><span>' + safe(f.client_phone || 'No phone') + '</span><small>Updated ' + safe(new Date(f.updated_at).toLocaleString()) + '</small><b>Open →</b></button>').join('') :
+        '<div class="mi-delete-status" data-mi-delete-status role="status" aria-live="polite"></div>' +
+        '<div data-mi-list>' + (data.length ? data.map(f => '<div class="mi-saved-entry">' +
+          '<button type="button" class="mi-saved-row" data-mi-open="' + safe(f.id) + '"><strong>' + safe(f.client_name) +
+          '</strong><span>' + safe(f.client_phone || 'No phone') + '</span><small>Updated ' + safe(new Date(f.updated_at).toLocaleString()) +
+          '</small><b>Open →</b></button>' +
+          '<button type="button" class="btn mi-delete-form mi-delete-list" data-mi-delete="' + safe(f.id) +
+          '" data-mi-updated="' + safe(f.updated_at || '') + '" aria-label="Delete Medicare intake for ' + safe(f.client_name) +
+          '">Delete</button></div>').join('') :
           '<div class="mi-empty">No saved Medicare intakes yet. Choose New Form to start.</div>') + '</div>';
     } catch(e) {
       if (request === epoch) host.innerHTML = '<button class="btn secondary" type="button" data-mi-home>Back</button><p class="mi-error">Unable to load saved forms: ' + safe(e.message) + '</p>';
+    }
+  }
+  async function deleteIntake(id, updatedAt, button) {
+    if (busy || !id) return;
+    const savedRow = button?.closest('.mi-saved-entry');
+    const name = savedRow?.querySelector('[data-mi-open] strong')?.textContent ||
+      (row?.id === id ? row.client_name : '') || 'this client';
+    const unsaved = row?.id === id && dirty
+      ? '\n\nAny unsaved edits to this intake will also be lost.' : '';
+    const confirmed = window.confirm(
+      'Permanently delete the saved Medicare intake for ' + name + '?\n\n' +
+      'This cannot be undone. The client record, policies, and uploaded documents in the CRM will remain.' + unsaved
+    );
+    if (!confirmed) return;
+    busy = true;
+    if (button) button.disabled = true;
+    const wasOpen = row?.id === id;
+    try {
+      // Match the exact saved version so a form changed in another session
+      // cannot accidentally be deleted from a stale list.
+      let query = supabase.from('medicare_intakes').delete().eq('id', id);
+      if (updatedAt) query = query.eq('updated_at', updatedAt);
+      const { data, error } = await query.select('id').maybeSingle();
+      if (error) throw error;
+      if (!data?.id) throw new Error('This form was changed or has already been removed. Refresh Saved Forms and retry.');
+      // Only the intake row is removed. Do not delete associated clients,
+      // policies, vault data or documents.
+      if (wasOpen) { row = null; dirty = false; }
+      busy = false;
+      if (host?.isConnected) await savedForms({ skipLeaveCheck: true });
+    } catch (error) {
+      if (host?.isConnected) {
+        const message = 'Could not delete the form: ' + (error.message || 'Please retry.');
+        const status = host.querySelector('[data-mi-delete-status]');
+        if (status) { status.textContent = message; status.classList.add('mi-error'); }
+        else setStatus(message, true);
+      }
+    } finally {
+      busy = false;
+      if (button?.isConnected) button.disabled = false;
     }
   }
   async function openSaved(id) {
@@ -493,6 +542,7 @@ export function createMedicareIntakeFeature() {
     if (target.matches('[data-mi-home]')) { if (canLeave()) home(); return; }
     if (target.matches('[data-mi-saved],[data-mi-back]')) return void savedForms();
     if (target.matches('[data-mi-open]')) return void openSaved(target.dataset.miOpen);
+    if (target.matches('[data-mi-delete]')) return void deleteIntake(target.dataset.miDelete, target.dataset.miUpdated, target);
     if (target.matches('[data-mi-save]')) return void save();
     if (target.matches('[data-mi-client-select]')) {
       const results = host.querySelector('[data-mi-client-results]');
