@@ -40,11 +40,15 @@ export const mhRepository = {
     const { data: { session } } = await supabase.auth.getSession();
     this.user = session?.user || null;
     if (!this.user) return false;
-    this.profile = await one(supabase.from('profiles').select('id,full_name,role,active').eq('id', this.user.id));
+    // Run the independent profile and agent reads concurrently.
+    const [profile, agents] = await Promise.all([
+      one(supabase.from('profiles').select('id,full_name,role,active').eq('id', this.user.id)),
+      supabase.from('profiles').select('id,full_name,role,active').eq('active', true).order('full_name')
+    ]);
+    this.profile = profile;
     if (!this.profile?.active) throw new Error('This CRM account is inactive. Contact your administrator.');
-    const { data, error } = await supabase.from('profiles').select('id,full_name,role,active').eq('active', true).order('full_name');
-    if (error) throw error;
-    this.agents.splice(0, this.agents.length, ...(data || []));
+    if (agents.error) throw agents.error;
+    this.agents.splice(0, this.agents.length, ...(agents.data || []));
     return true;
   },
   async signIn(email, password) { const { data, error } = await supabase.auth.signInWithPassword({ email, password }); if (error) throw error; return data; },
