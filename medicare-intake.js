@@ -153,7 +153,7 @@ export function createMedicareIntakeFeature() {
         const lookup = step.querySelector('[data-mi-client-lookup]');
         if (lookup) lookup.hidden = !skip || Boolean(row?.client_id);
         const linked = step.querySelector('[data-mi-client-linked]');
-        if (linked) linked.textContent = linkedClient ? 'Selected CRM client: ' + [linkedClient.first_name, linkedClient.last_name].filter(Boolean).join(' ') : (row?.client_id ? 'Using the client already linked to this intake.' : '');
+        if (linked) linked.textContent = linkedClient ? 'Selected CRM client: ' + [linkedClient.first_name, linkedClient.last_name].filter(Boolean).join(' ') : (row?.client_id ? 'Using the client already linked to this review.' : '');
       }
     });
   }
@@ -190,7 +190,7 @@ export function createMedicareIntakeFeature() {
   function reset() { row = null; linkedClient = null; queued = []; uploaded = []; dirty = false; clearTimeout(clientSearchTimer); ++clientSearchToken; }
   function home() {
     currentMode = 'home'; reset();
-    host.innerHTML = '<div class="mi-home"><p>Start a complete Medicare conversation or return to a saved intake. Forms remain in the CRM for later editing.</p>' +
+    host.innerHTML = '<div class="mi-home"><p>Start a complete Medicare conversation or return to a saved review. Forms remain in the CRM for later editing.</p>' +
       '<div class="mi-home-actions"><button class="mi-home-card" type="button" data-mi-new><strong>+ New Form</strong><span>Start a 13-step Medicare review</span></button>' +
       '<button class="mi-home-card" type="button" data-mi-saved><strong>Saved Forms</strong><span>Search and reopen existing forms</span></button></div></div>';
   }
@@ -328,7 +328,7 @@ export function createMedicareIntakeFeature() {
     if (busy || !host?.querySelector('.mi-form')) return;
     busy = true;
     host.querySelectorAll('[data-mi-save]').forEach(b => b.disabled = true);
-    setStatus('Saving the intake securely…');
+    setStatus('Saving the review securely…');
     try {
       calc();
       const value = readEditor(), sec = getSecrets();
@@ -478,7 +478,7 @@ export function createMedicareIntakeFeature() {
     const name = savedRow?.querySelector('[data-mi-open] strong')?.textContent ||
       (row?.id === id ? row.client_name : '') || 'this client';
     const unsaved = row?.id === id && dirty
-      ? '\n\nAny unsaved edits to this intake will also be lost.' : '';
+      ? '\n\nAny unsaved edits to this review will also be lost.' : '';
     const confirmed = window.confirm(
       'Permanently delete the saved Medicare review for ' + name + '?\n\n' +
       'This cannot be undone. The client record, policies, and uploaded documents in the CRM will remain.' + unsaved
@@ -515,7 +515,7 @@ export function createMedicareIntakeFeature() {
   async function openSaved(id) {
     if (!canLeave()) return;
     ++epoch; dirty = false; queued = []; uploaded = [];
-    host.innerHTML = '<div class="mi-loading">Opening saved intake…</div>';
+    host.innerHTML = '<div class="mi-loading">Opening saved review…</div>';
     try {
       const {data,error} = await supabase.from('medicare_intakes').select('*').eq('id',id).single();
       if (error) throw error;
@@ -528,7 +528,7 @@ export function createMedicareIntakeFeature() {
       await loadFiles();
     } catch(e) {
       reset();
-      host.innerHTML = '<button type="button" class="btn secondary" data-mi-saved>Saved Forms</button><p class="mi-error">Could not open this form: ' + safe(e.message) + '</p>';
+      host.innerHTML = '<button type="button" class="btn secondary" data-mi-saved>Saved Forms</button><p class="mi-error">Could not open this review: ' + safe(e.message) + '</p>';
     }
   }
   function newForm() {
@@ -558,7 +558,7 @@ export function createMedicareIntakeFeature() {
       if (results) results.replaceChildren();
       showSkipSections();
       dirty = true;
-      setStatus('CRM client selected. This intake will link to that client when saved.');
+      setStatus('CRM client selected. This review will link to that client when saved.');
       return;
     }
     if (target.matches('[data-mi-next]')) {
@@ -625,7 +625,7 @@ export function createMedicareIntakeFeature() {
       if (checkbox.checked && step) step.open = true;
       showSkipSections();
       dirty = true;
-      setStatus('Section status changed. Save the intake to keep this selection.');
+      setStatus('Section status changed. Save the review to keep this selection.');
     }
   }
   function onFiles(e) {
