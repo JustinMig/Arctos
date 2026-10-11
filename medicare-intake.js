@@ -31,8 +31,12 @@ function choice(name, label, values, wide = false) {
 const yesNo = (name,label) => choice(name,label,[['yes','Yes'],['no','No']]);
 const amount = (name,label) => field(name,label,'type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"');
 const block = (number,title,body) =>
-  '<details class="mi-step" data-mi-step="' + number + '"><summary><span class="mi-step-n">' + String(number).padStart(2,'0') + '</span><span>' + esc(title) + '</span><span class="mi-chevron" aria-hidden="true">⌄</span></summary>' +
-  '<div class="mi-step-inner"><div class="mi-grid">' + body + '</div><div class="mi-step-next"><button type="button" class="btn secondary" data-mi-next="' + number + '">' + (number === 13 ? 'Finish & Save' : 'Continue to Step ' + (number + 1)) + '</button></div></div></details>';
+  '<details class="mi-step" data-mi-step="' + number + '"><summary><span class="mi-step-n">' + String(number).padStart(2,'0') + '</span><span class="mi-step-label">' + esc(title) + '</span><span class="mi-chevron" aria-hidden="true">⌄</span></summary>' +
+  '<label class="mi-already-in-crm"><input type="checkbox" data-mi-skip-toggle="' + number + '" aria-label="Step ' + number + ': Already in CRM"><span>Already in CRM</span></label>' +
+  '<div class="mi-step-inner"><div class="mi-step-fields"><div class="mi-grid">' + body + '</div><div class="mi-step-next"><button type="button" class="btn secondary" data-mi-next="' + number + '">' + (number === 13 ? 'Finish & Save' : 'Continue to Step ' + (number + 1)) + '</button></div></div>' +
+  '<div class="mi-skip-panel" data-mi-skip-panel hidden><div class="mi-skip-message"><strong>✓ Already in CRM</strong><span>This section is marked to skip. Uncheck the box to enter or change information.</span></div>' +
+  (number === 1 ? '<div class="mi-skip-client" data-mi-client-lookup><label class="mi-field"><span>Find existing CRM client</span><input type="search" data-mi-client-search placeholder="Search name or phone" autocomplete="off"></label><div class="mi-client-results" data-mi-client-results></div><div class="mi-client-linked" data-mi-client-linked></div></div>' : '') +
+  '<div class="mi-step-next"><button type="button" class="btn secondary" data-mi-next="' + number + '">' + (number === 13 ? 'Finish & Save' : 'Skip to Step ' + (number + 1) + ' →') + '</button></div></div></div></details>';
 const repeatRow = (kind, index, row = {}) => {
   const label = kind === 'doctor' ? 'Doctor' : 'Pharmacy';
   const typeField = kind === 'doctor' ? input('kind','Type of Practice',false,'placeholder="Primary Care, Cardiology, etc."') : '';
@@ -129,14 +133,58 @@ function paymentDigits(v) { return String(v || '').replace(/\D/g,''); }
 function escapeName(v) { return String(v || 'photo').replace(/[^a-zA-Z0-9._-]/g,'-').slice(0,90); }
 export function createMedicareIntakeFeature() {
   let host = null, row = null, queued = [], uploaded = [], dirty = false, busy = false, epoch = 0;
+  let linkedClient = null, clientSearchTimer = 0, clientSearchToken = 0;
   let currentMode = 'home';
+  const isSkipped = number => Boolean(host?.querySelector('[data-mi-skip-toggle="' + number + '"]')?.checked);
+  const skippedSections = () => Array.from(host?.querySelectorAll('[data-mi-skip-toggle]:checked') || [], box => Number(box.dataset.miSkipToggle));
+  function showSkipSections() {
+    host?.querySelectorAll('.mi-step').forEach(step => {
+      const number = Number(step.dataset.miStep);
+      const skip = isSkipped(number);
+      step.classList.toggle('mi-skipped', skip);
+      const fields = step.querySelector('.mi-step-fields');
+      const panel = step.querySelector('[data-mi-skip-panel]');
+      if (fields) fields.hidden = skip;
+      if (panel) panel.hidden = !skip;
+      if (number === 1) {
+        const lookup = step.querySelector('[data-mi-client-lookup]');
+        if (lookup) lookup.hidden = !skip || Boolean(row?.client_id);
+        const linked = step.querySelector('[data-mi-client-linked]');
+        if (linked) linked.textContent = linkedClient ? 'Selected CRM client: ' + [linkedClient.first_name, linkedClient.last_name].filter(Boolean).join(' ') : (row?.client_id ? 'Using the client already linked to this intake.' : '');
+      }
+    });
+  }
+  async function searchExistingClients(term) {
+    const target = host?.querySelector('[data-mi-client-results]');
+    if (!target || !isSkipped(1) || row?.client_id) return;
+    const request = ++clientSearchToken;
+    const q = String(term || '').trim().replace(/[%*(),"]/g, ' ').trim().slice(0,80);
+    if (q.length < 2) {target.replaceChildren();return;}
+    target.textContent = 'Searching CRM clients…';
+    try {
+      // Search only rows the currently authenticated agent is allowed to see.
+      const {data,error} = await supabase.from('clients')
+        .select('id,first_name,last_name,phone,date_of_birth')
+        .or('first_name.ilike.' + JSON.stringify('%' + q + '%') + ',last_name.ilike.' + JSON.stringify('%' + q + '%') + ',phone.ilike.' + JSON.stringify('%' + q + '%'))
+        .order('last_name').limit(12);
+      if (error) throw error;
+      if (request !== clientSearchToken || !target.isConnected) return;
+      target.innerHTML = (data || []).length ? data.map(c =>
+        '<button type="button" class="mi-client-result" data-mi-client-select="' + safe(c.id) + '"><strong>' +
+        safe([c.first_name,c.last_name].filter(Boolean).join(' ')) + '</strong><small>' + safe(c.phone || c.date_of_birth || '') + '</small></button>').join('')
+        : '<small>No matching clients found. Try another name or phone number.</small>';
+      target._miClients = data || [];
+    } catch(e) {
+      if (request === clientSearchToken && target.isConnected) target.textContent = 'Could not search clients: ' + (e.message || 'Retry');
+    }
+  }
   function setStatus(message,error = false) {
     if (!host) return;
     const s = host.querySelector('[data-mi-status]');
     if (s) { s.textContent = message; s.classList.toggle('mi-error',error); }
   }
   function canLeave() { return !busy && (!dirty || window.confirm('This Medicare intake has unsaved changes. Discard your changes?')); }
-  function reset() { row = null; queued = []; uploaded = []; dirty = false; }
+  function reset() { row = null; linkedClient = null; queued = []; uploaded = []; dirty = false; clearTimeout(clientSearchTimer); ++clientSearchToken; }
   function home() {
     currentMode = 'home'; reset();
     host.innerHTML = '<div class="mi-home"><p>Start a complete Medicare conversation or return to a saved intake. Forms remain in the CRM for later editing.</p>' +
@@ -195,6 +243,10 @@ export function createMedicareIntakeFeature() {
     for (const [from,to] of [['routing_number','bank_routing'],['account_number','bank_account'],['card_number','card_number'],['card_expiration','card_expiration']]) {
       const el = f.elements.namedItem(to); if (el) el.value = fmt(banking[from]);
     }
+    const flags = Array.isArray(data.already_in_crm) ? data.already_in_crm : [];
+    f.querySelectorAll('[data-mi-skip-toggle]').forEach(box => {
+      box.checked = flags.includes(Number(box.dataset.miSkipToggle));
+    });
     if (banking.payment_method && !f.elements.namedItem('payment_method').value) f.elements.namedItem('payment_method').value = banking.payment_method;
     if (banking.bank_name && !f.elements.namedItem('bank_name').value) f.elements.namedItem('bank_name').value = banking.bank_name;
     renderRepeat('doctor',data.doctors?.length ? data.doctors : [{}]);
@@ -202,7 +254,7 @@ export function createMedicareIntakeFeature() {
     const title = host.querySelector('[data-mi-editor-title]');
     title.textContent = row ? 'Edit Intake — ' + (row.client_name || 'Client') : 'New Medicare Intake';
     host.querySelector('[data-mi-step="1"]').open = true;
-    showDependencies(); calc(); filePanel();
+    showDependencies(); showSkipSections(); calc(); filePanel();
     if (row) setStatus('Saved form loaded. Changes will update this same form.');
     else setStatus('New form — enter the client information and save when ready.');
   }
@@ -210,10 +262,23 @@ export function createMedicareIntakeFeature() {
     const f = host.querySelector('.mi-form');
     const out = {};
     for (const k of SIMPLE) out[k] = fmt(f.elements.namedItem(k)?.value).trim();
+    out.already_in_crm = skippedSections();
+    if (isSkipped(1) && linkedClient) {
+      out.first_name = linkedClient.first_name || '';
+      out.last_name = linkedClient.last_name || '';
+      out.phone = linkedClient.phone || '';
+      out.dob = linkedClient.date_of_birth || '';
+    }
+    if (isSkipped(1) && !row?.client_id && !linkedClient)
+      throw new Error('Step 1: Select an existing CRM client before skipping Client Information.');
     if (!out.first_name || !out.last_name) throw new Error('First name and last name are required to save a form.');
-    dateNames.forEach(k => { if (out[k]) out[k] = normalDate(out[k],k.replaceAll('_',' ')); });
-    if (out.soa_signed === 'no' && !out.soa_reason) throw new Error('Step 5: Explain why the Scope of Appointment was not signed.');
-    if (out.needs_phone === 'yes' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(out.working_email)) throw new Error('Step 12: Enter a working email address when a cell phone is needed.');
+    const dateSections = {dob:1,part_a:3,part_b:3,new_start:8};
+    dateNames.forEach(k => {
+      if (out[k] && !isSkipped(dateSections[k]))
+        out[k] = /^\d{4}-\d{2}-\d{2}$/.test(out[k]) ? out[k] : normalDate(out[k],k.replaceAll('_',' '));
+    });
+    if (!isSkipped(5) && out.soa_signed === 'no' && !out.soa_reason) throw new Error('Step 5: Explain why the Scope of Appointment was not signed.');
+    if (!isSkipped(12) && out.needs_phone === 'yes' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(out.working_email)) throw new Error('Step 12: Enter a working email address when a cell phone is needed.');
     out.doctors = repeatValues('doctor');
     out.pharmacies = repeatValues('pharmacy');
     // Payment credentials, SSN, Medicare and Medicaid numbers NEVER enter intake_data.
