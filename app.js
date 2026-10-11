@@ -91,14 +91,23 @@ function passwordResetScreen(message = '', error = false) {
 async function openWorkspace() {
   if (workspaceStarted) return;
   root.innerHTML = '<div class="auth-loading" role="status">Opening your workspace…</div>';
+  // Download CSS and the authenticated workspace code concurrently rather
+  // than paying for two separate network waits on every cold login.
+  const workspaceModule = withTimeout(import('./workspace-start.js?v=ma-plans-4'), 20000);
   let sheet = document.querySelector('[data-workspace-css]');
+  let stylesReady = Promise.resolve();
   if (!sheet) {
     sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/workspace-styles.css?v=ma-plans-7'; sheet.dataset.workspaceCss = '';
-    const loaded = new Promise((resolve,reject) => {sheet.onload=resolve;sheet.onerror=()=>reject(new Error('Unable to load workspace styles. Refresh and retry.'));});
+    stylesReady = withTimeout(new Promise((resolve,reject) => {
+      sheet.onload = resolve;
+      sheet.onerror = () => reject(new Error('Unable to load workspace styles. Refresh and retry.'));
+    }));
     document.head.append(sheet);
-    try { await withTimeout(loaded); } catch (error) { sheet.remove(); throw error; }
   }
-  const { startWorkspace } = await withTimeout(import('./workspace-start.js?v=ma-plans-4'),20000);
+  let workspace;
+  try { [, workspace] = await Promise.all([stylesReady, workspaceModule]); }
+  catch (error) { if (sheet && !sheet.sheet) sheet.remove(); throw error; }
+  const { startWorkspace } = workspace;
   root.inert = true;
   try { await startWorkspace(); workspaceStarted = true; }
   finally { root.inert = false; }
