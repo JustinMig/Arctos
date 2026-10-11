@@ -46,13 +46,26 @@ export async function startWorkspace() {
   document.body.dataset.singleAgent = String(mhRepository.agents.length <= 1);
   if (!location.hash || location.hash === '#/' || location.hash === '#') history.replaceState(null, '', '#/dashboard');
   if (['owner','admin'].includes(mhRepository.profile?.role)) installMayerJustinCalendar();
-  await import('./workspace-extensions.js?v=pharmacy-notes-1');
   installClientDuplicateCheck();
-  await import('./input-formatting.js?v=optimization-2');
-  await import('./campaigns-smooth-load.js?v=1');
   installFastNavigation(root);
+  // Put the authenticated shell and calendar on screen before loading the
+  // large optional client/campaign enhancement chunk. Previously these imports
+  // were awaited, delaying EVERY login and dashboard opening.
   createWorkspace(root, mhRepository);
-  await import('./top-add-client.js?v=optimization-2');
+  // The basic client/appointment actions already work in createWorkspace.
+  // Progressive enhancements initialize immediately after the first paint.
+  const loadEnhancements = () => {
+    void Promise.allSettled([
+      import('./workspace-extensions.js?v=pharmacy-notes-1'),
+      import('./input-formatting.js?v=optimization-2'),
+      import('./campaigns-smooth-load.js?v=1'),
+      import('./top-add-client.js?v=optimization-2')
+    ]).then(results => results.forEach((result, index) => {
+      if (result.status === 'rejected')
+        console.error('CRM enhancement failed to load (' + index + '):', result.reason);
+    }));
+  };
+  requestAnimationFrame(() => setTimeout(loadEnhancements, 0));
   installClientAgeFilter(root);
   installClientDelete(root, mhRepository);
   installSimpleDashboardNote(root);
