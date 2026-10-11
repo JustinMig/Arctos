@@ -60,7 +60,7 @@ function formHTML() {
   // Only the five *total price* fields are included in Total HIP Amount.
   const hip = amount('hospital_cost_day','In-Hospital Cost Per Day') +
     field('hospital_days','Number of Hospital Days','type="number" inputmode="numeric" min="0" step="1"') +
-    amount('hospital_total','Hospital Total Price') +
+    field('hospital_total','Hospital Total Price','type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"',true) +
     amount('ambulance_cost','Ambulance Ride Cost') + amount('ambulance_total','Ambulance Total Price') +
     amount('outpatient_cost','Outpatient Cost') + amount('outpatient_total','Outpatient Total Price') +
     amount('cancer_amount','Cancer Coverage Amount') + amount('cancer_total','Cancer Total Price') +
