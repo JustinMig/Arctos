@@ -1,0 +1,82 @@
+/* Medicare Intake — one-screen, mobile-friendly accordion workflow. */
+#medicare-intake-host{max-width:1120px;margin:0 auto 28px;color:#e9f2f7}
+#medicare-intake-host .mi-home{border:1px solid #2f4758;background:#102431;border-radius:17px;padding:24px}
+#medicare-intake-host .mi-home>p{color:#b7c9d3;margin:0 0 22px}
+#medicare-intake-host .mi-home-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+#medicare-intake-host .mi-home-card{min-height:140px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:22px;border:1px solid #345468;border-radius:15px;color:#eaf4f9;background:#173348}
+#medicare-intake-host .mi-home-card:hover{background:#1c4057}
+#medicare-intake-host .mi-home-card strong{font-size:23px}
+#medicare-intake-host .mi-home-card span{font-size:13px;color:#c0d1dd}
+#medicare-intake-host .mi-editor-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;margin-bottom:16px;border:1px solid #36556b;border-radius:15px;background:#112a3b}
+#medicare-intake-host .mi-editor-head strong{display:block;font-size:20px}
+#medicare-intake-host .mi-editor-head p{margin:6px 0 0;font-size:13px;color:#bdcdd6}
+#medicare-intake-host .mi-editor-buttons{display:flex;gap:8px;flex-wrap:wrap;flex:none}
+#medicare-intake-host .mi-step{background:#fff;border:1px solid #ccdae4;border-radius:13px;margin-bottom:11px;overflow:hidden;color:#193044}
+#medicare-intake-host .mi-step>summary{list-style:none;display:flex;align-items:center;gap:14px;padding:15px 17px;cursor:pointer;font-size:15px;font-weight:800;min-height:59px}
+#medicare-intake-host .mi-step>summary::-webkit-details-marker{display:none}
+#medicare-intake-host .mi-step>summary:hover{background:#f3f8fb}
+#medicare-intake-host .mi-step[open]>summary{border-bottom:1px solid #d8e3eb;background:#edf4f8}
+#medicare-intake-host .mi-step-n{width:34px;height:34px;flex:none;display:grid;place-items:center;background:#e0ebf2;border-radius:9px;color:#2b5068;font-size:12px}
+#medicare-intake-host .mi-step[open] .mi-step-n{background:#284962;color:#fff}
+#medicare-intake-host .mi-chevron{font-size:25px;margin-left:auto;color:#648399;transition:transform .15s ease}
+#medicare-intake-host .mi-step[open] .mi-chevron{transform:rotate(180deg)}
+#medicare-intake-host .mi-step-inner{padding:18px}
+#medicare-intake-host .mi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#medicare-intake-host .mi-field{min-width:0;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#405970}
+#medicare-intake-host .mi-field span{line-height:1.4}
+#medicare-intake-host .mi-field input,#medicare-intake-host .mi-field select,#medicare-intake-host .mi-field textarea,#medicare-intake-host .mi-list-filter input{width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid #bbccd9;border-radius:9px;background:#fff;color:#20364a;font-size:15px;box-sizing:border-box}
+#medicare-intake-host .mi-field input:focus,#medicare-intake-host .mi-field select:focus,#medicare-intake-host .mi-field textarea:focus{border-color:#3475a0}
+#medicare-intake-host .mi-field input[readonly]{background:#f0f6f9;color:#415e74}
+#medicare-intake-host .mi-field textarea{min-height:155px;resize:vertical}
+#medicare-intake-host .mi-wide{grid-column:1/-1}
+#medicare-intake-host .mi-dependent{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#medicare-intake-host .mi-payment-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:15px;border:1px solid #d4e1e9;border-radius:12px;background:#f6fafc}
+#medicare-intake-host .mi-payment-panel p{margin:3px 0;color:#51687b;font-size:13px}
+#medicare-intake-host .mi-warning{background:#fff7e8;color:#78551d;border:1px solid #f0dab0;border-radius:9px;padding:11px 13px;font-size:13px;line-height:1.5;margin:0}
+#medicare-intake-host .mi-muted{font-size:13px;color:#648095;margin:0}
+#medicare-intake-host .mi-repeat{grid-column:1/-1;display:grid;gap:12px}
+#medicare-intake-host .mi-repeat-row{border:1px solid #d8e3eb;background:#f7fafc;border-radius:12px;padding:14px}
+#medicare-intake-host .mi-row-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;font-size:13px}
+#medicare-intake-host .mi-row-head .btn{min-height:33px;padding:6px 11px}
+#medicare-intake-host .mi-add{grid-column:1/-1;justify-self:start}
+#medicare-intake-host .mi-photo-area{grid-column:1/-1;padding:16px;border:1px dashed #9cb4c4;border-radius:12px;background:#f6fafc;display:flex;flex-wrap:wrap;gap:10px}
+#medicare-intake-host .mi-upload{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;min-height:44px;padding:9px 14px;background:#e7f0f5;border:1px solid #bcd0df;border-radius:9px;color:#2e5269;font-size:13px;font-weight:800}
+#medicare-intake-host .mi-upload:hover{background:#dceaf2}
+#medicare-intake-host .mi-file-list{flex:1 1 100%;display:grid;gap:7px;min-width:0}
+#medicare-intake-host .mi-file-item{border:1px solid #d8e3eb;border-radius:9px;padding:8px 10px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
+#medicare-intake-host .mi-file-item span{overflow-wrap:anywhere;min-width:0}
+#medicare-intake-host .mi-file-item small{color:#718297}
+#medicare-intake-host .mi-file-item button{flex:none}
+#medicare-intake-host .mi-total{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #c6d9e5;background:#ecf4f8;color:#244d65;border-radius:10px;padding:17px;font-weight:800}
+#medicare-intake-host .mi-total output{font-size:24px;color:#133b55}
+#medicare-intake-host .mi-step-next{border-top:1px solid #e3ebf1;display:flex;justify-content:flex-end;margin-top:20px;padding-top:16px}
+#medicare-intake-host .mi-editor-footer{position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid #36536a;border-radius:13px;background:#112b3b;padding:13px 16px;box-shadow:0 -4px 22px rgba(6,21,29,.19)}
+#medicare-intake-host .mi-status{font-size:13px;color:#c7d5dc;line-height:1.5}
+#medicare-intake-host .mi-error{color:#aa2931!important;font-weight:700}
+#medicare-intake-host .mi-list-head{display:flex;gap:16px;align-items:center;margin-bottom:19px;flex-wrap:wrap}
+#medicare-intake-host .mi-list-head h2{margin:0;font-size:22px}
+#medicare-intake-host .mi-list-head small{color:#b9c9d3;font-weight:400}
+#medicare-intake-host .mi-list-filter{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;max-width:550px;margin-bottom:15px}
+#medicare-intake-host .mi-saved-row{width:100%;display:grid;align-items:center;grid-template-columns:minmax(160px,2fr) minmax(120px,1fr) minmax(145px,1fr) 68px;gap:10px;text-align:left;margin-bottom:9px;padding:16px;border:1px solid #d0dfe7;background:#fff;border-radius:12px;color:#213b51}
+#medicare-intake-host .mi-saved-row:hover{border-color:#3d718c;background:#f0f8fb}
+#medicare-intake-host .mi-saved-row small{color:#567286}
+#medicare-intake-host .mi-saved-row b{color:#255d80;text-align:right}
+#medicare-intake-host .mi-empty{padding:24px;border:1px solid #3b5568;border-radius:10px;color:#bacbd5}
+#medicare-intake-host .mi-loading{padding:35px;color:#bfd0db}
+@media(max-width:750px){
+ #medicare-intake-host .mi-editor-head{align-items:flex-start;flex-direction:column;padding:14px}
+ #medicare-intake-host .mi-editor-buttons{width:100%}
+ #medicare-intake-host .mi-editor-buttons .btn{flex:1}
+ #medicare-intake-host .mi-home-actions{grid-template-columns:1fr}
+ #medicare-intake-host .mi-grid,#medicare-intake-host .mi-dependent,#medicare-intake-host .mi-payment-panel{grid-template-columns:1fr}
+ #medicare-intake-host .mi-saved-row{grid-template-columns:1fr auto;gap:5px}
+ #medicare-intake-host .mi-saved-row strong{grid-column:1}
+ #medicare-intake-host .mi-saved-row span{grid-column:1}
+ #medicare-intake-host .mi-saved-row small{grid-column:1}
+ #medicare-intake-host .mi-saved-row b{grid-column:2;grid-row:1 / span 3}
+ #medicare-intake-host .mi-step-inner{padding:13px}
+ #medicare-intake-host .mi-step>summary{padding:13px}
+ #medicare-intake-host .mi-step-next .btn{width:100%}
+ #medicare-intake-host .mi-editor-footer{flex-direction:column;align-items:stretch;padding:12px}
+ #medicare-intake-host .mi-editor-footer .btn{width:100%}
+}
