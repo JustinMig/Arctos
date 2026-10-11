@@ -50,27 +50,36 @@ export function installMayerJustinCalendar() {
         includeReschedule: criteria.includeReschedule ? '1' : ''
       });
       const events = Array.isArray(payload.events) ? payload.events : [];
-      const eventIds = events.map(event => event.id).filter(Boolean);
-      let merged = events;
+      const record = { events, loadedAt: Date.now() };
+      calendarCache.set(key, record);
+
+      const notify = list => window.dispatchEvent(new CustomEvent('mig:calendar-refreshed', {
+        detail: { ...criteria, events: list }
+      }));
+      if (background) notify(events);
+
+      // Render the calendar as soon as the shared calendar API returns.
+      // Enrich the linked client IDs without making the user wait for a
+      // second, sequential Supabase request on every cold calendar load.
+      const eventIds = [...new Set(events.map(event => event.id).filter(Boolean))];
       if (eventIds.length) {
-        const { data: links, error } = await supabase
-          .from('calendar_event_client_links')
-          .select('event_id,client_id')
-          .in('event_id', eventIds);
-        if (error) throw error;
-        const byEvent = new Map((links || []).map(link => [link.event_id, link.client_id]));
-        merged = events.map(event => ({
-          ...event,
-          client_id: event.client_id || byEvent.get(event.id) || null
-        }));
+        void (async () => {
+          const { data: links, error } = await supabase
+            .from('calendar_event_client_links')
+            .select('event_id,client_id')
+            .in('event_id', eventIds);
+          if (error) throw error;
+          if (calendarCache.get(key) !== record) return;
+          const byEvent = new Map((links || []).map(link => [link.event_id, link.client_id]));
+          const merged = events.map(event => ({
+            ...event,
+            client_id: event.client_id || byEvent.get(event.id) || null
+          }));
+          record.events = merged;
+          notify(merged);
+        })().catch(error => console.warn('Calendar client links could not be refreshed.', error));
       }
-      calendarCache.set(key, { events: merged, loadedAt: Date.now() });
-      if (background) {
-        window.dispatchEvent(new CustomEvent('mig:calendar-refreshed', {
-          detail: { ...criteria, events: merged }
-        }));
-      }
-      return merged;
+      return events;
     })().finally(() => calendarInFlight.delete(key));
 
     calendarInFlight.set(key, request);
