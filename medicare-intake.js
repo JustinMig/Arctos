@@ -55,12 +55,12 @@ function formHTML() {
     ['specialist_copay','Specialist Copay'],['hearing','Hearing Benefit'],['transportation','Transportation'],
     ['food_utilities','Food / Utilities Amount']
   ].map(x => input(x[0],x[1],false,'placeholder="Amount / frequency / details"')).join('');
-  // First row: in-hospital daily cost and length of stay. Hospital total is calculated below.
+  // Hospital Total Price is entered manually, exactly like the other total price fields.
   // Each remaining cost and its total price share one row on desktop and tablet.
   // Only the five *total price* fields are included in Total HIP Amount.
   const hip = amount('hospital_cost_day','In-Hospital Cost Per Day') +
     field('hospital_days','Number of Hospital Days','type="number" inputmode="numeric" min="0" step="1"') +
-    field('hospital_total','Hospital Total Price (Cost × Days)','type="number" min="0" step="0.01" readonly',true) +
+    amount('hospital_total','Hospital Total Price') +
     amount('ambulance_cost','Ambulance Ride Cost') + amount('ambulance_total','Ambulance Total Price') +
     amount('outpatient_cost','Outpatient Cost') + amount('outpatient_total','Outpatient Total Price') +
     amount('cancer_amount','Cancer Coverage Amount') + amount('cancer_total','Cancer Total Price') +
@@ -176,9 +176,6 @@ export function createMedicareIntakeFeature() {
   function calc() {
     const f = host?.querySelector('.mi-form'); if (!f) return;
     const read = k => f.elements.namedItem(k)?.value || '';
-    const cost = read('hospital_cost_day'), days = read('hospital_days');
-    const hospital = cost !== '' && days !== '' ? (num(cost) * num(days)).toFixed(2) : '';
-    f.elements.namedItem('hospital_total').value = hospital;
     const total = ['hospital_total','ambulance_total','outpatient_total','cancer_total','snf_total'].reduce((n,k) => n + num(read(k)),0);
     f.elements.namedItem('hip_total').value = total.toFixed(2);
     f.querySelector('[data-mi-total]').textContent = moneyLabel(total);
