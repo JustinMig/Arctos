@@ -38,9 +38,9 @@ export async function loadAthenaClientSections(db,id){
     ].filter(Boolean)
   };
 }
-export async function syncAthenaClient(db,{clientId,data,edited=[],editedLists=[],skipped=[],createdClient=false}){
+export async function syncAthenaClient(db,{clientId,data,edited=[],editedLists=[],editedRows=[],skipped=[],createdClient=false}){
   if(!clientId)throw Error('Select a CRM client before saving.');
-  const edits=new Set(edited),lists=new Set(editedLists),skip=new Set(skipped),updated=[];
+  const edits=new Set(edited),lists=new Set(editedLists),rowsEdited=new Set(editedRows),skip=new Set(skipped),updated=[];
   const fields=(map,section,convert=(_k,v)=>maybe(v))=>{
     const out={};
     if(!skip.has(section))for(const [key,col] of Object.entries(map))
@@ -61,6 +61,7 @@ export async function syncAthenaClient(db,{clientId,data,edited=[],editedLists=[
     updated.push('client information');
   }
   const medicare=fields(MEDICARE,2);
+  if(!skip.has(2)&&edits.has('medicaid_status')&&data.medicaid_status==='no')medicare.medicaid_level=null;
   if(Object.keys(medicare).length){
     const prior=await one(db.from('medicare_details').select('client_id').eq('client_id',clientId),'Read Medicare details');
     if(prior){
@@ -89,13 +90,13 @@ export async function syncAthenaClient(db,{clientId,data,edited=[],editedLists=[
   for(const [step,kind,table] of [[4,'doctors','client_doctors'],[5,'medications','client_medications']]){
     if(skip.has(step)||!lists.has(kind))continue;
     for(const item of data[kind]||[]){
-      if(!trim(item.name))continue;
+      if(!trim(item.name)||!rowsEdited.has(item.crm_id))continue;
       const values=kind==='doctors' ? {
         doctor_name:trim(item.name),specialty:maybe(item.specialty),city:maybe(item.city),
         state:maybe(item.state),notes:maybe(item.network)
       } : {
         medication_name:trim(item.name),strength:maybe(item.strength),
-        frequency:maybe(item.frequency),notes:maybe(item.notes),status:'active'
+        frequency:maybe(item.frequency),notes:maybe([trim(item.notes),trim(item.quantity)?'Quantity / refill: '+trim(item.quantity):''].filter(Boolean).join('\n')),status:'active'
       };
       if(item.crm_id){
         const existing=await one(db.from(table).select('id').eq('id',item.crm_id).eq('client_id',clientId),'Find linked '+kind);
