@@ -169,7 +169,7 @@ export function createAthenaMedicareFeature() {
   let host=null, mode='home', record=null, linkedClient=null, files=[],queued=[],busy=false,dirty=false;
   let epoch=0, searchToken=0, searchTimer=0, vaultOriginal={}, vaultLoaded=false;
   let crmLoadToken=0;
-  const editedFields=new Set(), editedLists=new Set();
+  const editedFields=new Set(), editedLists=new Set(), editedRows=new Set();
   const active = () => host?.isConnected;
   const canLeave = () => !busy && (!dirty || window.confirm('Athena\'s Medicare has unsaved changes. Discard them?'));
   const say = (msg,error=false) => {
@@ -180,7 +180,7 @@ export function createAthenaMedicareFeature() {
   };
   function reset() {
     record=null;linkedClient=null;files=[];queued=[];dirty=false;busy=false;vaultOriginal={};vaultLoaded=false;
-    editedFields.clear();editedLists.clear();++crmLoadToken;
+    editedFields.clear();editedLists.clear();editedRows.clear();++crmLoadToken;
     clearTimeout(searchTimer);++searchToken;
   }
   function hero(subtitle) {
@@ -388,6 +388,49 @@ export function createAthenaMedicareFeature() {
     dirty=true;updateSections();
     say('Linked to existing CRM client '+displayName(client)+'.');
   }
+
+  // Bring existing CRM information into a freshly linked intake. Respect
+  // values the agent already typed, and never overwrite saved review history.
+  async function loadCRMForClient(clientId,fillBlanks=true) {
+    const token=++crmLoadToken;
+    try {
+      const crm=await loadAthenaClientSections(supabase,clientId);
+      if(token!==crmLoadToken || linkedClient?.id!==clientId || !active())return;
+      const form=host.querySelector('.at-form');
+      if(!form)return;
+      if(fillBlanks){
+        for(const [name,value] of Object.entries(crm.fields)){
+          const input=form.elements.namedItem(name);
+          if(input && !String(input.value||'').trim() && !editedFields.has(name)){
+            input.value=DATE_FIELDS.has(name)?dateInput(value):String(value??'');
+          }
+        }
+      }
+      for(const kind of ['doctors','medications','pharmacies']){
+        const box=host.querySelector('[data-at-repeat="'+kind+'"]');
+        if(!box)continue;
+        const have=collectRows(kind);
+        if(fillBlanks && !editedLists.has(kind) && !have.length && crm[kind]?.length){
+          box.innerHTML=crm[kind].map((row,i)=>repeatRow(kind,i,row)).join('');
+        }else if(kind!=='pharmacies'){
+          // Older Athena reviews did not store CRM row IDs. Resolve the
+          // connection by name before edits to avoid accidental duplicates.
+          const saved=crm[kind]||[];
+          for(const node of box.querySelectorAll('[data-at-row]')){
+            if(node.dataset.atCrmId)continue;
+            const name=node.querySelector('input[name="name"]')?.value?.trim().toLowerCase();
+            const match=name&&saved.find(x=>x.name?.trim().toLowerCase()===name);
+            if(match)node.dataset.atCrmId=match.crm_id;
+          }
+        }
+      }
+      updateSections();
+    }catch(error) {
+      if(token===crmLoadToken && active())say(
+        'Client linked, but some CRM details could not be loaded: '+(error.message||'Please retry.'),true);
+    }
+  }
+
   async function findPotentialDuplicate(data) {
     if(!data.first_name || !data.last_name)return null;
     const {data:people,error}=await supabase.from('clients')
@@ -562,6 +605,7 @@ export function createAthenaMedicareFeature() {
       if(task!==epoch||!active())return;
       record=data;linkedClient=client;
       renderEditor(data.form_data||{});
+      void loadCRMForClient(client.id,false);
       void readVault(client.id);
       void loadFileList();
     }catch(error){if(task===epoch && active()){
@@ -663,8 +707,10 @@ export function createAthenaMedicareFeature() {
     if(!control.closest('.at-form'))return;
     if(control.hasAttribute('data-at-date'))control.value=maskDate(control.value);
     const row=control.closest('[data-at-row]');
-    if(row)editedLists.add(row.dataset.atRow);
-    else if(control.name)editedFields.add(control.name);
+    if(row){
+      if(!row.dataset.atCrmId)row.dataset.atCrmId=crypto.randomUUID();
+      editedLists.add(row.dataset.atRow);editedRows.add(row.dataset.atCrmId);
+    }else if(control.name)editedFields.add(control.name);
     dirty=true;
     if(HIP_TOTALS.includes(control.name))calcHip();
     updateSections();say('Unsaved changes.');
@@ -676,8 +722,10 @@ export function createAthenaMedicareFeature() {
     }
     if(input.closest('.at-form') && input.name){
       const row=input.closest('[data-at-row]');
-      if(row)editedLists.add(row.dataset.atRow);
-      else editedFields.add(input.name);
+      if(row){
+        if(!row.dataset.atCrmId)row.dataset.atCrmId=crypto.randomUUID();
+        editedLists.add(row.dataset.atRow);editedRows.add(row.dataset.atCrmId);
+      }else editedFields.add(input.name);
       dirty=true;updateSections();return;
     }
     if(!input.hasAttribute('data-at-files'))return;
