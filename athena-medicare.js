@@ -458,6 +458,7 @@ export function createAthenaMedicareFeature() {
     host.querySelectorAll('[data-at-save]').forEach(b=>b.disabled=true);
     say('Saving securely…');
     let savedRecord=false;
+    let crmSections=[];
     try{
       const data=collectData(),skip=new Set(data.skipped_sections);
       const type=record?.review_kind || host.querySelector('[name="review_kind"]').value;
@@ -467,6 +468,7 @@ export function createAthenaMedicareFeature() {
       if(!skip.has(9)&&data.soa_status==='not_signed'&&!data.soa_reason)
         throw Error('Record why the Scope of Appointment was not signed (section 9).');
       const {data:auth,error:authError}=await supabase.auth.getUser();
+      let createdClient=false;
       if(authError || !auth?.user?.id)throw Error('Sign in to save your review.');
       if(!linkedClient?.id){
         const dup=await findPotentialDuplicate(data);
@@ -474,12 +476,17 @@ export function createAthenaMedicareFeature() {
           selectClient(dup);
         }else{
           linkedClient=await createClient(data,auth.user.id);
+          createdClient=true;
           // Keep the client linked if the following save fails; retries will not duplicate it.
           say('CRM client created. Saving the review…');
         }
       }
-      // Never overwrite an existing CRM client when conducting a review.
-      const name=displayName(linkedClient)||[data.first_name,data.last_name].filter(Boolean).join(' ').trim();
+      // Edited client names are reflected in both the review list and CRM.
+      // Never rename the client using stale/skipped Athena information.
+      const changedName=!skip.has(1) &&
+        (editedFields.has('first_name') || editedFields.has('last_name'));
+      const name=changedName ? [data.first_name||linkedClient.first_name,data.last_name||linkedClient.last_name].filter(Boolean).join(' ').trim() :
+        displayName(linkedClient)||[data.first_name,data.last_name].filter(Boolean).join(' ').trim();
       const status=statusOverride||host.querySelector('[name="workflow_status"]')?.value||record?.workflow_status||'draft';
       const payload={client_id:linkedClient.id,full_name:name,review_kind:type,
         workflow_status:status,review_date:data.review_date||null,next_contact_date:data.followup_date||null,
@@ -496,6 +503,20 @@ export function createAthenaMedicareFeature() {
       }
       if(result.error)throw result.error;
       record=result.data;savedRecord=true;
+      // Apply only fields actually edited in this form. Skipped sections,
+      // future plan recommendations and unrelated CRM records are untouched.
+      crmSections=await syncAthenaClient(supabase,{
+        clientId:record.client_id,data,edited:[...editedFields],
+        editedLists:[...editedLists],editedRows:[...editedRows],
+        skipped:data.skipped_sections,createdClient
+      });
+      if(crmSections.includes('client information')){
+        const {data:updated,error:updatedError}=await supabase.from('clients')
+          .select('id,first_name,last_name,phone,date_of_birth,email,address1,city,state,zip_code,county,gender,veteran')
+          .eq('id',record.client_id).single();
+        if(updatedError)throw updatedError;
+        linkedClient=updated;
+      }
       // Only store changed secure values in the separate encrypted vault.
       const med=String(host.querySelector('[name="medicare_number"]')?.value||'').trim();
       const mcd=String(host.querySelector('[name="medicaid_number"]')?.value||'').trim();
@@ -511,13 +532,15 @@ export function createAthenaMedicareFeature() {
       }
       if(queued.length)await uploadQueuedFiles();
       dirty=false;
+      editedFields.clear();editedLists.clear();editedRows.clear();
       renderEditor(record.form_data||{});
       // Restore encrypted numbers to the editor after its form is rebuilt.
       for(const k of ['medicare_number','medicaid_number']){
         const el=host.querySelector('[name="'+k+'"]');
         if(el)el.value=String(vaultOriginal[k]||'');
       }
-      say('Saved successfully. '+(status==='completed'?'Review marked complete.':'You can reopen this review anytime.'));
+      say('Saved successfully. '+(crmSections.length ? 'Linked CRM updated: '+crmSections.join(', ')+'. ' : 'Linked client kept unchanged. ')+(status==='completed'?'Review marked complete.':'You can reopen this review anytime.'));
+      window.dispatchEvent(new CustomEvent('mig:client-updated',{detail:{client_id:record.client_id,source:'athena-medicare'}}));
       void loadFileList();
     }catch(error){
       dirty=true;
