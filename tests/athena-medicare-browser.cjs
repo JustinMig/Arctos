@@ -77,6 +77,9 @@ let browser;
   await page.locator('[data-at-open]').click();
   await page.locator('[data-at-step="4"]').waitFor();
   assert.equal(await page.locator('[data-at-skip="4"]').isChecked(),true);
+  // Existing CRM rows are fetched asynchronously after a saved review opens.
+  // Wait for them to appear before editing rather than typing into the blank placeholder.
+  await page.waitForFunction(()=>document.querySelector('[data-at-row="doctors"] input[name="name"]')?.value==='Dr Smith');
   await page.locator('[data-at-step="4"] > summary').click();
   await page.locator('[data-at-skip="4"]').uncheck();
   await page.locator('[data-at-row="doctors"] input[name="city"]').first().fill('Tupelo');
