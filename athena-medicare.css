@@ -1,0 +1,162 @@
+
+/* Athena's Medicare — independent, responsive review workspace. */
+#athena-medicare-host{--at-ink:#16354b;--at-blue:#285875;--at-green:#176f5d;--at-line:#d5e3eb;--at-light:#f4f8fb;--at-bg:#ffffff;max-width:1230px;margin:0 auto 48px;color:var(--at-ink)}
+#athena-medicare-host *{box-sizing:border-box}
+#athena-medicare-host button,#athena-medicare-host input,#athena-medicare-host select,#athena-medicare-host textarea{font-family:inherit}
+#athena-medicare-host button{cursor:pointer}
+#athena-medicare-host .at-app{min-width:0}
+#athena-medicare-host .at-hero{background:linear-gradient(113deg,#122f42 0%,#215c70 58%,#23806a 125%);border:1px solid #3a7381;border-radius:20px;padding:24px 29px;color:#fff;margin-bottom:17px;box-shadow:0 7px 23px #102b4020}
+#athena-medicare-host .at-eyebrow{color:#b5d9e2;font-size:10px;letter-spacing:.18em;font-weight:900}
+#athena-medicare-host .at-hero-row{display:flex;align-items:center;justify-content:space-between;gap:18px}
+#athena-medicare-host .at-hero h2{margin:8px 0 5px;font-size:clamp(25px,3.2vw,38px);letter-spacing:-.035em;color:#fff;font-weight:850}
+#athena-medicare-host .at-hero p{margin:0;color:#dceaf0;max-width:730px;font-size:14px;line-height:1.6}
+#athena-medicare-host .at-hero-mark{height:65px;width:65px;border-radius:18px;display:grid;place-items:center;border:1px solid #9acac777;color:white;font-size:27px;font-weight:900;background:#ffffff16;flex:none}
+#athena-medicare-host .at-hero-mark span{font-size:13px;color:#aed9d8;position:relative;top:-8px}
+#athena-medicare-host .at-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#athena-medicare-host .at-start-card{display:flex;flex-direction:column;align-items:start;gap:15px;text-align:left;background:#fff;border:1px solid #cddde6;border-radius:17px;padding:27px;min-height:206px;box-shadow:0 2px 10px #0e304015;transition:transform .14s,border-color .14s,box-shadow .14s}
+#athena-medicare-host .at-start-card:hover{border-color:#3a8290;transform:translateY(-2px);box-shadow:0 8px 20px #113d5020}
+#athena-medicare-host .at-start-card strong{font-size:22px;color:#153c53;line-height:1.2}
+#athena-medicare-host .at-start-card small{font-size:13px;color:#597487;line-height:1.55;max-width:420px}
+#athena-medicare-host .at-card-num{font-size:10px;font-weight:850;letter-spacing:.15em;color:#187266}
+#athena-medicare-host .at-card-link{color:#176a6d;font-weight:850;font-size:12px;margin-top:auto}
+#athena-medicare-host .at-start-card-wide{grid-column:1/-1;min-height:157px;background:#edf7f7;border-color:#c6e3e3}
+#athena-medicare-host .at-security-line{padding:18px 20px;margin-top:19px;border-radius:11px;border:1px solid #d4e6e8;background:#eaf3f3;color:#415e67;font-size:12px;line-height:1.65}
+#athena-medicare-host .at-security-line strong{color:#195f61}
+#athena-medicare-host .at-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
+#athena-medicare-host .at-toolbar-right{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+#athena-medicare-host .at-btn{border:1px solid transparent;border-radius:9px;min-height:41px;padding:9px 14px;font-size:12px;font-weight:850;display:inline-flex;justify-content:center;align-items:center;gap:6px;text-decoration:none;line-height:1.2;white-space:nowrap}
+#athena-medicare-host .at-btn:focus-visible,#athena-medicare-host button:focus-visible,#athena-medicare-host input:focus-visible,#athena-medicare-host select:focus-visible,#athena-medicare-host textarea:focus-visible{outline:3px solid #92bcd1;outline-offset:2px}
+#athena-medicare-host .at-btn:disabled{cursor:wait;opacity:.55}
+#athena-medicare-host .at-btn-primary{background:#176957;color:#fff;border-color:#176957}
+#athena-medicare-host .at-btn-primary:hover{background:#115545}
+#athena-medicare-host .at-btn-soft{background:#f0f6f9;border-color:#cbdce5;color:#2b5870}
+#athena-medicare-host .at-btn-soft:hover{background:#e2f0f6}
+#athena-medicare-host .at-btn-outline{background:#fff;border-color:#9ebccc;color:#235a73}
+#athena-medicare-host .at-btn-outline:hover{background:#eef7fb}
+#athena-medicare-host .at-btn-delete{color:#982d33;border-color:#e4b9ba;background:#fff5f5}
+#athena-medicare-host .at-btn-delete:hover{background:#fbe6e7}
+#athena-medicare-host .at-kind{padding:8px 11px;background:#e2edf4;color:#315973;border-radius:999px;font-size:11px;font-weight:800}
+#athena-medicare-host .at-form-layout{display:grid;grid-template-columns:minmax(0,1fr) 254px;gap:16px;align-items:start}
+#athena-medicare-host .at-form-main{min-width:0}
+#athena-medicare-host .at-overview{background:#fff;border:1px solid var(--at-line);border-radius:14px;padding:19px 21px;margin-bottom:13px}
+#athena-medicare-host .at-overview strong{font-size:20px;color:#153e56}
+#athena-medicare-host .at-overview p{font-size:13px;color:#5d798d;line-height:1.5;margin:5px 0 0}
+#athena-medicare-host .at-client-picker{background:#edf7f6;border:1px solid #c3dfda;border-radius:14px;padding:16px;margin-bottom:13px}
+#athena-medicare-host .at-client-pick-head strong{display:block;font-size:14px;color:#245f57}
+#athena-medicare-host .at-client-pick-head small{font-size:12px;color:#52767b;line-height:1.6}
+#athena-medicare-host .at-search{margin-top:12px;max-width:580px}
+#athena-medicare-host .at-client-results{display:grid;gap:6px;margin-top:8px;max-height:330px;overflow:auto}
+#athena-medicare-host .at-client-option{border:1px solid #cbdce0;background:#fff;border-radius:8px;color:#224d66;padding:10px 12px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:12px}
+#athena-medicare-host .at-client-option:hover{border-color:#4d978a;background:#f5fcfa}
+#athena-medicare-host .at-client-option small{color:#56798a}
+#athena-medicare-host .at-linked{background:#fff;border:1px solid #b4dbd3;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:11px;margin-top:10px;padding:10px 12px;flex-wrap:wrap}
+#athena-medicare-host .at-linked div{display:flex;flex-direction:column;gap:3px}
+#athena-medicare-host .at-linked div strong{font-size:15px;color:#1b554e}
+#athena-medicare-host .at-linked span,#athena-medicare-host .at-linked small{font-size:11px;color:#64817a}
+#athena-medicare-host .at-steps{display:grid;gap:10px}
+#athena-medicare-host .at-step{border:1px solid #ccdae2;border-radius:13px;background:#fff;overflow:hidden;color:#223e50}
+#athena-medicare-host .at-step>summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:69px;padding:13px 18px;cursor:pointer}
+#athena-medicare-host .at-step>summary::-webkit-details-marker{display:none}
+#athena-medicare-host .at-step>summary:hover{background:#f4f9fb}
+#athena-medicare-host .at-step[open]>summary{background:#eaf3f7;border-bottom:1px solid #d2e0e8}
+#athena-medicare-host .at-step-no{width:39px;height:39px;border-radius:10px;background:#e4edf2;color:#336179;flex:none;display:grid;place-items:center;font-size:12px;font-weight:850}
+#athena-medicare-host .at-step[open] .at-step-no{background:#285e74;color:white}
+#athena-medicare-host .at-step-title{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+#athena-medicare-host .at-step-title strong{font-size:14px}
+#athena-medicare-host .at-step-title small{font-size:11px;color:#6b8596;line-height:1.3;font-weight:500}
+#athena-medicare-host .at-step-state{color:#678296;background:#f1f5f7;border-radius:20px;padding:5px 8px;white-space:nowrap;font-size:10px;font-weight:850}
+#athena-medicare-host .at-is-skipped .at-step-state{background:#d9f0e7;color:#176a55}
+#athena-medicare-host .at-arrow{margin-left:auto;color:#5d8397;font-size:23px;transition:transform .17s}
+#athena-medicare-host .at-step[open] .at-arrow{transform:rotate(180deg)}
+#athena-medicare-host .at-step-inner{padding:17px}
+#athena-medicare-host .at-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#athena-medicare-host .at-field{display:flex;flex-direction:column;gap:6px;min-width:0;color:#38596c;font-size:12px;font-weight:750}
+#athena-medicare-host .at-field>span{line-height:1.4}
+#athena-medicare-host .at-field input,#athena-medicare-host .at-field select,#athena-medicare-host .at-field textarea{background:#fff;border:1px solid #b8cad6;border-radius:9px;padding:10px 12px;min-height:42px;min-width:0;width:100%;font-size:14px;color:#1d394a}
+#athena-medicare-host .at-field textarea{resize:vertical;min-height:95px;line-height:1.5}
+#athena-medicare-host .at-span{grid-column:1/-1}
+#athena-medicare-host .at-skip{cursor:pointer;display:flex;align-items:center;gap:9px;background:#f0f8f5;border:1px solid #cfe5dc;padding:10px 12px;border-radius:9px;color:#20634f;font-size:12px;font-weight:800;margin-bottom:16px}
+#athena-medicare-host .at-skip input{accent-color:#176a55;width:18px;height:18px;cursor:pointer;margin:0}
+#athena-medicare-host .at-skipped{background:#e8f6f0;color:#206b50;padding:16px;border-radius:10px;font-weight:750;font-size:12px}
+#athena-medicare-host [hidden]{display:none!important}
+#athena-medicare-host .at-step-actions{border-top:1px solid #e5edf1;margin-top:18px;padding-top:13px;display:flex;justify-content:flex-end}
+#athena-medicare-host .at-repeat-wrap{background:#f5f9fb;border:1px solid #d5e3e8;border-radius:11px;padding:13px}
+#athena-medicare-host .at-repeat-title{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:9px;flex-wrap:wrap}
+#athena-medicare-host .at-repeat-title strong{font-size:13px;color:#285b6c}
+#athena-medicare-host .at-repeat{display:grid;gap:10px}
+#athena-medicare-host .at-repeat-row{border:1px solid #d4e1e7;background:#fff;border-radius:10px;padding:12px}
+#athena-medicare-host .at-repeat-row .at-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#athena-medicare-host .at-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:12px}
+#athena-medicare-host .at-row-head strong{font-size:12px}
+#athena-medicare-host .at-text-btn{background:none;border:0;color:#1d6a82;font-size:12px;font-weight:850;padding:6px 4px;white-space:nowrap}
+#athena-medicare-host .at-text-btn:hover{text-decoration:underline}
+#athena-medicare-host .at-secret{display:flex;align-items:flex-end;gap:7px;min-width:0}
+#athena-medicare-host .at-secret .at-field{flex:1;min-width:0}
+#athena-medicare-host .at-secret .at-text-btn{min-height:42px}
+#athena-medicare-host .at-note{background:#eaf5f5;border:1px solid #c8e4e4;border-radius:9px;padding:11px;color:#32616c;font-size:12px;line-height:1.55}
+#athena-medicare-host .at-helper{font-size:12px;color:#6b8795;line-height:1.55;margin:7px 0}
+#athena-medicare-host .at-hip-total{display:flex;justify-content:space-between;align-items:center;border:1px solid #c3dcda;background:#e9f5f3;border-radius:10px;padding:17px;color:#246354;font-size:13px;font-weight:850;gap:10px}
+#athena-medicare-host .at-hip-total strong{color:#104b41;font-size:21px}
+#athena-medicare-host .at-attachments{margin:15px 0;border:1px solid #d1e0e8;background:#fff;border-radius:13px;padding:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:11px}
+#athena-medicare-host .at-attachments strong{font-size:14px}
+#athena-medicare-host .at-attachments p{font-size:12px;color:#648092;line-height:1.5;margin:4px 0 0;max-width:520px}
+#athena-medicare-host .at-file-button{cursor:pointer}
+#athena-medicare-host .at-file-list{flex-basis:100%;display:grid;gap:6px}
+#athena-medicare-host .at-file{display:flex;align-items:center;justify-content:space-between;border:1px solid #dbe5eb;background:#f8fbfc;border-radius:8px;padding:7px 10px;gap:9px;font-size:12px;color:#375e73}
+#athena-medicare-host .at-file span{overflow-wrap:anywhere}
+#athena-medicare-host .at-file-list small{color:#668094;font-size:11px}
+#athena-medicare-host .at-save-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #b9d6d2;background:#e6f2ee;border-radius:12px;padding:13px 15px;margin-top:14px}
+#athena-medicare-host .at-save-footer [data-at-status]{font-size:12px;line-height:1.5;color:#336855}
+#athena-medicare-host .at-error{color:#b33133!important;font-weight:800}
+#athena-medicare-host .at-sidebar{display:grid;gap:12px}
+#athena-medicare-host .at-side-card{border:1px solid #ccdde6;background:#fff;border-radius:14px;padding:19px;position:sticky;top:16px}
+#athena-medicare-host .at-side-overline{font-size:10px;font-weight:900;letter-spacing:.12em;color:#448276}
+#athena-medicare-host .at-side-card h3{font-size:17px;line-height:1.3;margin:9px 0 16px;color:#21495d}
+#athena-medicare-host .at-side-card p{font-size:12px;color:#698293;line-height:1.6;margin:12px 0 0}
+#athena-medicare-host [data-at-progress]{display:flex;flex-direction:column;gap:4px}
+#athena-medicare-host [data-at-progress] strong{font-size:24px;color:#176d58}
+#athena-medicare-host [data-at-progress] small{font-size:11px;color:#6d8795}
+#athena-medicare-host .at-progress-track{margin-top:13px;height:7px;border-radius:99px;background:#e3edf0;overflow:hidden}
+#athena-medicare-host .at-progress-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,#176a58,#47b397);transition:width .2s}
+#athena-medicare-host .at-side-note{background:#f0f8f7;border-color:#d5e7e5;position:static}
+#athena-medicare-host .at-side-note strong{font-size:13px;color:#247261}
+#athena-medicare-host .at-saved-head{display:flex;justify-content:space-between;align-items:end;gap:14px;margin:19px 0 14px;flex-wrap:wrap}
+#athena-medicare-host .at-saved-head h3{font-size:22px;margin:0;color:#143f58}
+#athena-medicare-host .at-saved-head p{color:#658394;font-size:12px;margin:6px 0 0}
+#athena-medicare-host .at-filter{min-width:260px}
+#athena-medicare-host .at-saved-list{display:grid;gap:9px}
+#athena-medicare-host .at-saved-card{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #cfdee6;border-radius:12px;padding:10px}
+#athena-medicare-host .at-saved-open{flex:1;background:transparent;border:0;text-align:left;display:flex;flex-direction:column;gap:4px;padding:8px 10px;min-width:0}
+#athena-medicare-host .at-saved-open strong{color:#264d61;font-size:16px;overflow-wrap:anywhere}
+#athena-medicare-host .at-saved-open small{color:#748b99;font-size:12px;overflow-wrap:anywhere}
+#athena-medicare-host .at-kind-badge{font-size:10px;font-weight:900;color:#187766;letter-spacing:.06em;text-transform:uppercase}
+#athena-medicare-host .at-saved-open:hover strong{color:#187568;text-decoration:underline}
+#athena-medicare-host .at-list-status{font-size:12px;color:#658392;line-height:1.6;margin:0 0 12px}
+#athena-medicare-host .at-empty,#athena-medicare-host .at-loading{padding:30px;border:1px dashed #b8d0d6;border-radius:12px;color:#5e7b8d;text-align:center;background:#f5fafb}
+@media(max-width:1050px){#athena-medicare-host .at-form-layout{grid-template-columns:minmax(0,1fr)}#athena-medicare-host .at-sidebar{display:none}}
+@media(max-width:680px){
+ #athena-medicare-host .at-hero{padding:19px;border-radius:14px}
+ #athena-medicare-host .at-hero-mark{height:43px;width:43px;border-radius:11px;font-size:21px}
+ #athena-medicare-host .at-home-grid{grid-template-columns:1fr}
+ #athena-medicare-host .at-start-card-wide{grid-column:auto}
+ #athena-medicare-host .at-start-card{padding:21px;min-height:168px}
+ #athena-medicare-host .at-toolbar,#athena-medicare-host .at-toolbar-right{align-items:stretch}
+ #athena-medicare-host .at-toolbar{display:grid;grid-template-columns:1fr}
+ #athena-medicare-host .at-toolbar-right{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #athena-medicare-host .at-toolbar-right .at-kind{grid-column:1/-1;text-align:center}
+ #athena-medicare-host .at-grid,#athena-medicare-host .at-repeat-row .at-grid{grid-template-columns:1fr}
+ #athena-medicare-host .at-step>summary{padding:12px;gap:8px}
+ #athena-medicare-host .at-step-no{width:33px;height:33px;font-size:11px}
+ #athena-medicare-host .at-step-title strong{font-size:13px}
+ #athena-medicare-host .at-step-title small{font-size:10px}
+ #athena-medicare-host .at-step-state{font-size:9px;padding:4px 6px}
+ #athena-medicare-host .at-step-inner{padding:13px}
+ #athena-medicare-host .at-save-footer{flex-direction:column;align-items:stretch}
+ #athena-medicare-host .at-save-footer .at-btn{width:100%}
+ #athena-medicare-host .at-attachments{align-items:stretch}
+ #athena-medicare-host .at-file-button{width:100%}
+ #athena-medicare-host .at-saved-head{align-items:stretch}
+ #athena-medicare-host .at-filter{min-width:0;width:100%}
+ #athena-medicare-host .at-client-option{align-items:flex-start;flex-direction:column}
+}
+@media print{body .sidebar,body .top,body .at-toolbar,body .at-sidebar,body .at-step-actions,body .at-save-footer,body .at-skip,body .at-file-button{display:none!important}#athena-medicare-host .at-step{break-inside:avoid}#athena-medicare-host .at-step-inner{display:block!important}}
