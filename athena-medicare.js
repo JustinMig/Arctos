@@ -1,0 +1,686 @@
+
+import { supabase } from './supabase-client.js';
+import { esc, dateISO, dateText } from './core.js';
+
+// A standalone, secure workflow alongside (not replacing) Medicare Reviews.
+// Private identity numbers live in the CRM's encrypted client-sensitive vault.
+const TABLE = 'athena_medicare_reviews';
+const BUCKET = 'mh-client-documents';
+const DOC_CATEGORY = 'medicare_intake_pharmacy';
+const FILE_LIMIT = 25 * 1024 * 1024;
+const ALLOWED_FILES = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf']);
+const FIELD_GROUPS = {
+  1: ['first_name','last_name','dob','phone','email','address','city','state','zip','county','gender','veteran'],
+  2: ['part_a','part_b','medicaid_status','medicaid_level','medicare_status','eligibility_notes'],
+  3: ['current_carrier','current_plan','current_plan_id','current_year','current_member_id','current_plan_type','current_premium','current_like','current_dislike'],
+  4: [],
+  5: [],
+  6: ['care_priorities','dental_need','vision_need','hearing_need','transport_need','otc_need','giveback_need','food_need','preferred_hospitals','network_concerns'],
+  7: ['recommended_carrier','recommended_plan','recommended_plan_id','new_effective','new_premium','new_moop','dental_benefit','vision_benefit','hearing_benefit','otc_benefit','food_benefit','transport_benefit','giveback_benefit','pcp_copay','specialist_copay','hospital_copay','recommendation_reason','doctor_network_verified','drug_coverage_verified'],
+  8: ['hip_hospital_day','hip_days','hip_hospital_total','hip_ambulance','hip_outpatient','hip_cancer','hip_snf','hip_notes'],
+  9: ['review_date','soa_status','soa_reason','permission_to_contact','application_status','followup_date','followup_action','next_steps','client_questions','private_notes']
+};
+const DATE_FIELDS = new Set(['dob','part_a','part_b','new_effective','review_date','followup_date']);
+const HIP_TOTALS = ['hip_hospital_total','hip_ambulance','hip_outpatient','hip_cancer','hip_snf'];
+const SECTIONS = [
+  ['Client & contact','Confirm who we are helping and link their CRM profile.'],
+  ['Medicare & Medicaid','Eligibility dates and coverage assistance.'],
+  ['Current coverage','What they have today and what works or does not.'],
+  ['Doctors & pharmacies','People and locations that must remain accessible.'],
+  ['Prescriptions','Medication information to verify coverage and costs.'],
+  ['Needs & priorities','What matters most when comparing plans.'],
+  ['Plan recommendation','Record the proposed plan and benefit comparison.'],
+  ['Hospital protection','Optional indemnity needs and cost comparison.'],
+  ['Review, SOA & follow-up','Document the conversation, next steps and outcome.']
+];
+const DOCTOR_COLS = [['name','Doctor name'],['specialty','Specialty'],['city','City'],['state','State'],['network','Network notes']];
+const PHARMACY_COLS = [['name','Pharmacy'],['city','City'],['state','State'],['preferred','Preferred / notes']];
+const MED_COLS = [['name','Medication'],['strength','Strength / dosage'],['frequency','Frequency'],['quantity','Quantity / refill'],['notes','Notes']];
+
+function control(name,label,kind='text',hint='') {
+  const type = kind === 'date' ? 'text' : kind;
+  const attrs = kind === 'date' ? ' data-at-date inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY"' :
+    kind === 'number' ? ' inputmode="decimal" min="0" step="0.01" placeholder="0.00"' :
+    kind === 'tel' ? ' inputmode="tel" autocomplete="tel"' : '';
+  return '<label class="at-field"><span>' + esc(label) + '</span><input name="' + name + '" type="' + type + '"' + attrs + (hint ? ' placeholder="' + esc(hint) + '"' : '') + '></label>';
+}
+function choice(name,label,entries) {
+  return '<label class="at-field"><span>' + esc(label) + '</span><select name="' + name + '">' +
+    '<option value="">Select…</option>' + entries.map(x => '<option value="' + esc(x[0]) + '">' + esc(x[1]) + '</option>').join('') +
+    '</select></label>';
+}
+function area(name,label,hint='') {
+  return '<label class="at-field at-span"><span>' + esc(label) + '</span><textarea name="' + name + '" rows="3" placeholder="' + esc(hint) + '"></textarea></label>';
+}
+const yesNo = (name,label) => choice(name,label,[['yes','Yes'],['no','No'],['unknown','Not sure']]);
+const options = (s) => s.map(x => [x,x]);
+function repeatArea(kind,title,columns) {
+  return '<div class="at-repeat-wrap at-span"><div class="at-repeat-title"><strong>' + esc(title) + '</strong>' +
+    '<button type="button" class="at-btn at-btn-soft" data-at-add="' + kind + '">+ Add ' + esc(title.slice(0,-1)) + '</button></div>' +
+    '<div data-at-repeat="' + kind + '" class="at-repeat"></div></div>';
+}
+function repeatRow(kind,index,data={}) {
+  const cols = kind === 'doctors' ? DOCTOR_COLS : kind === 'pharmacies' ? PHARMACY_COLS : MED_COLS;
+  return '<div class="at-repeat-row" data-at-row="' + kind + '"><div class="at-row-head"><strong>' +
+    esc((kind === 'doctors' ? 'Doctor' : kind === 'pharmacies' ? 'Pharmacy' : 'Medication') + ' ' + (index+1)) +
+    '</strong><button class="at-text-btn" type="button" data-at-remove="' + kind + '">Remove</button></div><div class="at-grid">' +
+    cols.map(([key,label]) => '<label class="at-field"><span>' + esc(label) + '</span><input name="' + key +
+      '" value="' + esc(data[key] || '') + '" autocomplete="off"></label>').join('') + '</div></div>';
+}
+function sectionBody(index) {
+  switch(index) {
+    case 1: return control('first_name','First name') + control('last_name','Last name') + control('dob','Date of birth','date') +
+      control('phone','Phone number','tel') + control('email','Email','email') + yesNo('veteran','Veteran') +
+      control('address','Street address') + control('city','City') + control('state','State','text','MS') +
+      control('zip','ZIP code','text','38801') + control('county','County') +
+      choice('gender','Sex',[['male','Male'],['female','Female'],['other','Other / prefer not to say']]);
+    case 2: return '<div class="at-note at-span">Medicare and Medicaid ID numbers are stored only in the CRM encrypted vault—not in review notes or saved form JSON.</div>' +
+      '<div class="at-secret"><label class="at-field"><span>Medicare number (secure)</span><input name="medicare_number" type="password" autocomplete="off" spellcheck="false" maxlength="25"></label><button type="button" class="at-text-btn" data-at-reveal="medicare_number">Show</button></div>' +
+      control('part_a','Part A effective date','date') + control('part_b','Part B effective date','date') +
+      choice('medicare_status','Medicare status',[['active','Active'],['pending','Pending'],['unknown','Not confirmed']]) +
+      yesNo('medicaid_status','Has Medicaid?') +
+      '<div class="at-secret"><label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="password" autocomplete="off" spellcheck="false" maxlength="35"></label><button type="button" class="at-text-btn" data-at-reveal="medicaid_number">Show</button></div>' +
+      choice('medicaid_level','Medicaid level',[['QMB','QMB'],['QMB+','QMB+'],['SLMB','SLMB'],['SLMB+','SLMB+'],['FBDE','Full Benefit Dual Eligible'],['QI','QI'],['QDWI','QDWI'],['other','Other']]) +
+      area('eligibility_notes','Eligibility / assistance notes');
+    case 3: return control('current_carrier','Current carrier') + control('current_plan','Current plan name') +
+      control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
+      control('current_member_id','Member ID') +
+      choice('current_plan_type','Plan type',[['HMO','HMO'],['PPO','PPO'],['HMO-POS','HMO-POS'],['D-SNP','D-SNP'],['C-SNP','C-SNP'],['Medigap','Supplement'],['Original Medicare','Original Medicare'],['Other','Other']]) +
+      control('current_premium','Monthly plan premium','number') +
+      area('current_like','Benefits or features they want to keep') + area('current_dislike','Problems with current coverage');
+    case 4: return repeatArea('doctors','Doctors',DOCTOR_COLS) + repeatArea('pharmacies','Pharmacies',PHARMACY_COLS) +
+      '<p class="at-helper at-span">Record the doctor\'s preferred location. Verify network status directly with the plan before enrollment.</p>';
+    case 5: return repeatArea('medications','Medications',MED_COLS) +
+      '<p class="at-helper at-span">Confirm medication strengths, quantity, preferred pharmacy, formulary and any prior authorization requirements.</p>';
+    case 6: return area('care_priorities','Top priorities','What matters most: cost, doctors, dental, prescriptions, etc.') +
+      yesNo('dental_need','Dental / dentures important?') + yesNo('vision_need','Vision important?') +
+      yesNo('hearing_need','Hearing important?') + yesNo('transport_need','Transportation needed?') +
+      yesNo('otc_need','OTC allowance important?') + yesNo('food_need','Food / utility help needed?') +
+      yesNo('giveback_need','Part B giveback important?') +
+      area('preferred_hospitals','Preferred hospitals and specialists') + area('network_concerns','Out-of-network or prior authorization concerns');
+    case 7: return control('recommended_carrier','Recommended carrier') + control('recommended_plan','Recommended plan') +
+      control('recommended_plan_id','Plan ID (contract–PBP)') + control('new_effective','Planned start date','date') +
+      control('new_premium','Monthly premium','number') + control('new_moop','In-network medical MOOP','number') +
+      control('dental_benefit','Dental') + control('vision_benefit','Vision') + control('hearing_benefit','Hearing') +
+      control('otc_benefit','OTC amount / frequency') + control('food_benefit','Food / utility benefits') +
+      control('transport_benefit','Transportation') + control('giveback_benefit','Part B giveback') +
+      control('pcp_copay','PCP copay') + control('specialist_copay','Specialist copay') +
+      control('hospital_copay','Inpatient hospital cost per day') +
+      yesNo('doctor_network_verified','Doctor network verified?') + yesNo('drug_coverage_verified','Drugs / pharmacy verified?') +
+      area('recommendation_reason','Why this plan was recommended');
+    case 8: return control('hip_hospital_day','Hospital cost per day','number') + control('hip_days','Hospital days','number') +
+      control('hip_hospital_total','Hospital total price','number') + control('hip_ambulance','Ambulance total','number') +
+      control('hip_outpatient','Outpatient total','number') + control('hip_cancer','Cancer total','number') +
+      control('hip_snf','Skilled nursing total','number') +
+      '<div class="at-hip-total at-span">Total planned HIP amount <strong data-at-hip-total>$0.00</strong></div>' +
+      area('hip_notes','Hospital indemnity comparison / notes');
+    case 9: return control('review_date','Conversation date','date') +
+      choice('soa_status','Scope of Appointment (SOA)',[['signed','Signed'],['not_signed','Not signed'],['not_required','Not required / confirmed'],['pending','Pending']]) +
+      area('soa_reason','SOA details / reason if not signed') +
+      yesNo('permission_to_contact','Permission to follow up?') +
+      choice('application_status','Application / review outcome',[['not_started','Not started'],['considering','Considering options'],['submitted','Application submitted'],['enrolled','Enrollment confirmed'],['declined','Declined / no change'],['other','Other']]) +
+      control('followup_date','Follow-up date','date') +
+      control('followup_action','Follow-up action / task') +
+      area('client_questions','Questions or concerns raised') +
+      area('next_steps','Agreed next steps') +
+      area('private_notes','Additional review notes') +
+      '<p class="at-helper at-span">Recording an SOA status here does not replace the signed Scope of Appointment. Confirm plan and eligibility details in official carrier/CMS documents.</p>';
+    default: return '';
+  }
+}
+function stepMarkup(index) {
+  const [title,subtitle] = SECTIONS[index-1];
+  return '<details class="at-step" data-at-step="' + index + '"' + (index === 1 ? ' open' : '') + '>' +
+    '<summary><span class="at-step-no">' + String(index).padStart(2,'0') + '</span><span class="at-step-title"><strong>' + esc(title) +
+    '</strong><small>' + esc(subtitle) + '</small></span><span class="at-step-state" data-at-state>Not started</span><span class="at-arrow">⌄</span></summary>' +
+    '<div class="at-step-inner"><label class="at-skip"><input type="checkbox" data-at-skip="' + index +
+    '"><span>Already in CRM — skip this section</span></label>' +
+    '<div data-at-step-fields><div class="at-grid">' + sectionBody(index) + '</div></div>' +
+    '<div class="at-skipped" data-at-skipped hidden>Already recorded in the CRM. You can skip this section or uncheck the box to update it here.</div>' +
+    '<div class="at-step-actions"><button type="button" class="at-btn at-btn-outline" data-at-next="' + index + '">' +
+    (index === SECTIONS.length ? 'Finish review' : 'Continue →') + '</button></div></div></details>';
+}
+function dateInput(raw) {
+  if (!raw) return '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(raw)) ? dateText(raw) : String(raw);
+}
+function cleanDate(value,label) {
+  if (!value) return null;
+  const date = dateISO(value);
+  if (!date) throw Error('Enter ' + label + ' as MM/DD/YYYY.');
+  return date;
+}
+function maskDate(value) {
+  const d = String(value || '').replace(/\D/g,'').slice(0,8);
+  return d.slice(0,2) + (d.length > 2 ? '/' + d.slice(2,4) : '') + (d.length > 4 ? '/' + d.slice(4) : '');
+}
+function displayName(c) { return [c?.first_name,c?.last_name].filter(Boolean).join(' ').trim(); }
+function num(value) { const n = Number(value); return Number.isFinite(n) && n > 0 ? n : 0; }
+function dollars(value) { return num(value).toLocaleString('en-US',{style:'currency',currency:'USD'}); }
+function mimeOf(file) {
+  const ext = String(file.name || '').toLowerCase().split('.').pop();
+  return file.type || ({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heic:'image/heic',heif:'image/heif',pdf:'application/pdf'})[ext];
+}
+function shortFileName(name) { return String(name).replace(/[^a-zA-Z0-9._-]/g,'-').slice(0,90); }
+
+export function createAthenaMedicareFeature() {
+  let host=null, mode='home', record=null, linkedClient=null, files=[],queued=[],busy=false,dirty=false;
+  let epoch=0, searchToken=0, searchTimer=0, vaultOriginal={}, vaultLoaded=false;
+  const active = () => host?.isConnected;
+  const canLeave = () => !busy && (!dirty || window.confirm('Athena\'s Medicare has unsaved changes. Discard them?'));
+  const say = (msg,error=false) => {
+    if (!host) return;
+    host.querySelectorAll('[data-at-status]').forEach(node => {
+      node.textContent=msg; node.classList.toggle('at-error',error);
+    });
+  };
+  function reset() {
+    record=null;linkedClient=null;files=[];queued=[];dirty=false;busy=false;vaultOriginal={};vaultLoaded=false;
+    clearTimeout(searchTimer);++searchToken;
+  }
+  function hero(subtitle) {
+    return '<div class="at-hero"><div class="at-eyebrow">MAYER MIG CRM / ATHENA WORKSPACE</div>' +
+      '<div class="at-hero-row"><div><h2>Athena\'s Medicare</h2><p>' + esc(subtitle) +
+      '</p></div><span class="at-hero-mark">A<span>+</span></span></div></div>';
+  }
+  function home() {
+    mode='home';reset();
+    host.innerHTML = '<div class="at-app">' + hero('A dedicated workspace for thoughtful Medicare conversations, from first enrollment to annual review.') +
+      '<div class="at-home-grid">' +
+      '<button class="at-start-card" type="button" data-at-new="new_intake"><span class="at-card-num">01 / NEW</span><strong>New Medicare intake</strong><small>Build a client profile, confirm eligibility and record plan recommendations.</small><span class="at-card-link">Start intake →</span></button>' +
+      '<button class="at-start-card" type="button" data-at-new="annual_review"><span class="at-card-num">02 / EXISTING</span><strong>Annual Medicare review</strong><small>Link an existing CRM client, identify changes and document next steps.</small><span class="at-card-link">Start review →</span></button>' +
+      '<button class="at-start-card at-start-card-wide" type="button" data-at-saved><span class="at-card-num">YOUR WORK</span><strong>Saved reviews & drafts</strong><small>Resume, update, complete or delete previously saved Athena records.</small><span class="at-card-link">Open saved work →</span></button></div>' +
+      '<div class="at-security-line"><strong>Private by design.</strong> Your records stay in this CRM under your existing access permissions. Never enter card CVVs, payment-card numbers or Social Security numbers in notes.</div></div>';
+  }
+  function clientPicker() {
+    const label = linkedClient ? '<div class="at-linked"><div><small>LINKED CRM CLIENT</small><strong>' + esc(displayName(linkedClient)) +
+      '</strong><span>' + esc(linkedClient.phone || '') + '</span></div>' +
+      '<button type="button" class="at-btn at-btn-soft" data-at-unlink>Change client</button></div>' : '';
+    return '<div class="at-client-picker"><div class="at-client-pick-head"><div><strong>Link to CRM client</strong><small>' +
+      (record?.review_kind === 'annual_review' ? 'Required for an annual review.' : 'Recommended to avoid duplicate records; new clients can be created when saving.') +
+      '</small></div></div>' + label +
+      (linkedClient ? '' : '<label class="at-field at-search"><span>Find existing client by name or phone</span>' +
+      '<input type="search" data-at-client-search placeholder="Search clients…" autocomplete="off"></label>' +
+      '<div data-at-client-results class="at-client-results"></div>') + '</div>';
+  }
+  function renderEditor(data={}) {
+    mode='edit';
+    const type = record?.review_kind || data.review_kind || 'new_intake';
+    const heading=type==='annual_review' ? 'Annual Medicare review' : 'New Medicare intake';
+    host.innerHTML='<div class="at-app">' + hero('A clear record of eligibility, needs, comparison, and follow-through.') +
+      '<div class="at-toolbar"><button type="button" class="at-btn at-btn-soft" data-at-home>← Workspace</button>' +
+      '<div class="at-toolbar-right"><span class="at-kind">' + esc(heading) + '</span>' +
+      (record?.id ? '<button type="button" class="at-btn at-btn-delete" data-at-delete>Delete</button>' : '') +
+      '<button type="button" class="at-btn at-btn-primary" data-at-save>Save review</button></div></div>' +
+      '<div class="at-form-layout"><div class="at-form-main">' +
+      '<div class="at-overview"><strong>' + esc(heading) + '</strong><p>Open each section, record the conversation and save as a draft or completed review.</p></div>' +
+      clientPicker() +
+      '<form class="at-form" autocomplete="off" novalidate><input type="hidden" name="review_kind" value="' + esc(type) + '">' +
+      '<div class="at-steps">' + SECTIONS.map((_,i)=>stepMarkup(i+1)).join('') + '</div>' +
+      '<div class="at-attachments"><div><strong>Supporting documents</strong><p>Securely attach plan letters, medication lists or pharmacy pictures. Files upload when you save.</p></div>' +
+      '<label class="at-btn at-btn-soft at-file-button">+ Add photos or PDFs<input type="file" data-at-files accept="image/*,application/pdf" multiple hidden></label>' +
+      '<div data-at-file-list class="at-file-list"></div></div>' +
+      '<div class="at-save-footer"><span data-at-status role="status" aria-live="polite">Ready to complete.</span>' +
+      '<button type="button" class="at-btn at-btn-primary" data-at-save>Save Athena review</button></div>' +
+      '</form></div><aside class="at-sidebar"><div class="at-side-card"><span class="at-side-overline">WORKFLOW</span><h3>Your review checklist</h3>' +
+      '<div data-at-progress><strong>0 of 9</strong><small>sections recorded or skipped</small></div>' +
+      '<div class="at-progress-track"><i data-at-progress-bar></i></div>' +
+      '<p>Use “Already in CRM” where the information is already recorded. Your review will remember what you skipped.</p></div>' +
+      '<div class="at-side-card at-side-note"><strong>Need a second opinion?</strong><p>Verify benefits with current official plan documents. This form records your discussion, not a guarantee of enrollment or coverage.</p></div></aside></div></div>';
+    const form=host.querySelector('.at-form');
+    for(const keys of Object.values(FIELD_GROUPS)) for(const key of keys){
+      const el=form.elements.namedItem(key);
+      if (!el) continue;
+      el.value=DATE_FIELDS.has(key) ? dateInput(data[key]) : String(data[key] ?? '');
+    }
+    const skipped=new Set(Array.isArray(data.skipped_sections) ? data.skipped_sections.map(Number) : []);
+    host.querySelectorAll('[data-at-skip]').forEach(x=>x.checked=skipped.has(Number(x.dataset.atSkip)));
+    for(const kind of ['doctors','pharmacies','medications']) {
+      const rows=Array.isArray(data[kind]) && data[kind].length ? data[kind] : [{}];
+      const box=host.querySelector('[data-at-repeat="'+kind+'"]');
+      if(box)box.innerHTML=rows.map((x,i)=>repeatRow(kind,i,x)).join('');
+    }
+    fillFiles();
+    updateSections(); calcHip();
+    dirty=false;
+    say(record?.id ? 'Saved review loaded. You can edit and save changes.' : 'New review — nothing saved yet.');
+  }
+  function updateSections() {
+    const form=host?.querySelector('.at-form');if(!form)return;
+    let done=0;
+    host.querySelectorAll('[data-at-step]').forEach(section=>{
+      const number=Number(section.dataset.atStep);
+      const skipped=section.querySelector('[data-at-skip]')?.checked;
+      section.classList.toggle('at-is-skipped',Boolean(skipped));
+      const fieldBox=section.querySelector('[data-at-step-fields]');
+      const message=section.querySelector('[data-at-skipped]');
+      if(fieldBox)fieldBox.hidden=!!skipped;
+      if(message)message.hidden=!skipped;
+      const filled=FIELD_GROUPS[number].some(key=>String(form.elements.namedItem(key)?.value||'').trim()) ||
+        (number===4 && (collectRows('doctors').length || collectRows('pharmacies').length)) ||
+        (number===5 && collectRows('medications').length);
+      if(skipped || filled)done++;
+      const label=section.querySelector('[data-at-state]');
+      if(label)label.textContent=skipped?'In CRM ✓':filled?'In progress':'Not started';
+    });
+    const progress=host.querySelector('[data-at-progress]');
+    if(progress)progress.innerHTML='<strong>'+done+' of '+SECTIONS.length+'</strong><small>sections recorded or skipped</small>';
+    const bar=host.querySelector('[data-at-progress-bar]');
+    if(bar)bar.style.width=Math.round(100*done/SECTIONS.length)+'%';
+  }
+  function collectRows(kind) {
+    if(!host)return[];
+    return Array.from(host.querySelectorAll('[data-at-row="'+kind+'"]')).map(node=>{
+      const out={};
+      node.querySelectorAll('input').forEach(i=>out[i.name]=i.value.trim());
+      return out;
+    }).filter(row=>Object.values(row).some(Boolean));
+  }
+  function skipped() {
+    return Array.from(host?.querySelectorAll('[data-at-skip]:checked')||[],i=>Number(i.dataset.atSkip));
+  }
+  function collectData() {
+    const form=host.querySelector('.at-form'),result={},skip=new Set(skipped());
+    const previous=record?.form_data||{};
+    for(const [number,keys] of Object.entries(FIELD_GROUPS)){
+      for(const key of keys){
+        let val=String(form.elements.namedItem(key)?.value||'').trim();
+        if(skip.has(Number(number)))val=String(previous[key]||'');
+        if(DATE_FIELDS.has(key) && val){
+          if(!skip.has(Number(number)))val=cleanDate(val,key.replaceAll('_',' '));
+        }
+        result[key]=val;
+      }
+    }
+    for(const [step,kind] of [[4,'doctors'],[4,'pharmacies'],[5,'medications']])
+      result[kind]=skip.has(step) ? (previous[kind]||[]) : collectRows(kind);
+    result.skipped_sections=[...skip];
+    result.hip_total=HIP_TOTALS.reduce((sum,key)=>sum+num(result[key]),0).toFixed(2);
+    result.schema_version=1;
+    return result;
+  }
+  function calcHip(){
+    const total=HIP_TOTALS.reduce((sum,key)=>sum+num(host?.querySelector('[name="'+key+'"]')?.value),0);
+    const out=host?.querySelector('[data-at-hip-total]');if(out)out.textContent=dollars(total);
+  }
+  function fillFiles(){
+    const box=host?.querySelector('[data-at-file-list]');if(!box)return;
+    box.innerHTML=files.map(f=>'<div class="at-file"><span>📎 '+esc(f.file_name)+'</span><button class="at-text-btn" type="button" data-at-view="'+esc(f.id)+'">View</button></div>').join('') +
+      queued.map((f,i)=>'<div class="at-file"><span>⏳ '+esc(f.name)+' — queued</span><button class="at-text-btn" type="button" data-at-unqueue="'+i+'">Remove</button></div>').join('') ||
+      '<small>No attachments added yet.</small>';
+  }
+  async function invokeSensitive(body) {
+    const {data,error}=await supabase.functions.invoke('client-sensitive',{body});
+    if(error)throw error;
+    if(data?.error)throw Error(data.error);
+    return data?.sensitive||{};
+  }
+  async function readVault(clientId) {
+    const task=++epoch;
+    try{
+      const data=await invokeSensitive({action:'get',client_id:clientId});
+      if(task!==epoch || !active() || linkedClient?.id!==clientId)return;
+      vaultOriginal=data;vaultLoaded=true;
+      const form=host.querySelector('.at-form');
+      if(!form)return;
+      for(const name of ['medicare_number','medicaid_number']){
+        const el=form.elements.namedItem(name);
+        if(el && !el.value)el.value=String(data[name]||'');
+      }
+    }catch(error){
+      if(task===epoch) say('Existing secure ID fields could not load. You can still save your review; retry the secure fields later.',true);
+    }
+  }
+  async function findClients(text) {
+    const term=String(text||'').trim().replace(/[%*,"()]/g,' ').slice(0,80);
+    const results=host?.querySelector('[data-at-client-results]');
+    const token=++searchToken;
+    if(!results)return;
+    if(term.length<2){results.replaceChildren();return;}
+    results.textContent='Searching CRM clients…';
+    try{
+      const q='"%'+term.replaceAll('"','')+'%"';
+      const {data,error}=await supabase.from('clients')
+        .select('id,first_name,last_name,phone,date_of_birth,email,address1,city,state,zip_code,county,gender,veteran')
+        .or('first_name.ilike.'+q+',last_name.ilike.'+q+',phone.ilike.'+q)
+        .order('last_name').limit(15);
+      if(error)throw error;
+      if(token!==searchToken || !results.isConnected)return;
+      results.innerHTML=(data||[]).length?(data||[]).map(x=>
+        '<button type="button" class="at-client-option" data-at-select-client="'+esc(x.id)+'"><strong>'+esc(displayName(x))+
+        '</strong><small>'+esc(x.phone||x.date_of_birth||'')+'</small></button>').join('') :
+        '<span class="at-helper">No matching CRM clients found.</span>';
+      results._athenaClients=data||[];
+    }catch(error){
+      if(token===searchToken && results.isConnected)results.textContent='Unable to search CRM clients: '+(error.message||'Please retry.');
+    }
+  }
+  function selectClient(client){
+    linkedClient=client; ++searchToken; clearTimeout(searchTimer);
+    const picker=host.querySelector('.at-client-picker');
+    if(picker)picker.outerHTML=clientPicker();
+    const form=host.querySelector('.at-form');
+    const copy={first_name:client.first_name,last_name:client.last_name,dob:dateInput(client.date_of_birth),
+      phone:client.phone,email:client.email,address:client.address1,city:client.city,state:client.state,zip:client.zip_code,
+      county:client.county,gender:client.gender,veteran:client.veteran===true?'yes':client.veteran===false?'no':''};
+    for(const [key,value] of Object.entries(copy)){
+      const field=form?.elements.namedItem(key);
+      if(field && !field.value)field.value=String(value||'');
+    }
+    vaultOriginal={};vaultLoaded=false;
+    for(const name of ['medicare_number','medicaid_number']){const el=form?.elements.namedItem(name);if(el)el.value='';}
+    void readVault(client.id);
+    dirty=true;updateSections();
+    say('Linked to existing CRM client '+displayName(client)+'.');
+  }
+  async function findPotentialDuplicate(data) {
+    if(!data.first_name || !data.last_name)return null;
+    const {data:people,error}=await supabase.from('clients')
+      .select('id,first_name,last_name,date_of_birth,phone,email,address1,city,state,zip_code,county,gender,veteran')
+      .ilike('first_name',data.first_name).ilike('last_name',data.last_name).limit(25);
+    if(error)throw error;
+    return (people||[]).find(x=>
+      (data.dob && x.date_of_birth===data.dob) ||
+      (data.phone && String(x.phone||'').replace(/\D/g,'')===String(data.phone).replace(/\D/g,'')))||null;
+  }
+  async function createClient(data,userId) {
+    const {data:client,error}=await supabase.from('clients').insert({
+      assigned_agent_id:userId,first_name:data.first_name,last_name:data.last_name,
+      date_of_birth:data.dob||null,phone:data.phone||null,email:data.email||null,address1:data.address||null,
+      city:data.city||null,state:data.state||null,zip_code:data.zip||null,county:data.county||null,
+      gender:data.gender||null,veteran:data.veteran==='yes'?true:data.veteran==='no'?false:null,
+      products:['medicare']
+    }).select('id,first_name,last_name,phone,date_of_birth,email,address1,city,state,zip_code,county,gender,veteran').single();
+    if(error)throw error;
+    return client;
+  }
+  async function saveReview(statusOverride='') {
+    if(busy||!host?.querySelector('.at-form'))return;
+    busy=true;
+    host.querySelectorAll('[data-at-save]').forEach(b=>b.disabled=true);
+    say('Saving securely…');
+    let savedRecord=false;
+    try{
+      const data=collectData(),skip=new Set(data.skipped_sections);
+      const type=record?.review_kind || host.querySelector('[name="review_kind"]').value;
+      if(type==='annual_review' && !linkedClient?.id)throw Error('Select the existing CRM client before saving an annual review.');
+      if(!linkedClient?.id && (!data.first_name||!data.last_name))
+        throw Error('Enter the client\'s first and last name or select an existing CRM client.');
+      if(!skip.has(9)&&data.soa_status==='not_signed'&&!data.soa_reason)
+        throw Error('Record why the Scope of Appointment was not signed (section 9).');
+      const {data:auth,error:authError}=await supabase.auth.getUser();
+      if(authError || !auth?.user?.id)throw Error('Sign in to save your review.');
+      if(!linkedClient?.id){
+        const dup=await findPotentialDuplicate(data);
+        if(dup && window.confirm('A matching CRM client already exists: '+displayName(dup)+'. Link this review to that CRM client instead of creating a duplicate?')){
+          selectClient(dup);
+        }else{
+          linkedClient=await createClient(data,auth.user.id);
+          // Keep the client linked if the following save fails; retries will not duplicate it.
+          say('CRM client created. Saving the review…');
+        }
+      }
+      // Never overwrite an existing CRM client when conducting a review.
+      const name=displayName(linkedClient)||[data.first_name,data.last_name].filter(Boolean).join(' ').trim();
+      const status=statusOverride||host.querySelector('[name="workflow_status"]')?.value||record?.workflow_status||'draft';
+      const payload={client_id:linkedClient.id,full_name:name,review_kind:type,
+        workflow_status:status,review_date:data.review_date||null,next_contact_date:data.followup_date||null,
+        form_data:data,updated_at:new Date().toISOString()};
+      let result;
+      if(record?.id){
+        const {client_id,...changes}=payload;
+        let q=supabase.from(TABLE).update(changes).eq('id',record.id);
+        if(record.updated_at)q=q.eq('updated_at',record.updated_at);
+        result=await q.select('*').maybeSingle();
+        if(!result.error && !result.data)throw Error('This review was changed elsewhere. Reopen it before overwriting the newer version.');
+      }else{
+        result=await supabase.from(TABLE).insert(payload).select('*').single();
+      }
+      if(result.error)throw result.error;
+      record=result.data;savedRecord=true;
+      // Only store changed secure values in the separate encrypted vault.
+      const med=String(host.querySelector('[name="medicare_number"]')?.value||'').trim();
+      const mcd=String(host.querySelector('[name="medicaid_number"]')?.value||'').trim();
+      if(!skip.has(2) && ((med && med!==String(vaultOriginal.medicare_number||'')) ||
+          (mcd && mcd!==String(vaultOriginal.medicaid_number||'')))){
+        const previous=vaultLoaded ? vaultOriginal : await invokeSensitive({action:'get',client_id:record.client_id});
+        const saved=await invokeSensitive({action:'save',client_id:record.client_id,sensitive:{
+          ssn:previous.ssn||'',drivers_license_number:previous.drivers_license_number||'',
+          medicare_number:med||previous.medicare_number||'',medicaid_number:mcd||previous.medicaid_number||''
+        }});
+        vaultOriginal={...previous,...saved,medicare_number:med||previous.medicare_number||'',medicaid_number:mcd||previous.medicaid_number||''};
+        vaultLoaded=true;
+      }
+      if(queued.length)await uploadQueuedFiles();
+      dirty=false;
+      renderEditor(record.form_data||{});
+      // Restore encrypted numbers to the editor after its form is rebuilt.
+      for(const k of ['medicare_number','medicaid_number']){
+        const el=host.querySelector('[name="'+k+'"]');
+        if(el)el.value=String(vaultOriginal[k]||'');
+      }
+      say('Saved successfully. '+(status==='completed'?'Review marked complete.':'You can reopen this review anytime.'));
+      void loadFileList();
+    }catch(error){
+      dirty=true;
+      say((savedRecord?'Review saved, but a secure detail or attachment needs attention: ':'Could not save: ')+(error.message||'Please retry.'),true);
+    }finally{
+      busy=false;
+      host?.querySelectorAll('[data-at-save]').forEach(b=>b.disabled=false);
+    }
+  }
+  async function loadFileList(){
+    if(!record?.id || !active())return;
+    const id=record.id;
+    const {data,error}=await supabase.from('documents').select('id,file_name,storage_path').eq('client_id',record.client_id)
+      .eq('category',DOC_CATEGORY).eq('notes','athena-medicare:'+id).order('created_at',{ascending:false});
+    if(error){say('Review loaded; attachments could not be retrieved: '+error.message,true);return;}
+    if(record?.id!==id)return;
+    files=data||[];fillFiles();
+  }
+  async function uploadQueuedFiles(){
+    for(const file of [...queued]){
+      const mime=mimeOf(file);
+      if(!ALLOWED_FILES.has(mime)||file.size>FILE_LIMIT)throw Error('Only PDF and photo files up to 25 MB are accepted.');
+      const path=record.client_id+'/athena-medicare/'+record.id+'/'+crypto.randomUUID()+'-'+shortFileName(file.name);
+      const uploaded=await supabase.storage.from(BUCKET).upload(path,file,{contentType:mime,upsert:false});
+      if(uploaded.error)throw uploaded.error;
+      const result=await supabase.from('documents').insert({
+        client_id:record.client_id,category:DOC_CATEGORY,file_name:file.name,storage_path:path,mime_type:mime,
+        file_size:file.size,notes:'athena-medicare:'+record.id
+      }).select('id,file_name,storage_path').single();
+      if(result.error){
+        await supabase.storage.from(BUCKET).remove([path]).catch(()=>{});
+        throw result.error;
+      }
+      files.unshift(result.data);queued=queued.filter(f=>f!==file);
+      fillFiles();
+    }
+  }
+  function savedListCard(x){
+    const kind=x.review_kind==='annual_review'?'Annual review':'New intake';
+    const status=x.workflow_status==='completed'?'Complete':x.workflow_status==='follow_up'?'Follow-up':'Draft';
+    const stamp=new Date(x.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return '<div class="at-saved-card" data-at-list-card><button type="button" class="at-saved-open" data-at-open="'+esc(x.id)+'">' +
+      '<span class="at-kind-badge">'+esc(kind)+'</span><strong>'+esc(x.full_name)+'</strong>' +
+      '<small>'+esc(stamp)+' · '+esc(status)+(x.next_contact_date?' · Follow up '+esc(dateText(x.next_contact_date)):'')+'</small></button>' +
+      '<button type="button" class="at-btn at-btn-delete" data-at-delete="'+esc(x.id)+'" data-at-name="'+esc(x.full_name)+'" data-at-updated="'+esc(x.updated_at)+'">Delete</button></div>';
+  }
+  async function savedList(){
+    if(!canLeave())return;
+    mode='list';reset();
+    const request=++epoch;
+    host.innerHTML='<div class="at-app">'+hero('Your saved Athena reviews and new intakes, ready when you need them.')+
+      '<div class="at-toolbar"><button type="button" class="at-btn at-btn-soft" data-at-home>← Workspace</button><button class="at-btn at-btn-primary" type="button" data-at-new="new_intake">+ New intake</button></div>'+
+      '<div class="at-saved-head"><div><h3>Saved Athena records</h3><p>Open to continue editing, or delete only the saved Athena record.</p></div>'+
+      '<label class="at-field at-filter"><span>Search</span><input type="search" data-at-list-search placeholder="Name or status" autocomplete="off"></label></div>'+
+      '<p class="at-list-status" data-at-status role="status">Loading saved reviews…</p><div data-at-saved-list class="at-saved-list"></div></div>';
+    try{
+      const {data,error}=await supabase.from(TABLE).select('id,client_id,full_name,review_kind,workflow_status,updated_at,next_contact_date')
+        .order('updated_at',{ascending:false}).limit(250);
+      if(error)throw error;
+      if(request!==epoch||!active())return;
+      const box=host.querySelector('[data-at-saved-list]');
+      const list=data||[];box._records=list;
+      renderList();
+      say(list.length+' saved review'+(list.length===1?'':'s')+'.');
+    }catch(error){if(request===epoch)say('Could not load saved reviews: '+error.message,true);}
+  }
+  function renderList(){
+    const box=host?.querySelector('[data-at-saved-list]');if(!box)return;
+    const search=String(host.querySelector('[data-at-list-search]')?.value||'').toLowerCase();
+    const matches=(box._records||[]).filter(r=>(r.full_name+' '+r.review_kind+' '+r.workflow_status).toLowerCase().includes(search));
+    box.innerHTML=matches.length?matches.map(savedListCard).join(''):'<p class="at-empty">No matching saved Athena reviews yet.</p>';
+  }
+  async function openSaved(id){
+    if(!canLeave())return;
+    const task=++epoch;
+    mode='loading';reset();epoch=task;
+    host.innerHTML='<div class="at-app">'+hero('Opening saved review…')+'<p class="at-loading">Loading review details…</p></div>';
+    try{
+      const {data,error}=await supabase.from(TABLE).select('*').eq('id',id).single();
+      if(error)throw error;
+      if(task!==epoch||!active())return;
+      const {data:client,error:clientError}=await supabase.from('clients')
+        .select('id,first_name,last_name,phone,date_of_birth,email,address1,city,state,zip_code,county,gender,veteran').eq('id',data.client_id).single();
+      if(clientError)throw clientError;
+      if(task!==epoch||!active())return;
+      record=data;linkedClient=client;
+      renderEditor(data.form_data||{});
+      void readVault(client.id);
+      void loadFileList();
+    }catch(error){if(task===epoch && active()){
+      host.innerHTML='<div class="at-app">'+hero('Could not open review')+
+        '<p class="at-error">'+esc(error.message||'Please retry.')+'</p><button class="at-btn at-btn-soft" data-at-saved>Saved reviews</button></div>';
+    }}
+  }
+  function newReview(kind){
+    if(!canLeave())return;
+    reset();record={review_kind:kind};renderEditor({review_date:dateText(new Date().toISOString().slice(0,10))});
+  }
+  async function removeReview(id,name,updatedAt){
+    if(busy||!id)return;
+    if(!window.confirm('Permanently delete the Athena Medicare review for '+(name||'this client')+
+      '?\n\nThe CRM client, insurance policies and saved documents will remain. The deleted review cannot be recovered.'))return;
+    busy=true;
+    try{
+      let q=supabase.from(TABLE).delete().eq('id',id);
+      if(updatedAt)q=q.eq('updated_at',updatedAt);
+      const {data,error}=await q.select('id').maybeSingle();
+      if(error)throw error;
+      if(!data?.id)throw Error('The saved record has changed or is already removed. Refresh and try again.');
+      busy=false;dirty=false;await savedList();
+    }catch(error){say('Delete failed: '+(error.message||'Please retry.'),true);}
+    finally{busy=false;}
+  }
+  async function viewAttachment(id){
+    const found=files.find(f=>f.id===id);
+    if(!found)return;
+    const {data,error}=await supabase.storage.from(BUCKET).createSignedUrl(found.storage_path,90);
+    if(error){say('Could not open attachment: '+error.message,true);return;}
+    window.open(data.signedUrl,'_blank','noopener,noreferrer');
+  }
+  function onClick(event){
+    const target=event.target.closest('button');
+    if(!target||!host?.contains(target))return;
+    if(target.hasAttribute('data-at-home')){if(canLeave())home();return;}
+    if(target.hasAttribute('data-at-new')){newReview(target.dataset.atNew);return;}
+    if(target.hasAttribute('data-at-saved')){void savedList();return;}
+    if(target.hasAttribute('data-at-save')){void saveReview();return;}
+    if(target.hasAttribute('data-at-open')){void openSaved(target.dataset.atOpen);return;}
+    if(target.hasAttribute('data-at-delete')){
+      const id=target.dataset.atDelete||record?.id;
+      const name=target.dataset.atName||record?.full_name;
+      const updated=target.dataset.atUpdated||record?.updated_at;
+      void removeReview(id,name,updated);return;
+    }
+    if(target.hasAttribute('data-at-select-client')){
+      const results=host.querySelector('[data-at-client-results]');
+      const client=results?._athenaClients?.find(x=>x.id===target.dataset.atSelectClient);
+      if(client)selectClient(client);return;
+    }
+    if(target.hasAttribute('data-at-unlink')){
+      linkedClient=null;vaultOriginal={};vaultLoaded=false;++epoch;
+      for(const name of ['medicare_number','medicaid_number']){
+        const el=host.querySelector('[name="'+name+'"]');if(el)el.value='';
+      }
+      const picker=host.querySelector('.at-client-picker');
+      if(picker)picker.outerHTML=clientPicker();
+      dirty=true;say('Client link removed. Select another existing client.');return;
+    }
+    if(target.hasAttribute('data-at-next')){
+      const index=Number(target.dataset.atNext);
+      if(index===SECTIONS.length){void saveReview();return;}
+      const next=host.querySelector('[data-at-step="'+(index+1)+'"]');
+      host.querySelectorAll('[data-at-step]').forEach(e=>e.open=false);
+      if(next){next.open=true;next.scrollIntoView({behavior:'smooth',block:'nearest'});}return;
+    }
+    if(target.hasAttribute('data-at-add')){
+      const kind=target.dataset.atAdd,box=host.querySelector('[data-at-repeat="'+kind+'"]');
+      if(!box)return;
+      box.insertAdjacentHTML('beforeend',repeatRow(kind,box.querySelectorAll('[data-at-row]').length));
+      dirty=true;updateSections();return;
+    }
+    if(target.hasAttribute('data-at-remove')){
+      const el=target.closest('[data-at-row]');if(el)el.remove();
+      dirty=true;updateSections();return;
+    }
+    if(target.hasAttribute('data-at-unqueue')){
+      queued.splice(Number(target.dataset.atUnqueue),1);fillFiles();dirty=true;return;
+    }
+    if(target.hasAttribute('data-at-view')){void viewAttachment(target.dataset.atView);return;}
+    if(target.hasAttribute('data-at-reveal')){
+      const control=host.querySelector('[name="'+target.dataset.atReveal+'"]');
+      if(!control)return;
+      control.type=control.type==='password'?'text':'password';
+      target.textContent=control.type==='password'?'Show':'Hide';
+    }
+  }
+  function onInput(event){
+    const control=event.target;
+    if(control.matches('[data-at-list-search]')){renderList();return;}
+    if(control.matches('[data-at-client-search]')){
+      clearTimeout(searchTimer);const value=control.value;
+      searchTimer=setTimeout(()=>void findClients(value),260);return;
+    }
+    if(!control.closest('.at-form'))return;
+    if(control.hasAttribute('data-at-date'))control.value=maskDate(control.value);
+    dirty=true;
+    if(HIP_TOTALS.includes(control.name))calcHip();
+    updateSections();say('Unsaved changes.');
+  }
+  function onChange(event){
+    const input=event.target;
+    if(input.hasAttribute('data-at-skip')){
+      dirty=true;updateSections();say('Skip selection changed. Save to keep it.');return;
+    }
+    if(!input.hasAttribute('data-at-files'))return;
+    for(const file of Array.from(input.files||[])){
+      const mime=mimeOf(file);
+      if(!ALLOWED_FILES.has(mime)||file.size>FILE_LIMIT){
+        say('Choose photos or PDFs no larger than 25 MB.',true);continue;
+      }
+      queued.push(file);dirty=true;
+    }
+    input.value='';fillFiles();
+    say('Attachment queued. Save the review to upload it securely.');
+  }
+  function mount(node){
+    host=node;home();
+    host.addEventListener('click',onClick);
+    host.addEventListener('input',onInput);
+    host.addEventListener('change',onChange);
+    host.addEventListener('toggle',onToggle,true);
+  }
+  function onToggle(event){
+    if(!event.target.matches('[data-at-step]') || !event.target.open)return;
+    host?.querySelectorAll('[data-at-step]').forEach(step=>{if(step!==event.target)step.open=false;});
+  }
+  function unmount(){
+    ++epoch;clearTimeout(searchTimer);++searchToken;
+    if(host){host.removeEventListener('click',onClick);host.removeEventListener('input',onInput);
+      host.removeEventListener('change',onChange);host.removeEventListener('toggle',onToggle,true);}
+    host=null;reset();
+  }
+  return {mount,unmount,canLeave,destroy:unmount};
+}
