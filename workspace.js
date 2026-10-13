@@ -16,6 +16,15 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     }).catch(error => { intakeModule = null; throw error; });
     return intakeModule;
   }
+  let athenaFeature = null, athenaModule = null;
+  async function athenaMedicare() {
+    if (!athenaModule) athenaModule = import('./athena-medicare.js')
+      .then(({ createAthenaMedicareFeature }) => {
+        athenaFeature = createAthenaMedicareFeature();
+        return athenaFeature;
+      }).catch(error => { athenaModule = null; throw error; });
+    return athenaModule;
+  }
   let maPlansFeature = null, maPlansModule = null;
   async function maPlans() {
     if (!maPlansModule) maPlansModule = import('./ma-plans-ui.js?v=ma-plans-6').then(({ createMAPlansFeature }) => {
@@ -69,6 +78,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (route === 'campaigns') return '<div id="campaigns-host"><p class="subtle">Loading campaigns…</p></div>';
     if (route === 'ma-plans') return '<div id="ma-plans-host"><p class="subtle">Loading 2027 Mississippi MA plans…</p></div>';
     if (route === 'medicare-intake') return '<div id="medicare-intake-host"><p class="subtle">Opening Medicare Reviews…</p></div>';
+    if (route === 'athena-medicare') return '<div id="athena-medicare-host"><p class="subtle">Opening Athena\'s Medicare…</p></div>';
     if (route === 'clients') return clientSearchMarkup(state.search, agents);
     if (route === 'appointments') return '<div id="calendar-host"></div>';
     if (route === 'communications') return `<div class="panel-card dark-card"><h2>Communications</h2><div class="integration-grid">${['RingCentral Voice', 'Client Text Messages', 'Call Recordings'].map(x => `<div><h3>${x}</h3><span class="tag">Not connected</span></div>`).join('')}</div>${empty('No conversation selected', 'Calls, texts, and recordings are not connected to this framework.')}</div>`;
@@ -80,6 +90,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     campaignFeature?.unmount();
     maPlansFeature?.unmount();
     intakeFeature?.unmount();
+    athenaFeature?.unmount();
     state.route = route;
     root.innerHTML = shell(route, connected, pageBody(route));
     root.querySelectorAll('[data-tool]').forEach(button => button.onclick = () => openTool(button.dataset.tool));
@@ -99,6 +110,14 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       const host = root.querySelector('#medicare-intake-host');
       medicareIntake().then(feature => { if (host.isConnected && !state.destroyed) feature.mount(host); })
         .catch(error => { if (host.isConnected) host.innerHTML = empty('Medicare Reviews unavailable', error.message); });
+    }
+    if (route === 'athena-medicare') {
+      const host = root.querySelector('#athena-medicare-host');
+      athenaMedicare().then(feature => {
+        if (host.isConnected && !state.destroyed) feature.mount(host);
+      }).catch(error => {
+        if (host.isConnected) host.innerHTML = empty("Athena's Medicare unavailable", error.message);
+      });
     }
     if (route === 'ma-plans') {
       const host = root.querySelector('#ma-plans-host');
@@ -748,6 +767,10 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       history.replaceState(null, '', '#/medicare-intake');
       return;
     }
+    if (state.route === 'athena-medicare' && next !== 'athena-medicare' && athenaFeature && !athenaFeature.canLeave()) {
+      history.replaceState(null, '', '#/athena-medicare');
+      return;
+    }
     if (dialogs.stack.length) {
       routing = true;
       history.replaceState(null, '', `#/${state.route}`);
@@ -795,6 +818,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     campaignFeature?.destroy();
     maPlansFeature?.destroy();
     intakeFeature?.destroy();
+    athenaFeature?.destroy();
     dialogs.destroy();
     window.removeEventListener('hashchange', changeRoute);
     window.removeEventListener('keydown', escapeMenu);
