@@ -18,7 +18,7 @@ const FIELD_GROUPS = {
   6: ['care_priorities','dental_need','vision_need','hearing_need','transport_need','otc_need','giveback_need','food_need','preferred_hospitals','network_concerns'],
   7: ['recommended_carrier','recommended_plan','recommended_plan_id','new_effective','new_premium','new_moop','dental_benefit','vision_benefit','hearing_benefit','otc_benefit','food_benefit','transport_benefit','giveback_benefit','pcp_copay','specialist_copay','hospital_copay','recommendation_reason','doctor_network_verified','drug_coverage_verified'],
   8: ['hip_hospital_day','hip_days','hip_hospital_total','hip_ambulance','hip_outpatient','hip_cancer','hip_snf','hip_notes'],
-  9: ['review_date','soa_status','soa_reason','permission_to_contact','application_status','followup_date','followup_action','next_steps','client_questions','private_notes']
+  9: ['review_date','soa_status','soa_reason','permission_to_contact','application_status','workflow_status','followup_date','followup_action','next_steps','client_questions','private_notes']
 };
 const DATE_FIELDS = new Set(['dob','part_a','part_b','new_effective','review_date','followup_date']);
 const HIP_TOTALS = ['hip_hospital_total','hip_ambulance','hip_outpatient','hip_cancer','hip_snf'];
@@ -119,6 +119,7 @@ function sectionBody(index) {
       area('soa_reason','SOA details / reason if not signed') +
       yesNo('permission_to_contact','Permission to follow up?') +
       choice('application_status','Application / review outcome',[['not_started','Not started'],['considering','Considering options'],['submitted','Application submitted'],['enrolled','Enrollment confirmed'],['declined','Declined / no change'],['other','Other']]) +
+      choice('workflow_status','Review status',[['draft','Draft / in progress'],['follow_up','Follow-up required'],['completed','Completed']]) +
       control('followup_date','Follow-up date','date') +
       control('followup_action','Follow-up action / task') +
       area('client_questions','Questions or concerns raised') +
@@ -235,6 +236,8 @@ export function createAthenaMedicareFeature() {
     }
     const skipped=new Set(Array.isArray(data.skipped_sections) ? data.skipped_sections.map(Number) : []);
     host.querySelectorAll('[data-at-skip]').forEach(x=>x.checked=skipped.has(Number(x.dataset.atSkip)));
+    const statusField=form.elements.namedItem('workflow_status');
+    if(statusField)statusField.value=record?.workflow_status||data.workflow_status||'draft';
     for(const kind of ['doctors','pharmacies','medications']) {
       const rows=Array.isArray(data[kind]) && data[kind].length ? data[kind] : [{}];
       const box=host.querySelector('[data-at-repeat="'+kind+'"]');
@@ -356,6 +359,7 @@ export function createAthenaMedicareFeature() {
     }
   }
   function selectClient(client){
+    const replacingClient=Boolean(linkedClient?.id && linkedClient.id!==client.id);
     linkedClient=client; ++searchToken; clearTimeout(searchTimer);
     const picker=host.querySelector('.at-client-picker');
     if(picker)picker.outerHTML=clientPicker();
@@ -368,7 +372,9 @@ export function createAthenaMedicareFeature() {
       if(field && !field.value)field.value=String(value||'');
     }
     vaultOriginal={};vaultLoaded=false;
-    for(const name of ['medicare_number','medicaid_number']){const el=form?.elements.namedItem(name);if(el)el.value='';}
+    if(replacingClient)for(const name of ['medicare_number','medicaid_number']){
+      const el=form?.elements.namedItem(name);if(el)el.value='';
+    }
     void readVault(client.id);
     dirty=true;updateSections();
     say('Linked to existing CRM client '+displayName(client)+'.');
@@ -587,6 +593,7 @@ export function createAthenaMedicareFeature() {
     if(target.hasAttribute('data-at-new')){newReview(target.dataset.atNew);return;}
     if(target.hasAttribute('data-at-saved')){void savedList();return;}
     if(target.hasAttribute('data-at-save')){void saveReview();return;}
+    if(target.hasAttribute('data-at-complete')){void saveReview('completed');return;}
     if(target.hasAttribute('data-at-open')){void openSaved(target.dataset.atOpen);return;}
     if(target.hasAttribute('data-at-delete')){
       const id=target.dataset.atDelete||record?.id;
