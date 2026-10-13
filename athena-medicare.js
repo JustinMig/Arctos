@@ -628,7 +628,7 @@ export function createAthenaMedicareFeature() {
       if(task!==epoch||!active())return;
       record=data;linkedClient=client;
       renderEditor(data.form_data||{});
-      void loadCRMForClient(client.id,false);
+      void loadCRMForClient(client.id,true);
       void readVault(client.id);
       void loadFileList();
     }catch(error){if(task===epoch && active()){
