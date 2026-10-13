@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NAV, CLIENT_TABS, esc, monthDays, isoDate, dateISO, dateText, stable, snapshot, disconnectedRepository, NotConnectedError } from '../core.js';
+import { shell } from '../views.js';
 
 test('sidebar contains only workspace pages, not client sections', () => {
   const names = NAV.map(([key]) => key);
@@ -69,4 +70,14 @@ test('no demo rows, users or financial data are seeded by the provider', async (
   assert.equal(disconnectedRepository.connected, false);
   assert.deepEqual(disconnectedRepository.agents, []);
   for (const method of ['searchClients','listEvents','listNotes','searchContacts','commissions','getBuildChart']) await assert.rejects(disconnectedRepository[method]({}), NotConnectedError);
+});
+
+test('Settings is hidden from CRM navigation without removing other pages', () => {
+  const markup = shell('dashboard', true, '<div>Dashboard</div>');
+  assert.doesNotMatch(markup, /<a href="#\/settings"/);
+  for (const route of ['dashboard', 'clients', 'medicare-intake', 'ma-plans', 'campaigns', 'communications']) {
+    assert.ok(markup.includes('href="#/' + route + '"'), route + ' should stay visible');
+  }
+  // Keep the old route available to existing direct links; this is a UI-only hide.
+  assert.ok(NAV.some(([key]) => key === 'settings'));
 });
