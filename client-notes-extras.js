@@ -1,3 +1,4 @@
+import { observeClientDialogs } from './client-dialog-observer.js';
 import { mhRepository, supabase } from './supabase-repository.js';
 
 const BUCKET = 'mh-client-documents';
@@ -101,5 +102,6 @@ function dialogForRecord(record){const id=String(record?.id||'').trim();return[.
 const baseSave=mhRepository.saveClient.bind(mhRepository);
 mhRepository.saveClient=async function saveClientWithNotesExtras(record,...args){const dialog=dialogForRecord(record);const saved=await baseSave(record,...args);if(saved?.id&&dialog){await flushQueued(dialog,saved.id);const host=dialog.querySelector('[data-notes-extras-documents]');if(host){(host.closest('.cfh-general-uploader')||host).remove();bind(dialog);}}return saved;};
 
-const observer=new MutationObserver(mutations=>{for(const mutation of mutations){for(const node of mutation.addedNodes){if(!(node instanceof Element))continue;if(node.matches?.('dialog.client-dialog'))queueMicrotask(()=>bind(node));node.querySelectorAll?.('dialog.client-dialog').forEach(dialog=>queueMicrotask(()=>bind(dialog)));const parent=node.closest?.('dialog.client-dialog');if(parent)queueMicrotask(()=>bind(parent));}}});
-observer.observe(document.body,{childList:true,subtree:true});document.querySelectorAll('dialog.client-dialog').forEach(bind);
+// Install on native client dialogs only; unrelated CRM DOM updates no longer
+// trigger Notes & Files binding work.
+observeClientDialogs(bind);
