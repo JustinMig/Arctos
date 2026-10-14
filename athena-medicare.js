@@ -184,7 +184,7 @@ export function createAthenaMedicareFeature() {
     clearTimeout(searchTimer);++searchToken;
   }
   function hero(subtitle) {
-    return '<div class="at-hero"><div class="at-eyebrow">MAYER MIG CRM / ATHENA WORKSPACE</div>' +
+    return '<div class="at-hero"><div class="at-eyebrow">ARCTOS / ATHENA WORKSPACE</div>' +
       '<div class="at-hero-row"><div><h2>Athena\'s Medicare</h2><p>' + esc(subtitle) +
       '</p></div><span class="at-hero-mark">A<span>+</span></span></div></div>';
   }
