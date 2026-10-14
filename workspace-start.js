@@ -68,8 +68,7 @@ export async function startWorkspace() {
   // Client, lead, and campaign observers load on first use and are cached.
   const loadEnhancements = () => {
     void Promise.allSettled([
-      import('./input-formatting.js?v=optimization-2'),
-      import('./top-add-client.js?v=optimization-2')
+      import('./input-formatting.js?v=optimization-2')
     ]).then(results => results.forEach((result, index) => {
       if (result.status === 'rejected')
         console.error('CRM enhancement failed to load (' + index + '):', result.reason);
