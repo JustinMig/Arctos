@@ -245,6 +245,50 @@
 #athena-medicare-host .at-start-card:hover{border-color:#9bb9c2;box-shadow:0 3px 12px rgba(15,41,55,.07)}
 #athena-medicare-host .at-step{border-color:var(--arctos-border);box-shadow:none}
 
+/* The sign-in screen and Athena custom controls share the same muted,
+ * accessible action meanings without altering their layouts or workflows. */
+.auth-card .btn.primary{
+  background:var(--arctos-sage)!important;
+  border-color:var(--arctos-sage)!important;
+  color:#fff!important;
+}
+.auth-card .btn.primary:hover:not(:disabled){
+  background:var(--arctos-sage-hover)!important;
+  border-color:var(--arctos-sage-hover)!important;
+}
+.auth-card input:focus{
+  border-color:var(--arctos-focus);
+  outline-color:rgba(50,122,146,.25);
+}
+#athena-medicare-host .at-btn-primary{
+  background:var(--arctos-sage)!important;
+  border-color:var(--arctos-sage)!important;
+  color:#fff!important;
+}
+#athena-medicare-host .at-btn-primary:hover:not(:disabled){
+  background:var(--arctos-sage-hover)!important;
+  border-color:var(--arctos-sage-hover)!important;
+}
+#athena-medicare-host .at-btn-soft,
+#athena-medicare-host .at-btn-outline{
+  background:#f0f5f7!important;
+  color:#2c5164!important;
+  border-color:var(--arctos-border-strong)!important;
+}
+#athena-medicare-host .at-btn-soft:hover,
+#athena-medicare-host .at-btn-outline:hover{background:#e5eef2!important}
+#athena-medicare-host .at-btn-delete{
+  background:var(--arctos-danger-soft)!important;
+  border-color:#ddb9b8!important;
+  color:var(--arctos-danger)!important;
+}
+#athena-medicare-host .at-btn-delete:hover{background:#fae5e5!important}
+#athena-medicare-host .at-start-card-wide{background:#f5f8f9;border-color:var(--arctos-border)}
+#athena-medicare-host .at-step[open]>summary{background:#e8f0f1;border-color:var(--arctos-border)}
+#athena-medicare-host .at-step[open] .at-step-no{background:var(--arctos-navy-800)}
+#athena-medicare-host :is(input,select,textarea):focus-visible,
+#athena-medicare-host :is(button,a,summary):focus-visible{outline-color:var(--arctos-focus)}
+
 /* Intentional exceptions: company/carrier colors in MA plan comparisons,
  * error/success states, and branded bear artwork should not be recolored. */
 @media(max-width:700px){
