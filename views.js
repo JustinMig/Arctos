@@ -57,7 +57,49 @@ export function clientForm(connected, agents = []) {
     documents: `<div class="panel-card"><h3>Client Documents &amp; SOA</h3><p class="subtle">Files, card photos, policy documents, and signed Scopes of Appointment belong to this client.</p><div class="document-actions"><label class="btn secondary disabled">Upload File<input type="file" disabled hidden></label><button type="button" class="btn secondary" disabled>Camera / Scan</button><button type="button" class="btn secondary" disabled>Send SOA</button></div>${empty('Secure storage not connected', 'Uploads and signatures will be enabled after the new storage and signing services are configured.')}</div>`,
     notes: group('Client Notes', textArea('notes', 'Notes', 'Client-specific notes'), true)
   };
-  return `<form class="client-form" autocomplete="off" novalidate><nav class="section-tabs" role="tablist" aria-label="Client information sections">${CLIENT_TABS.map(([key, label], i) => `<button type="button" role="tab" id="client-tab-${key}" aria-controls="client-panel-${key}" aria-selected="${i === 0}" tabindex="${i === 0 ? '0' : '-1'}" data-tab="${key}">${label}</button>`).join('')}</nav>${CLIENT_TABS.map(([key, label], i) => `<section role="tabpanel" id="client-panel-${key}" aria-labelledby="client-tab-${key}" data-panel="${key}"${i ? ' hidden' : ''}>${panels[key]}</section>`).join('')}</form>`;
+  // The eight original panel IDs remain in the DOM for the saved-client
+  // repository, Medicare uploads, pharmacy, and document integrations. Only
+  // their presentation changes: four visible sections with focused cards.
+  const categories = [
+    ['medicare','Medicare & Current Coverage','Current plans, Medicare and Medicaid details',true],
+    ['life','Life Insurance','Life policies and beneficiaries',false],
+    ['hospital_indemnity','Hospital Indemnity','Hospital and supplemental coverage',false],
+    ['retirement','Retirement','Retirement accounts and products',false],
+    ['doctors','Doctors','Providers, specialties and office locations',true],
+    ['medications','Medications & Pharmacies','Prescriptions, pharmacies and medication files',true]
+  ];
+  const category = (key,title,description,open) => '<details class="client-category" data-client-category="'+key+'"'+(open?' open':'')+'>' +
+    '<summary><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span><span class="client-category-chevron" aria-hidden="true">⌄</span></summary>' +
+    '<section class="client-category-body" id="client-panel-'+key+'" data-panel="'+key+'">'+(panels[key]||'')+'</section></details>';
+  const categoryMarkup = keys => categories.filter(([key])=>keys.includes(key)).map(([key,title,description,open])=>category(key,title,description,open)).join('');
+  const sections = [
+    {key:'overview',label:'Overview',hint:'Personal information and client details'},
+    {key:'coverage',label:'Coverage',hint:'Medicare, life, hospital indemnity and retirement'},
+    {key:'medical',label:'Medical',hint:'Doctors, medications and pharmacies'},
+    {key:'files',label:'Notes & Files',hint:'Client notes, forms and uploaded documents'}
+  ];
+  return '<form class="client-form client-four-tabs" autocomplete="off" novalidate>' +
+    // These buttons are compatibility hooks for existing integrations which
+    // programmatically select an original client section.
+    '<div class="client-legacy-tabs" hidden aria-hidden="true">' +
+      CLIENT_TABS.map(([key])=>'<button type="button" tabindex="-1" data-tab="'+key+'" id="client-tab-'+key+'"></button>').join('')+
+    '</div>' +
+    '<nav class="section-tabs client-main-tabs" role="tablist" aria-label="Client record sections">' +
+      sections.map(({key,label},i)=>'<button type="button" role="tab" data-client-group-tab="'+key+'" id="client-group-tab-'+key+'" aria-controls="client-group-panel-'+key+'" aria-selected="'+String(i===0)+'" tabindex="'+(i===0?0:-1)+'">'+esc(label)+'</button>').join('')+'</nav>' +
+    '<section role="tabpanel" data-client-group-panel="overview" id="client-group-panel-overview" aria-labelledby="client-group-tab-overview">' +
+      '<div class="client-overview-card"><div><span class="client-overview-kicker">CLIENT AT A GLANCE</span><strong data-client-summary-name>Client information</strong><p data-client-summary-meta>Enter or review the client details below.</p></div>' +
+      '<div class="client-overview-shortcuts"><button type="button" data-client-jump="medicare">Coverage</button><button type="button" data-client-jump="doctors">Medical</button><button type="button" data-client-jump="notes">Notes & Files</button></div></div>' +
+      '<section id="client-panel-information" data-panel="information">'+panels.information+'</section></section>' +
+    '<section role="tabpanel" data-client-group-panel="coverage" id="client-group-panel-coverage" aria-labelledby="client-group-tab-coverage" hidden>' +
+      '<div class="client-group-heading"><strong>Insurance & Coverage</strong><p>Open only the type of coverage you need to review or update.</p></div>'+
+      categoryMarkup(['medicare','life','hospital_indemnity','retirement'])+'</section>' +
+    '<section role="tabpanel" data-client-group-panel="medical" id="client-group-panel-medical" aria-labelledby="client-group-tab-medical" hidden>' +
+      '<div class="client-group-heading"><strong>Medical Information</strong><p>Doctors, current medications, pharmacies and supporting files.</p></div>'+
+      categoryMarkup(['doctors','medications'])+'</section>' +
+    '<section role="tabpanel" data-client-group-panel="files" id="client-group-panel-files" aria-labelledby="client-group-tab-files" hidden>' +
+      '<div class="client-group-heading"><strong>Notes & Files</strong><p>Keep client notes and additional documents together. Medicare cards, SOA forms and policy documents remain accessible within their coverage sections.</p></div>'+
+      '<section id="client-panel-notes" data-panel="notes">'+panels.notes+'</section></section>' +
+    '</form>';
 }
 export function calendarMarkup(month, events = [], connected = false, agents = []) {
   const days = monthDays(month.getFullYear(), month.getMonth());
