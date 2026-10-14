@@ -128,6 +128,7 @@ export function dailyDashboardMarkup(events = [], loaded = false, date = new Dat
   return '<section class="daily-dashboard" aria-label="Daily work overview">' +
     '<header class="daily-hero"><div><span class="daily-date">'+esc(readableDate)+'</span><h2>Today\'s Work</h2><p>Appointments, follow-ups, and your next actions in one place.</p></div>' +
     '<div class="daily-hero-actions"><button type="button" class="btn primary" data-new-appointment>+ Appointment</button>' +
+    '<button type="button" class="btn secondary" data-add-client>+ New Client</button>' +
     '<a class="btn secondary" href="#/clients">Find Client</a></div></header>' +
     '<div class="daily-stats" aria-label="Appointment overview">' +
     metric('Today',todays.length,'Active appointments','today') +
