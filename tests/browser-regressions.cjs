@@ -149,6 +149,52 @@ let browser;
  result.tests.push('four-tab client UI retains eight CRM panels, legacy links, unsaved field data, and mobile layout');
  await page.close();
 
+
+ // Calendar-day cards must display scheduled times next to client names,
+ // ordered by time even if the backend returns unsorted Postgres TIME values.
+ ({page,errors}=await createPage());
+ await page.goto('http://127.0.0.1/harness.html#/dashboard');
+ await page.addStyleTag({url:'http://127.0.0.1/workspace-styles.css'});
+ await page.evaluate(async()=>{
+   const {mhRepository}=await import('/supabase-repository.js');
+   const {createWorkspace}=await import('/workspace.js');
+   const {todayKey}=await import('/core.js');
+   const day=todayKey();
+   mhRepository.listEvents=async()=>[
+     {id:'late-event',event_date:day,start_time:'14:00:00',title:'Appointment: Test Beta',status:'scheduled',event_type:'Appointment',client_id:'00000000-0000-4000-8000-000000000012'},
+     {id:'no-time',event_date:day,start_time:null,title:'Walk-in',status:'scheduled',event_type:'Activity',client_id:null},
+     {id:'early-event',event_date:day,start_time:'08:00:00',title:'Appointment: Test Alpha',status:'scheduled',event_type:'Appointment',client_id:'00000000-0000-4000-8000-000000000011'},
+     {id:'middle-event',event_date:day,start_time:'10:30:00',title:'Follow up',status:'scheduled',event_type:'Appointment',client_id:null}
+   ];
+   window.__syntheticDay=day;
+   createWorkspace(document.querySelector('#app'),mhRepository);
+ });
+ await page.locator('[data-daily-open-calendar]').click();
+ await page.waitForSelector('#calendar-host [data-day]');
+ await page.locator('#calendar-host [data-day]').filter({has:page.locator('.day-number')}).first().waitFor();
+ await page.locator('#calendar-host [data-day]').evaluateAll((els,day)=>{
+   const target=els.find(el=>el.dataset.day===day);
+   if(!target)throw new Error('Calendar did not show test day');
+   target.click();
+ },await page.evaluate(()=>window.__syntheticDay));
+ await page.locator('dialog.day-dialog[open] .appointment-card').first().waitFor();
+ await page.waitForFunction(()=>[...document.querySelectorAll('dialog.day-dialog[open] .appointment-summary-name')].some(el=>el.textContent.includes('Test Alpha')));
+ const order=await page.locator('dialog.day-dialog[open] .appointment-card').evaluateAll(cards=>cards.map(c=>({
+   id:c.dataset.eventId,
+   time:c.querySelector('.appointment-summary-time')?.textContent.trim(),
+   name:c.querySelector('.appointment-summary-name')?.textContent.trim()
+ })));
+ assert.deepEqual(order.map(x=>x.id),['early-event','middle-event','late-event','no-time']);
+ assert.deepEqual(order.map(x=>x.time),['8:00 AM','10:30 AM','2:00 PM','Time not set']);
+ assert.equal(order[0].name,'Test Alpha');
+ assert.equal(order[2].name,'Test Beta');
+ await page.setViewportSize({width:390,height:844});
+ assert.equal(await page.locator('dialog.day-dialog[open] .appointment-summary-time').first().isVisible(),true);
+ assert.equal(await page.locator('dialog.day-dialog[open] .appointment-summary-name').first().isVisible(),true);
+ assert.deepEqual(errors,[]);
+ result.tests.push('calendar day lists chronological appointments with visible time beside each client on desktop and iPhone');
+ await page.close();
+
  // Recovery UI state is tested without consuming a real recovery link or changing a real password.
  for(const suffix of ['?recovery=1','?recovery=1#error=access_denied&error_code=otp_expired']){
   ({page,errors}=await createPage({auth:true}));await page.goto('http://127.0.0.1/'+suffix);await page.waitForSelector('[data-new-reset]');assert.equal(await page.locator('h1').innerText(),'Reset Link Unavailable');
