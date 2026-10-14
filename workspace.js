@@ -128,7 +128,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     }
     if (route === 'dashboard') {
       const details = root.querySelector('[data-daily-calendar]');
-      details?.addEventListener('toggle', () => { if(details.open) drawCalendar(); });
+      details?.addEventListener('toggle', () => { if(details.open) drawCalendar(); else renderVisibleCalendar(); });
       drawDailyDashboard();
     }
     if (root.querySelector('#calendar-host')) drawCalendar();
