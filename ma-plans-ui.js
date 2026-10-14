@@ -45,8 +45,18 @@ export function createMAPlansFeature({ dialogs }) {
   let zipError = '';
   let zipToken = 0;
 
+  function verifiedPlan(plan) {
+    const corrected = applyVerified2027Benefits(plan);
+    if (!Array.isArray(plan._cms_verified_fields)) return corrected;
+    // CMS county-specific numbers must not be overwritten by a generic plan
+    // reference when a contract has multiple geographic segments.
+    for (const field of plan._cms_verified_fields)
+      if (plan[field]) corrected[field] = plan[field];
+    return corrected;
+  }
+
   function catalog() {
-    if (!countySelection && !zipCode) return MA_PLANS_2027.map(applyVerified2027Benefits);
+    if (!countySelection && !zipCode) return MA_PLANS_2027.map(verifiedPlan);
     if (!(availablePlanIds instanceof Set)) return [];
     const detailed = new Map(MA_PLANS_2027.map(plan => [plan.plan_number,plan]));
     const combined = new Map();
@@ -56,22 +66,23 @@ export function createMAPlansFeature({ dialogs }) {
     for (const entry of countyCatalog) {
       if (!MA_CARRIERS.includes(entry.carrier) || !availablePlanIds.has(entry.plan_number)) continue;
       const saved = detailed.get(entry.plan_number);
-      combined.set(entry.plan_number, applyVerified2027Benefits({
+      combined.set(entry.plan_number, verifiedPlan({
         ...(saved || {}), ...entry,
         premium:entry.premium || saved?.premium || 'Verify 2027 SOB/EOC',
         medical_moop:entry.medical_moop || 'Verify county-specific 2027 SOB/EOC',
         drug_deductible:entry.drug_deductible || saved?.drug_deductible || 'Verify 2027 SOB/EOC',
+        rx_oop:entry.rx_oop || saved?.rx_oop || 'Verify 2027 Part D OOP/SB',
         medicaid_levels:saved?.is_dsnp === entry.is_dsnp && saved?.medicaid_levels?.[0] !== 'DUAL_VERIFY'
           ? saved.medicaid_levels : entry.medicaid_levels,
         medicaid_label:saved?.is_dsnp === entry.is_dsnp && saved?.medicaid_levels?.[0] !== 'DUAL_VERIFY'
           ? saved.medicaid_label : entry.medicaid_label,
         source_note:'2027 CMS county values; other benefit lines may be unverified references except for explicit 2027 SB corrections.',
-        _cms_verified_fields:['premium','medical_moop','drug_deductible','part_b_giveback'].filter(key=>Boolean(entry[key]))
+        _cms_verified_fields:['premium','medical_moop','drug_deductible','rx_oop','part_b_giveback'].filter(key=>Boolean(entry[key]))
       }));
     }
     for (const plan of MA_PLANS_2027) {
       if (availablePlanIds.has(plan.plan_number) && !combined.has(plan.plan_number))
-        combined.set(plan.plan_number,applyVerified2027Benefits(plan));
+        combined.set(plan.plan_number,verifiedPlan(plan));
     }
     return [...combined.values()];
   }
