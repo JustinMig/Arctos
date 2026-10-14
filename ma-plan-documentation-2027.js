@@ -153,6 +153,32 @@ export const VERIFIED_2027_BENEFITS = Object.freeze({
     "urgent_care": "Urgent care/walk-in: $40 copay IN/OON",
     "emergency_room": "$115 per visit",
     "transportation": "Not covered"
+  },
+  "H3239-028": {
+    "premium": "$0/month",
+    "medical_deductible": "$0",
+    "medical_moop": "$9,850 IN; beneficiaries with Medicaid paying Medicare medical cost sharing generally owe $0 IN",
+    "pcp": "$0 copay (in-network)",
+    "specialist": "$0 copay (in-network)",
+    "inpatient": "$0 copay per stay IN (90 days per benefit period, plus 60 lifetime reserve days)",
+    "ambulance": "$0 copay (ground or air; one-way)",
+    "emergency_room": "$0 copay in U.S.",
+    "urgent_care": "$0 copay in U.S.",
+    "drug_deductible": "$0 with Extra Help/LIS; otherwise $700 for tiers 3–5",
+    "rx_oop": "$2,400 annual Part D out-of-pocket threshold",
+    "dental": "$3,500/year for covered dental services; $0 copay IN Aetna Dental PPO; no coverage OON dental",
+    "vision": "$275/year for eyewear through EyeMed network; $0 annual routine eye exam IN",
+    "hearing": "$1,250/ear annual hearing aid allowance at NationsHearing providers; $0 yearly routine hearing exam IN",
+    "otc_food_utilities": "$215/month OTC Wallet for approved OTC items; eligible SSBCI chronic-condition members may use SAME $215/month as Extra Supports for approved food/utilities/personal care (not an extra $215). Qualifying High Value PCP participants may receive additional $30/month HVP wallet.",
+    "transportation": "36 one-way routine trips/year, up to 60 miles each; $0 copay to plan-approved destinations with authorization",
+    "fitness": "Basic SilverSneakers membership included at $0",
+    "eligibility": "Aetna Medicare Full Dual Care H3239-028 D-SNP: QMB+, SLMB+, or FBDE Medicaid eligibility plus Medicare A/B and residence in service area.",
+    "medicaid_levels": [
+      "QMB+",
+      "SLMB+",
+      "FBDE"
+    ],
+    "medicaid_label": "QMB+, SLMB+, FBDE"
   }
 });
 
@@ -191,6 +217,9 @@ export function get2027PlanDocuments(plan) {
     page:devoted.page, directSB:true, directEOC:Boolean(devoted.eoc),
     label:'Official 2027 Devoted plan-specific documents'
   };
+  // H3239-028 official 2027 SB/EOC were also available in the user's
+  // internal source Library, dated 2026-09-18, and checked directly. The
+  // public Aetna link remains a landing page, NOT a verified PDF URL.
   // Exact 2027 Aetna member plan pages display both the SB and EOC
   // through Aetna's own dynamic document links; these URLs are not PDFs.
   // Only add IDs whose 2027 document landing page was checked.
