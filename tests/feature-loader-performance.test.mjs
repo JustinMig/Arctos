@@ -33,7 +33,7 @@ test('separate observer groups are imported for the correct Arctos workflows onl
  assert.match(start,/lead: \(\) => import\('\.\/workspace-lead-extensions/);
  assert.match(client,/client-health-tabs\.js/);
  assert.match(client,/client-files-hub\.js/);
- assert.doesNotMatch(client,/campaign-stage-layout\.js|leads-icon-screen\.js|commission-icon-screen\.js/);
+ assert.doesNotMatch(client,/campaign-stage-layout\.js|leads-icon-screen\.js|commission-icon-screen\.js|client-summary-commissions\.js/);
  assert.match(campaign,/campaign-stage-layout\.js/);
  assert.match(campaign,/campaigns-smooth-load\.js/);
  assert.doesNotMatch(campaign,/client-medicare-assets\.js|lead-dob-format\.js/);
