@@ -60,8 +60,9 @@
   .top .toolbar-quick-tools .quick-tool{min-width:49px;width:49px;padding:2px 0;min-height:50px}
   .top .toolbar-quick-tools .quick-tool .tool-icon{width:29px;height:29px}
   .top .toolbar-quick-tools .quick-tool strong{font-size:9px}
-  .top .toolbar-quick-tools .quick-desktop-label{display:none}
-  .top .toolbar-quick-tools .quick-phone-label{display:inline}
+  .top .toolbar-quick-tools .quick-desktop-label{display:none!important}
+  .top .toolbar-quick-tools .quick-phone-label{display:inline!important}
+  .top .toolbar-quick-tools .quick-tool strong{display:block;max-width:48px;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .top .top-workspace-label{display:none}
 }
 @media(max-width:700px){
