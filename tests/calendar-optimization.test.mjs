@@ -37,6 +37,17 @@ test('calendar day cards show time on the tab before the client name and apply s
   assert.match(css,/\.appointment-summary-time/);
 });
 
+test('all standard appointment dialogs block occupied agent times and recheck before saving',async()=>{
+ const workspace=await source('workspace.js');
+ const form=workspace.slice(workspace.indexOf('  function openAppointment('),workspace.indexOf('  function openNotes()'));
+ assert.match(form,/appointment-slot-status/);
+ assert.match(form,/data-booked="true"/);
+ assert.match(form,/timeSelect\.disabled = !slotsReady/);
+ assert.match(form,/assigned_agent_id.*addEventListener\('change',refreshAppointmentSlots\)/);
+ assert.match(form,/slotIsBooked\(t,30,booked,existing\?\.id/);
+ assert.match(form,/await repository\.listEvents\(\{ start: currentDay, end: currentDay \}\)/);
+ assert.match(form,/slotIsBooked\(value\.start_time, 30, blocks, existing\?\.id/);
+});
 test('month grid handles many appointments without filtering the full list per day', async () => {
   const view = await source('views.js');
   const code = view.slice(view.indexOf('export function calendarMarkup'), view.indexOf('export function shell'));
