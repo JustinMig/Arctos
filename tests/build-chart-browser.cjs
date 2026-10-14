@@ -39,6 +39,7 @@ let browser;
       createWorkspace(document.querySelector('#app'), mhRepository);
     });
     assert.equal(requests.includes('/build-charts.js'), false, 'Chart data should not load before opening the lookup');
+    await page.locator('[data-nav-toggle="more"]').click();
     await page.locator('[data-tool="build"]').click();
     const dialog = page.locator('dialog.build-dialog');
     const company = dialog.locator('[name="company"]');
