@@ -4,7 +4,7 @@ import { Dialogs } from './dialogs.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=arctos-work-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
-export function createWorkspace(root, repository = disconnectedRepository) {
+export function createWorkspace(root, repository = disconnectedRepository, { ensureClientFeatures, ensureCampaignFeatures, ensureLeadFeatures } = {}) {
   if (!(root instanceof HTMLElement)) throw new TypeError('Arctos needs an application root.');
   const dialogs = new Dialogs();
   let campaignFeature = null, campaignModule = null;
@@ -41,6 +41,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   }
   async function campaigns() {
     if (!repository.campaigns) throw new Error('Campaign storage is not connected.');
+    if (ensureCampaignFeatures) await ensureCampaignFeatures();
     if (!campaignModule) campaignModule = import('./campaigns-ui.js').then(({ createCampaignFeature }) => {
       campaignFeature = createCampaignFeature({ repository, dialogs, openClient, onCalendarChange: drawCalendar });
       return campaignFeature;
@@ -127,7 +128,11 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       }
       if (event.target.closest('a[href], [data-tool]')) closeMenu();
     };
-    if (route === 'clients') bindSearch();
+    if (route === 'clients') {
+      bindSearch();
+      // Start client enhancements while the user is searching, before they open the editor.
+      if (ensureClientFeatures) void ensureClientFeatures().catch(error => console.error('Client features unavailable:', error));
+    }
     if (route === 'work') {
       const host=root.querySelector('#work-queue-host');
       workQueue().then(feature=>{if(host.isConnected&&!state.destroyed)feature.mount(host);})
@@ -182,6 +187,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   }
   async function openWorkLead(id) {
     try {
+      if (ensureLeadFeatures) await ensureLeadFeatures();
       const {openLeadFromQueue}=await import('./leads-icon-screen.js?v=arctos-work-1');
       await openLeadFromQueue(id);
     }catch(error){alert(error?.message||'Unable to open the lead. Refresh the Work Queue.');}
@@ -345,6 +351,20 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     updateSummary();
   }
   function openClient(id = null) {
+    // New client and existing-client editors must not open until their
+    // specialized form/save handlers have registered. This avoids a race
+    // with offline/slow iPads while skipping the same modules on Home.
+    if (ensureClientFeatures) {
+      return Promise.resolve().then(ensureClientFeatures)
+        .then(() => openClientReady(id))
+        .catch(error => {
+          console.error('Client feature loading failed:', error);
+          alert('Client information could not load. Check your connection and try again. No changes were made.');
+        });
+    }
+    return openClientReady(id);
+  }
+  function openClientReady(id = null) {
     let record = {};
     const d = dialogs.open({ title: 'Client Information', hint: id ? 'Edit this client without leaving your search results' : 'New client • all sections in one window', icon: icon('client', true), kind: 'client-dialog', clientId: id || null, isNewClient: !id, body: '<p class="subtle">Loading client information…</p>', footer: saveFooter('Save Client'), onSave: async form => {
       const saved = await repository.saveClient({ ...record, ...serializable(form) }, { expectedVersion: record.updated_at || null });
@@ -943,12 +963,15 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   }
   function openTool(key) {
     if (key === 'leads') {
-      // Work remains usable immediately, even before optional enhancements
-      // finish loading after login. Once loaded, the Leads feature handles
-      // the same button through its delegated click listener.
-      void import('./leads-icon-screen.js?v=arctos-nav-1').then(() => {
+      // The Leads extension owns the click handler once loaded; replay only
+      // after its capture listener is installed, so there is no competing editor.
+      const ready = ensureLeadFeatures ? ensureLeadFeatures() : import('./leads-icon-screen.js?v=arctos-nav-1');
+      void ready.then(() => {
         root.querySelector('.nav-section-work [data-tool="leads"]')?.click();
-      }).catch(error => console.error('Leads could not open:', error));
+      }).catch(error => {
+        console.error('Leads could not open:', error);
+        alert('Leads could not load. Please retry.');
+      });
       return;
     }
     ({ appointments: openAppointment, notes: openNotes, contacts: openContacts, build: openBuild, commissions: openCommissions })[key]?.();
