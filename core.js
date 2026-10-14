@@ -40,8 +40,28 @@ export const longDate = key => {
   const d = parseISO(key);
   return d ? d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
 };
+// Supabase time values can include seconds. Normalize for chronological
+// appointment ordering without relying on how the database returned rows.
+export function appointmentStartMinutes(value) {
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(String(value || '').trim());
+  if (!match) return Number.POSITIVE_INFINITY;
+  const hours = Number(match[1]), minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return Number.POSITIVE_INFINITY;
+  return hours * 60 + minutes;
+}
+export function sortAppointmentsByStartTime(appointments) {
+  return [...appointments].sort((a, b) => {
+    const time = appointmentStartMinutes(a.start_time) - appointmentStartMinutes(b.start_time);
+    // For two missing times, subtraction yields NaN; keep consistent ordering
+    // using the stored date, then title, then record id.
+    if (Number.isFinite(time) && time !== 0) return time;
+    return String(a.event_date || '').localeCompare(String(b.event_date || '')) ||
+      String(a.title || '').localeCompare(String(b.title || '')) ||
+      String(a.id || '').localeCompare(String(b.id || ''));
+  });
+}
 export function timeLabel(value) {
-  const m = /^(\d{2}):(\d{2})$/.exec(value || '');
+  const m = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(String(value || ''));
   if (!m) return 'All day';
   return `${+m[1] % 12 || 12}:${m[2]} ${+m[1] >= 12 ? 'PM' : 'AM'}`;
 }
