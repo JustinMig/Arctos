@@ -34,7 +34,9 @@ export function slotIsBooked(time, duration, events, excludedId = '') {
   return events.some(event => {
     if (event.id === excludedId || (event.status && event.status !== 'scheduled')) return false;
     const from = timeMinutes(event.start_time);
-    if (from === null) return true; // An all-day scheduled event blocks the day.
+    // A legacy record with no valid start time cannot reserve every slot.
+    // Only actual scheduled times should disable a new appointment choice.
+    if (from === null) return false;
     const parsedEnd = timeMinutes(event.end_time);
     const to = parsedEnd !== null && parsedEnd > from ? parsedEnd : from + 30;
     return start < to && end > from;
