@@ -1,6 +1,6 @@
 // Source ledger for published, PLAN-YEAR 2027 documents only.
 // Confirmed Devoted PDFs were opened from Devoted's individual Mississippi
-// 2027 plan pages on 2026-10-13; 3 direct EOC PDFs were reachable.
+// 2027 plan pages on 2026-10-13; 3 EOC PDFs could be text-fetched; every plan-specific Devoted 2027 plan page also publishes a direct EOC PDF link.
 // For other plans we link the carrier's official *lookup* rather than make
 // up an unverified PDF or suggest a 2026 document is for 2027.
 export const DEVOTED_2027_DOCS = Object.freeze({
@@ -11,17 +11,17 @@ export const DEVOTED_2027_DOCS = Object.freeze({
   },
   "H7355-002": {
     "sb": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-CHOICE-GIVEBACK-002-MS-(PPO)-SB-H7355-002-ENG.pdf",
-    "eoc": null,
+    "eoc": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-CHOICE-GIVEBACK-002-MS-(PPO)-EOC-H7355-002-ENG.pdf",
     "page": "https://www.devoted.com/plan-documents/benefit-and-coverage-details/H7355-002-000-2027/"
   },
   "H7355-003": {
     "sb": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-DUAL-CHOICE-PLUS-003-MS-(PPO-D-SNP)-SB-H7355-003-ENG.pdf",
-    "eoc": null,
+    "eoc": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-DUAL-CHOICE-PLUS-003-MS-(PPO-D-SNP)-EOC-H7355-003-ENG.pdf",
     "page": "https://www.devoted.com/plan-documents/benefit-and-coverage-details/H7355-003-000-2027/"
   },
   "H7355-004": {
     "sb": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-DUAL-CHOICE-004-MS-(PPO-D-SNP)-SB-H7355-004-ENG.pdf",
-    "eoc": null,
+    "eoc": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-DUAL-CHOICE-004-MS-(PPO-D-SNP)-EOC-H7355-004-ENG.pdf",
     "page": "https://www.devoted.com/plan-documents/benefit-and-coverage-details/H7355-004-000-2027/"
   },
   "H7355-006": {
@@ -31,12 +31,12 @@ export const DEVOTED_2027_DOCS = Object.freeze({
   },
   "H7355-007": {
     "sb": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-C-SNP-CHOICE-ENHANCED-007-MS-(PPO-C-SNP)-SB-H7355-007-ENG.pdf",
-    "eoc": null,
+    "eoc": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-C-SNP-CHOICE-ENHANCED-007-MS-(PPO-C-SNP)-EOC-H7355-007-ENG.pdf",
     "page": "https://www.devoted.com/plan-documents/benefit-and-coverage-details/H7355-007-000-2027/"
   },
   "H7355-009": {
     "sb": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-DUAL-CHOICE-FULL-009-MS-(PPO-D-SNP)-SB-H7355-009-ENG.pdf",
-    "eoc": null,
+    "eoc": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-DUAL-CHOICE-FULL-009-MS-(PPO-D-SNP)-EOC-H7355-009-ENG.pdf",
     "page": "https://www.devoted.com/plan-documents/benefit-and-coverage-details/H7355-009-000-2027/"
   },
   "H7355-010": {
@@ -46,12 +46,12 @@ export const DEVOTED_2027_DOCS = Object.freeze({
   },
   "H7355-011": {
     "sb": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-C-SNP-CHOICE-GIVEBACK-EXTRAS-011-MS-(PPO-C-SNP)-SB-H7355-011-ENG.pdf",
-    "eoc": null,
+    "eoc": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-C-SNP-CHOICE-GIVEBACK-EXTRAS-011-MS-(PPO-C-SNP)-EOC-H7355-011-ENG.pdf",
     "page": "https://www.devoted.com/plan-documents/benefit-and-coverage-details/H7355-011-000-2027/"
   },
   "H7355-012": {
     "sb": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-CHOICE-GIVEBACK-EXTRAS-012-MS-(PPO)-SB-H7355-012-ENG.pdf",
-    "eoc": null,
+    "eoc": "https://assets.devoted.com/plan-documents/2027/2027-DEVOTED-CHOICE-GIVEBACK-EXTRAS-012-MS-(PPO)-EOC-H7355-012-ENG.pdf",
     "page": "https://www.devoted.com/plan-documents/benefit-and-coverage-details/H7355-012-000-2027/"
   }
 });
