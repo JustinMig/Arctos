@@ -67,7 +67,7 @@ async function conversationRows() {
 }
 
 function conversationMarkup(groups) {
-  if (!groups.length) return '<div class="sms-center-empty"><h3>No Mayer MIG text conversations yet</h3><p>Only texts from saved Mayer MIG clients received or sent after Mayer MIG texting was connected appear here.</p></div>';
+  if (!groups.length) return '<div class="sms-center-empty"><h3>No Arctos text conversations yet</h3><p>Only text messages matched to saved Arctos clients since CRM texting was connected appear here.</p></div>';
   return groups.map(group => {
     const client = group.client;
     const name = [client.first_name, client.last_name].filter(Boolean).join(' ') || 'Client';
@@ -97,7 +97,7 @@ async function loadCenter(host) {
     });
     communicationsRendered(host);
     updateUnreadBadge(unread);
-    status.textContent = `Saved Mayer MIG clients · Mayer MIG texting activity only · Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
+    status.textContent = `Saved Arctos clients · CRM texting activity only · Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } catch (error) {
     if (host.isConnected) status.textContent = error instanceof Error ? error.message : 'Unable to load text messages.';
   } finally {
@@ -228,9 +228,9 @@ function mountCommunications() {
   const firstMount = !host.dataset.mounted;
   if (firstMount) {
     host.dataset.mounted = 'true';
-    host.innerHTML = `<div class="sms-center-head"><div><span class="eyebrow">Twilio</span><h2>Client Text Messages</h2><p>Office number: (662) 572-2425 · Saved Mayer MIG clients · Mayer MIG texting activity only</p></div><div class="sms-center-actions"><button type="button" class="btn secondary" data-sms-sync>Sync Replies</button><button type="button" class="btn primary" data-sms-mass>+ Mass Text</button></div></div>
+    host.innerHTML = `<div class="sms-center-head"><div><span class="eyebrow">Twilio</span><h2>Client Text Messages</h2><p>Office number: (662) 572-2425 · Saved Arctos clients · CRM texting activity only</p></div><div class="sms-center-actions"><button type="button" class="btn secondary" data-sms-sync>Sync Replies</button><button type="button" class="btn primary" data-sms-mass>+ Mass Text</button></div></div>
       <div class="sms-center-metrics"><div><span>Unread Replies</span><strong data-sms-unread-total>—</strong></div><div><span>Client Conversations</span><strong data-sms-conversation-total>—</strong></div><div><span>Twilio</span><strong class="sms-connected">Connected</strong></div></div>
-      <div class="sms-center-status" data-sms-center-status>Loading saved Mayer MIG conversations…</div>
+      <div class="sms-center-status" data-sms-center-status>Loading saved Arctos conversations…</div>
       <div class="sms-conversations" data-sms-conversations></div>`;
     host.querySelector('[data-sms-sync]').onclick = () => void syncAndRefresh(host, { force:true });
     host.querySelector('[data-sms-mass]').onclick = massTextDialog;
