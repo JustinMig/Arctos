@@ -1,10 +1,12 @@
 import { MA_CARRIERS, MA_PLAN_YEAR, MA_PLANS_2027, plansByCarrier } from './ma-plans-data.js?v=ma-plans-5';
-import { countyForMississippiZip } from './ma-ms-zip-county.js?v=ma-plans-4';
+import { countyForMississippiZip, MS_ZIP_COUNTY } from './ma-ms-zip-county.js?v=ma-plans-4';
 import { supabase } from './supabase-repository.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
 }[c]));
+
+const MS_COUNTIES = Object.freeze([...new Set(Object.values(MS_ZIP_COUNTY).map(row => row.county))].sort((a,b) => a.localeCompare(b)));
 
 const ROWS = Object.freeze([
   ['Plan price', 'premium'],
@@ -35,13 +37,45 @@ export function createMAPlansFeature({ dialogs }) {
   let medicaidFilter = 'ALL';
   let zipCode = '';
   let zipCounty = null;
+  let countySelection = '';
+  let countyCatalog = [];
   let availablePlanIds = null;
   let zipLoading = false;
   let zipError = '';
   let zipToken = 0;
 
+  function catalog() {
+    if (!countySelection && !zipCode) return MA_PLANS_2027;
+    if (!(availablePlanIds instanceof Set)) return [];
+    const detailed = new Map(MA_PLANS_2027.map(plan => [plan.plan_number,plan]));
+    const combined = new Map();
+    // The current CMS landscape has the complete 2027 plan inventory and
+    // county-specific premiums/MOOP. Previously entered reference benefits
+    // supplement it, but never replace newer CMS county-specific amounts.
+    for (const entry of countyCatalog) {
+      if (!MA_CARRIERS.includes(entry.carrier) || !availablePlanIds.has(entry.plan_number)) continue;
+      const saved = detailed.get(entry.plan_number);
+      combined.set(entry.plan_number, {
+        ...(saved || {}), ...entry,
+        premium:entry.premium || saved?.premium || 'Verify 2027 SOB/EOC',
+        medical_moop:entry.medical_moop || 'Verify county-specific 2027 SOB/EOC',
+        drug_deductible:entry.drug_deductible || saved?.drug_deductible || 'Verify 2027 SOB/EOC',
+        medicaid_levels:saved?.is_dsnp === entry.is_dsnp && saved?.medicaid_levels?.[0] !== 'DUAL_VERIFY'
+          ? saved.medicaid_levels : entry.medicaid_levels,
+        medicaid_label:saved?.is_dsnp === entry.is_dsnp && saved?.medicaid_levels?.[0] !== 'DUAL_VERIFY'
+          ? saved.medicaid_label : entry.medicaid_label,
+        source_note:'CMS CY2027 Landscape for this county; other benefit lines from prior 2027 carrier reference where available. Verify final plan documents.'
+      });
+    }
+    for (const plan of MA_PLANS_2027) {
+      if (availablePlanIds.has(plan.plan_number) && !combined.has(plan.plan_number))
+        combined.set(plan.plan_number,plan);
+    }
+    return [...combined.values()];
+  }
+
   function selectedPlans() {
-    return MA_PLANS_2027.filter(plan => selected.has(plan.plan_number));
+    return catalog().filter(plan => selected.has(plan.plan_number));
   }
 
   function chosenCarriers() {
@@ -61,14 +95,14 @@ export function createMAPlansFeature({ dialogs }) {
     return plan.medicaid_levels.includes(medicaidFilter) || plan.medicaid_levels.includes('DUAL_VERIFY');
   }
 
-  function matchesZip(plan) {
-    if (!zipCode) return true;
-    if (zipCode.length !== 5 || zipLoading || zipError || !(availablePlanIds instanceof Set)) return false;
+  function matchesCounty(plan) {
+    if (!countySelection && !zipCode) return true;
+    if (zipLoading || zipError || !(availablePlanIds instanceof Set)) return false;
     return availablePlanIds.has(plan.plan_number);
   }
 
   function visiblePlansForCarrier(carrier) {
-    return plansByCarrier(carrier).filter(plan => matchesMedicaid(plan) && matchesZip(plan));
+    return catalog().filter(plan => plan.carrier === carrier && matchesMedicaid(plan) && matchesCounty(plan));
   }
 
   async function authHeaders() {
@@ -77,41 +111,58 @@ export function createMAPlansFeature({ dialogs }) {
     return { Authorization: `Bearer ${session.access_token}` };
   }
 
-  async function loadZipAvailability(value, preserveFocus = false) {
-    const normalized = String(value || '').replace(/\D/g, '').slice(0, 5);
-    zipCode = normalized;
+  async function loadCountyAvailability(county, preserveFocus = false) {
     const token = ++zipToken;
-    zipCounty = null;
     availablePlanIds = null;
+    countyCatalog = [];
     zipError = '';
-    if (!normalized) { zipLoading = false; return; }
-    if (normalized.length !== 5) { zipLoading = false; return; }
+    if (!county) { zipLoading = false; render(preserveFocus); return; }
+    zipLoading = true;
+    try {
+      const headers = await authHeaders();
+      const response = await fetch('/api/ma-plan-availability?county=' + encodeURIComponent(county), {
+        headers, cache:'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to check CMS 2027 county plan data.');
+      if (token !== zipToken) return;
+      if (payload.plan_year !== 2027 || !Array.isArray(payload.plans) || !Array.isArray(payload.entries))
+        throw new Error('2027 CMS plan data was incomplete; no plans were displayed.');
+      availablePlanIds = new Set(payload.plans);
+      countyCatalog = payload.entries;
+      zipLoading = false;
+      selected.clear();
+      render(preserveFocus);
+    } catch (error) {
+      if (token !== zipToken) return;
+      zipLoading = false;
+      zipError = error?.message || 'Unable to check the CMS 2027 Landscape right now.';
+      render(preserveFocus);
+    }
+  }
 
-    const match = countyForMississippiZip(normalized);
+  async function loadZipAvailability(value, preserveFocus = false) {
+    zipCode = String(value || '').replace(/\\D/g, '').slice(0,5);
+    if (!zipCode) {
+      countySelection = '';
+      zipCounty = null;
+      await loadCountyAvailability('', preserveFocus);
+      return;
+    }
+    if (zipCode.length !== 5) return;
+    const match = countyForMississippiZip(zipCode);
     if (!match) {
+      ++zipToken;
+      zipCounty = null;
+      countySelection = '';
       zipLoading = false;
       zipError = 'That ZIP was not found as a Mississippi ZIP code.';
       render(preserveFocus);
       return;
     }
-
     zipCounty = match;
-    zipLoading = true;
-    try {
-      const headers = await authHeaders();
-      const response = await fetch(`/api/ma-plan-availability?county=${encodeURIComponent(match.county)}`, { headers, cache: 'no-store' });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Unable to check 2027 plan availability.');
-      if (token !== zipToken) return;
-      availablePlanIds = new Set(Array.isArray(payload.plans) ? payload.plans : []);
-      zipLoading = false;
-      render(preserveFocus);
-    } catch (error) {
-      if (token !== zipToken) return;
-      zipLoading = false;
-      zipError = error?.message || 'Unable to check this ZIP right now.';
-      render(preserveFocus);
-    }
+    countySelection = match.county;
+    await loadCountyAvailability(match.county,preserveFocus);
   }
 
   function carrierMarkup(carrier) {
@@ -147,7 +198,7 @@ export function createMAPlansFeature({ dialogs }) {
           <div>
             <span class="eyebrow">Mississippi • ${MA_PLAN_YEAR}</span>
             <h2>Medicare Advantage Plans</h2>
-            <p>Select up to 5 plans to compare benefits side by side.</p>
+            <p>Select a Mississippi county or enter a ZIP, then compare up to 5 plans side by side.</p>
           </div>
           <div class="ma-plan-actions">
             <span data-ma-count>${selected.size} of 5 selected</span>
@@ -159,8 +210,9 @@ export function createMAPlansFeature({ dialogs }) {
           <label class="ma-zip-filter">
             <span>ZIP code</span>
             <input data-ma-zip value="${esc(zipCode)}" inputmode="numeric" maxlength="5" placeholder="Example: 38834" autocomplete="postal-code">
-            <small data-ma-zip-status>${zipLoading ? 'Checking 2027 CMS plan availability…' : zipError ? esc(zipError) : zipCounty ? `${esc(zipCounty.county)} County, Mississippi` : 'Enter a 5-digit Mississippi ZIP'}</small>
+            <small data-ma-zip-status>${zipLoading ? 'Checking 2027 CMS plan availability…' : zipError ? esc(zipError) : zipCounty ? `${esc(zipCounty.county)} County, Mississippi` : 'Or choose county below'}</small>
           </label>
+          <label class="ma-county-filter"><span>County (all 82 Mississippi counties)</span><select data-ma-county><option value="">Choose county for full 2027 listing</option>${MS_COUNTIES.map(county => `<option value="${esc(county)}"${countySelection === county ? ' selected' : ''}>${esc(county)} County</option>`).join('')}</select></label>
           <div class="ma-carrier-picker">
             <span class="ma-filter-label">Carriers</span>
             <div class="ma-carrier-buttons" role="group" aria-label="Select Medicare Advantage carriers">
@@ -189,15 +241,17 @@ export function createMAPlansFeature({ dialogs }) {
           </label>
         </section>
         <div class="ma-plan-note">
-          <strong>2027 Mississippi reference • 64 plans.</strong>
-          Benefits are loaded from the October 10, 2026 Mississippi plan reference. Exact Medicaid levels are shown where verified. “Dual eligible — verify exact Medicaid level” means the source did not confirm the exact Medicaid category list.
+          <strong>2027 Mississippi • five carriers • ${countySelection ? esc(countySelection) + ' County' : 'statewide reference'}.</strong>
+          ${countySelection ? 'Plan availability, names, premiums, and medical MOOP are checked against the CMS 2027 county Landscape where published. Other benefits require confirmation in official 2027 plan documents.' : 'Select a county or enter a ZIP to load the complete 2027 CMS plan inventory. The statewide list below is a partial carrier reference, not a confirmation of county availability.'}
+          <a href="https://www.cms.gov/medicare/coverage/prescription-drug-coverage" target="_blank" rel="noopener noreferrer">CMS 2027 Landscape</a> ·
+          <a href="https://q1medicare.com/2026/medicare-advantage/ms" target="_blank" rel="noopener noreferrer">Q1Medicare (2026 historical reference)</a>
         </div>
         <div class="ma-carrier-grid">
           ${chosenCarriers().length
   ? (zipCode && zipCode.length !== 5
       ? '<div class="ma-no-results">Enter the complete 5-digit ZIP code to filter plan availability.</div>'
       : zipLoading
-        ? '<div class="ma-no-results">Checking CMS 2027 plan availability for this ZIP…</div>'
+        ? '<div class="ma-no-results">Checking CMS 2027 plan availability for this county…</div>'
         : zipError
           ? `<div class="ma-no-results">${esc(zipError)}</div>`
           : chosenCarriers().map(carrierMarkup).join('') || '<div class="ma-no-results">No matching 2027 plans were found for those selections.</div>')
@@ -231,7 +285,7 @@ export function createMAPlansFeature({ dialogs }) {
             </tbody>
           </table>
         </div>
-        <p class="ma-compare-footnote">2027 Mississippi plans. Verify county/service area, Medicaid/LIS eligibility, and final benefit details in the carrier Summary of Benefits or Evidence of Coverage before enrollment.</p>
+        <p class="ma-compare-footnote">CMS CY2027 Landscape controls county availability and base costs. Compare remaining benefits with each carrier's official 2027 Summary of Benefits/Evidence of Coverage before enrollment. HealthSpring: <a href="https://www.healthspring.com/medicare/member-resources/plan-documents" target="_blank" rel="noopener noreferrer">official plan documents</a>.</p>
       </div>`;
   }
 
@@ -281,7 +335,10 @@ export function createMAPlansFeature({ dialogs }) {
           zipToken++;
           zipLoading = false;
           zipCounty = null;
+          countySelection = '';
+          countyCatalog = [];
           availablePlanIds = null;
+          selected.clear();
           zipError = '';
           if (status) status.textContent = value ? 'Enter the complete 5-digit Mississippi ZIP' : 'Enter a 5-digit Mississippi ZIP';
           return;
@@ -291,6 +348,13 @@ export function createMAPlansFeature({ dialogs }) {
         timer = window.setTimeout(() => void loadZipAvailability(value, true), 120);
       });
     }
+    host.querySelector('[data-ma-county]')?.addEventListener('change', event => {
+      countySelection = String(event.target.value || '');
+      zipCode = '';
+      zipCounty = countySelection ? {county:countySelection} : null;
+      selected.clear();
+      void loadCountyAvailability(countySelection);
+    });
     host.querySelector('[data-ma-medicaid-filter]')?.addEventListener('change', event => {
       medicaidFilter = event.target.value;
       render();
