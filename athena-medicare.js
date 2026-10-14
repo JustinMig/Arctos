@@ -763,12 +763,38 @@ export function createAthenaMedicareFeature() {
     input.value='';fillFiles();
     say('Attachment queued. Save the review to upload it securely.');
   }
+  async function openHandoffClient(node,id){
+    try{
+      const {data,error}=await supabase.from('clients')
+        .select('id,first_name,last_name,phone,date_of_birth,email,address1,city,state,zip_code,county,gender,veteran')
+        .eq('id',id).single();
+      if(error)throw error;
+      if(!data?.id)throw Error('This client is no longer available.');
+      if(host!==node || !active() || mode!=='home')return;
+      newReview('annual_review');
+      selectClient(data);
+    }catch(error){
+      if(host!==node || !active() || mode!=='home')return;
+      const notice=document.createElement('p');
+      notice.className='at-handoff-error';
+      notice.setAttribute('role','alert');
+      notice.textContent='Could not automatically link the client: '+(error.message||'Please search for the client in Athena.');
+      node.querySelector('.at-home-grid')?.insertAdjacentElement('beforebegin',notice);
+    }
+  }
   function mount(node){
     host=node;home();
     host.addEventListener('click',onClick);
     host.addEventListener('input',onInput);
     host.addEventListener('change',onChange);
     host.addEventListener('toggle',onToggle,true);
+    let handoff='';
+    try {
+      handoff=sessionStorage.getItem('arctos:athena-review-client')||'';
+      sessionStorage.removeItem('arctos:athena-review-client');
+    } catch {}
+    if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handoff))
+      void openHandoffClient(node,handoff);
   }
   function onToggle(event){
     if(!event.target.matches('[data-at-step]') || !event.target.open)return;
