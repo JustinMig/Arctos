@@ -344,7 +344,8 @@ function openLeadsScreen() {
 
 function installLeadsButton(scope = document) {
   const tools = scope.querySelector?.('.quick-tools');
-  if (!tools || tools.querySelector('[data-tool="leads"]')) return;
+  // Work now has its own Leads action; avoid inserting a duplicate in More.
+  if (!tools || scope.querySelector?.('.nav-section-work [data-tool="leads"]') || tools.querySelector('[data-tool="leads"]')) return;
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'quick-tool';
@@ -369,6 +370,11 @@ if (app) {
     if (!button || !app.contains(button)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    // On a phone the sidebar should not cover the lead management dialog.
+    const sidebar=app.querySelector('.sidebar'),shade=app.querySelector('.sidebar-shade'),menu=app.querySelector('.menu-toggle');
+    sidebar?.classList.remove('open');
+    if(shade)shade.hidden=true;
+    menu?.setAttribute('aria-expanded','false');
     openLeadsScreen();
   }, true);
 }
