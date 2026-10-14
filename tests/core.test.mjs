@@ -99,7 +99,7 @@ test('Arctos groups the sidebar into five primary destinations plus More while p
   assert.match(markup, /data-nav-toggle="medicare"/);
   assert.match(markup, /data-nav-toggle="work"/);
   assert.match(markup, /data-nav-toggle="more"/);
-  assert.match(markup, /href="#\/medicare-intake"/);
+  assert.doesNotMatch(markup, /href="#\/medicare-intake"/);
   assert.match(markup, /href="#\/ma-plans"/);
   assert.match(markup, /href="#\/carriers"/);
   assert.match(markup, /href="#\/agents"/);
@@ -119,7 +119,7 @@ test('Arctos groups the sidebar into five primary destinations plus More while p
 test('Settings is hidden from CRM navigation without removing other pages', () => {
   const markup = shell('dashboard', true, '<div>Dashboard</div>');
   assert.doesNotMatch(markup, /<a href="#\/settings"/);
-  for (const route of ['dashboard', 'clients', 'medicare-intake', 'ma-plans', 'campaigns', 'communications']) {
+  for (const route of ['dashboard', 'clients', 'athena-medicare', 'ma-plans', 'campaigns', 'communications']) {
     assert.ok(markup.includes('href="#/' + route + '"'), route + ' should stay visible');
   }
   // Keep the old route available to existing direct links; this is a UI-only hide.
