@@ -75,6 +75,7 @@ let browser;
  // Four-tab client record, using a synthetic new client and no database writes.
  ({page,errors}=await createPage());await page.goto('http://127.0.0.1/harness.html#/dashboard');
  await page.addStyleTag({url:'http://127.0.0.1/client-four-tabs.css'});
+ await page.addStyleTag({url:'http://127.0.0.1/arctos-visual-system.css'});
  await page.evaluate(async()=>{
    const {mhRepository}=await import('/supabase-repository.js');
    const {createWorkspace}=await import('/workspace.js');
@@ -127,6 +128,22 @@ let browser;
  assert.equal(await clientForm.locator('[name="phone"]').inputValue(),'6625550158');
  await page.setViewportSize({width:390,height:844});
  assert.equal(await clientForm.locator('[data-client-group-tab]').count(),4);
+ const themed=await page.evaluate(()=>{
+  const get=(selector,property)=>getComputedStyle(document.querySelector(selector)).getPropertyValue(property).trim();
+  return {
+    main:get('.main','background-color'),
+    primary:get('dialog.client-dialog .modal-footer .btn.primary','background-color'),
+    tabs:get('dialog.client-dialog [data-client-group-tab="overview"]','background-color'),
+    disclosure:get('dialog.client-dialog [data-panel="information"] details.field-group > summary','background-color'),
+    radius:get('dialog.client-dialog .modal-footer .btn.primary','border-radius')
+  };
+ });
+ assert.equal(themed.main,'rgb(243, 246, 248)');
+ assert.equal(themed.primary,'rgb(36, 104, 87)');
+ assert.equal(themed.tabs,'rgb(25, 60, 80)');
+ assert.equal(themed.disclosure,'rgb(241, 245, 247)');
+ assert.equal(themed.radius,'11px');
+ result.tests.push('standard Arctos light workspace, sage primary buttons, navy selected tabs and neutral client accordions');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  assert.deepEqual(errors,[]);
  result.tests.push('four-tab client UI retains eight CRM panels, legacy links, unsaved field data, and mobile layout');
