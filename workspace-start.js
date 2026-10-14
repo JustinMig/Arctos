@@ -60,7 +60,8 @@ export async function startWorkspace() {
   const features = {
     ensureClientFeatures: () => ensureFeature('client'),
     ensureCampaignFeatures: () => ensureFeature('campaign'),
-    ensureLeadFeatures: () => ensureFeature('lead')
+    ensureLeadFeatures: () => ensureFeature('lead'),
+    ensureQuickFeatures: () => ensureFeature('quick')
   };
   createWorkspace(root, mhRepository, features);
   // Only the small toolbar/formatting helpers start after first paint.
@@ -68,8 +69,7 @@ export async function startWorkspace() {
   const loadEnhancements = () => {
     void Promise.allSettled([
       import('./input-formatting.js?v=optimization-2'),
-      import('./top-add-client.js?v=optimization-2'),
-      ensureFeature('quick')
+      import('./top-add-client.js?v=optimization-2')
     ]).then(results => results.forEach((result, index) => {
       if (result.status === 'rejected')
         console.error('CRM enhancement failed to load (' + index + '):', result.reason);
