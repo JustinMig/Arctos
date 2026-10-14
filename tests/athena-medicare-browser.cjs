@@ -34,6 +34,19 @@ let browser;
   assert.equal(await page.locator('[data-at-new]').count(),2);
   assert.equal(await page.locator('[data-at-compare]').getAttribute('href'),'#/ma-plans');
   assert.equal(await page.locator('.at-home-grid [data-at-saved]').count(),1);
+  // Opening Athena from a linked CRM client should start its annual review,
+  // without a second client search or any production data access.
+  await page.evaluate(()=>{
+    sessionStorage.setItem('arctos:athena-review-client','00000000-0000-4000-8000-000000000014');
+    window.__athenaFeature.unmount();
+    window.__athenaFeature.mount(document.querySelector('#athena-medicare-host'));
+  });
+  await page.locator('.at-linked').waitFor();
+  assert.match(await page.locator('.at-linked').innerText(),/Jane Example/);
+  assert.equal(await page.locator('[name="review_kind"]').inputValue(),'annual_review');
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('arctos:athena-review-client')),null);
+  await page.locator('[data-at-home]').click();
+  assert.equal(await page.locator('[data-at-new]').count(),2);
   await page.locator('[data-at-new="annual_review"]').click();
   assert.equal(await page.locator('[data-at-step]').count(),9);
   await page.locator('[data-at-client-search]').fill('Jane');
