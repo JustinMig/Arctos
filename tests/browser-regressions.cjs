@@ -68,7 +68,7 @@ let browser;
  await page.locator('[data-sms-close]').click();result.layout=[];
  for(const width of [1440,1024,768,390]){
   await page.setViewportSize({width,height:900});await page.waitForTimeout(150);
-  const layout=await page.evaluate(()=>{const boxes=[...document.querySelectorAll('.sms-center-metrics>div')].map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}});return{width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,overlap:boxes.some((a,i)=>boxes.slice(i+1).some(b=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h))}});
+  const layout=await page.evaluate(()=>{const boxes=[...document.querySelectorAll('.sms-center-metrics>div')].map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}});return{width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflow:document.documentElement.scrollWidth>innerWidth,culprits:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width>1&&r.right>innerWidth+2&&getComputedStyle(el).position!=='fixed'}).slice(0,12).map(el=>({tag:el.tagName,cls:String(el.className).slice(0,65),right:Math.round(el.getBoundingClientRect().right),width:Math.round(el.getBoundingClientRect().width)})),overlap:boxes.some((a,i)=>boxes.slice(i+1).some(b=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h))}});
   assert.equal(layout.overflow,false,JSON.stringify(layout));assert.equal(layout.overlap,false,JSON.stringify(layout));result.layout.push(layout);await page.screenshot({path:path.join(out,`communications-${width}.png`),fullPage:true});
  }
  assert.deepEqual(errors,[]);await page.close();
