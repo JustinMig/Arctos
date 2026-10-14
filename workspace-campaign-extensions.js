@@ -7,3 +7,4 @@ import './campaign-date-picker.js';
 import './campaign-hide-duration.js';
 import './campaign-workflow-polish.js';
 import './campaign-title-dedupe.js';
+import './campaigns-smooth-load.js?v=1';
