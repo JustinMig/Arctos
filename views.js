@@ -148,7 +148,7 @@ export function dailyDashboardMarkup(events = [], loaded = false, date = new Dat
       followups.length?followups.slice(0,5).map(followup).join(''):'<p class="daily-empty">No appointments waiting to be rescheduled.</p>')+
     '</div>'+ (loaded&&followups.length>5?'<button type="button" class="daily-more-action" data-daily-open-followups>See all '+followups.length+' follow-ups →</button>':'') +
     '</section></div><div class="daily-work-footer">' +
-    '<a class="daily-work-link" href="#/campaigns">Open campaigns and lead lists →</a>' +
+    '<a class="daily-work-link" href="#/work">Open Work Queue →</a>' +
     '<button type="button" class="daily-text-action" data-daily-open-calendar>Open monthly calendar ↓</button>' +
     '</div></section>';
 }
@@ -190,7 +190,7 @@ const navAction = (tool, text) => '<button type="button" class="nav-child nav-ac
 
 export function navigationMarkup(route) {
   const medicareActive=['athena-medicare','ma-plans'].includes(route);
-  const workActive=route==='campaigns';
+  const workActive=['work','campaigns'].includes(route);
   const moreActive=['carriers','agents','settings'].includes(route);
   const direct=(key,label,iconKey=key)=>{
     const active=route===key;
@@ -218,8 +218,8 @@ export function navigationMarkup(route) {
     direct('clients','Clients')+
     group('medicare','Medicare','athena-medicare','medicare',medicareActive,
       navLink('athena-medicare','Medicare Workspace',route)+navLink('ma-plans','Compare MA Plans',route))+
-    group('work','Work','campaigns','work',workActive,
-      navAction('leads','Leads')+navLink('campaigns','Campaigns',route)+
+    group('work','Work','work','work',workActive,
+      navLink('work','Work Queue',route)+navAction('leads','Leads')+navLink('campaigns','Campaigns',route)+
       '<a class="nav-child" href="#/dashboard">Today & Follow-ups</a>')+
     direct('communications','Messages','messages')+
     more;
