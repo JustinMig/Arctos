@@ -24,7 +24,8 @@ test('all ten Devoted 2027 plan reference entries resolve to an official 2027 SB
     const doc=get2027PlanDocuments(plan);
     assert.equal(doc.directSB,true,plan.plan_number);
     assert.match(doc.sb,/^https:\/\/assets\.devoted\.com\/plan-documents\/2027\/.*SB-H7355-\d{3}-ENG\.pdf$/);
-    assert.match(doc.eoc,/^https:\/\/);
+    assert.match(doc.eoc,/^https:\/\/assets\.devoted\.com\/plan-documents\/2027\/.*EOC-H7355-\d{3}-ENG\.pdf$/);
+    assert.equal(doc.directEOC,true,plan.plan_number);
     assert.ok(!/\/2026\//.test(doc.eoc));
   }
 });
