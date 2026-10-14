@@ -4,8 +4,14 @@ function removeDuration(dialog) {
   if (!duration || duration.dataset.cmpDurationHidden === 'true') return;
   duration.dataset.cmpDurationHidden = 'true';
   duration.value = '30';
+  // Keep the named select in the form so FormData includes duration=30.
+  // Removing it used to make Number(v.duration) NaN, which falsely marked
+  // every time as overlapping even when the calendar had no appointments.
   const label = duration.closest('label.field');
-  if (label) label.remove();
+  if (label) {
+    label.hidden = true;
+    label.style.display = 'none';
+  }
 }
 
 function enhance(scope = document) {
