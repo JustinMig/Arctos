@@ -204,11 +204,10 @@ export function navigationMarkup(route) {
       '" aria-controls="nav-children-' + section + '" aria-label="Show ' + esc(title) + ' options"><span aria-hidden="true">⌄</span></button></div>' +
       '<div class="nav-children" id="nav-children-' + section + '"' + (active?'':' hidden') + '>' + children + '</div></div>';
   };
+  // Keep the five daily shortcuts in the persistent toolbar; other
+  // administration and reporting destinations remain under More.
   const moreChildren=navLink('carriers','Carriers',route)+navLink('agents','Agents & Admin',route)+
-    '<div class="nav-more-heading">Quick tools</div>' +
-    '<div class="quick-tools nav-extra-tools" aria-label="Additional CRM tools">' +
-    TOOLS.map(([key,label,,hint])=>'<button type="button" class="quick-tool" data-tool="'+key+'" title="'+esc(hint)+'" aria-label="'+esc(label)+'" aria-haspopup="dialog">'+icon(key)+'<strong>'+esc(label)+'</strong></button>').join('')+
-    '</div>';
+    navAction('commissions','Commissions');
   const more='<div class="nav-section nav-section-more" data-nav-section="more">' +
     '<button type="button" class="nav-primary nav-more-trigger'+(moreActive?' active':'')+
     '" data-nav-toggle="more" aria-controls="nav-children-more" aria-expanded="'+String(moreActive)+'">' +
@@ -224,6 +223,18 @@ export function navigationMarkup(route) {
     direct('communications','Messages','messages')+
     more;
 }
+// Desktop: top quick-access bar. iPhone: the same controls dock at the bottom.
+// Each action is mounted only once, so shortcuts never compete for click events.
+export function quickToolbarMarkup() {
+  const shortcut=(key,label,short,hint,action) =>
+    '<button type="button" class="quick-tool" '+action+' title="'+esc(hint)+'" aria-label="'+esc(label)+'" aria-haspopup="dialog">' +
+    icon(key)+'<strong><span class="quick-desktop-label">'+esc(label)+'</span><span class="quick-phone-label" aria-hidden="true">'+esc(short)+'</span></strong></button>';
+  return '<div class="quick-tools toolbar-quick-tools" role="group" aria-label="Quick tools">' +
+    shortcut('client','New Client','Client','Create a new client','data-add-client') +
+    TOOLS.filter(([key])=>key!=='commissions').map(([key,label,short,hint])=>
+      shortcut(key,label,short,hint,'data-tool="'+key+'"')).join('')+
+    '</div>';
+}
 export function shell(route, connected, body) {
   const label = NAV.find(([key]) => key === route)?.[1] || 'Dashboard';
   return '<div class="shell"><button class="sidebar-shade" aria-label="Close navigation" hidden></button>' +
@@ -232,5 +243,5 @@ export function shell(route, connected, body) {
     '<div class="sidebar-footer">Arctos<small>Client management workspace</small></div></aside>' +
     '<main class="main"><header class="top"><button type="button" class="menu-toggle" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">☰</button>' +
     '<a class="top-brand" href="#/dashboard"><img src="/assets/mayer-bear.webp" alt="Arctos bear" width="40" height="40"><strong>Arctos</strong></a>' +
-    '<span class="top-workspace-label">Insurance workspace</span></header><div class="content"><div class="page-heading"><div><span class="eyebrow">'+esc(label)+'</span><h1>'+esc(label)+'</h1></div></div>'+body+'</div></main></div>';
+    '<span class="top-workspace-label">Insurance workspace</span>'+quickToolbarMarkup()+'</header><div class="content"><div class="page-heading"><div><span class="eyebrow">'+esc(label)+'</span><h1>'+esc(label)+'</h1></div></div>'+body+'</div></main></div>';
 }
