@@ -298,6 +298,29 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       hydrate(form, record);
       wireTabs(d.node);
       d.attachForm(form);
+      // A one-click Medicare review from an existing client. Preserve the
+      // unsaved-change confirmation before leaving, then hand off only the
+      // client UUID (never personal data) to Athena for authorized lookup.
+      if (loaded.id) {
+        const shortcuts=form.querySelector('.client-overview-shortcuts');
+        if (shortcuts && !shortcuts.querySelector('[data-client-athena]')) {
+          const reviewButton=document.createElement('button');
+          reviewButton.type='button';
+          reviewButton.dataset.clientAthena='true';
+          reviewButton.textContent='Medicare Review';
+          shortcuts.prepend(reviewButton);
+          reviewButton.addEventListener('click',async()=>{
+            const closed=await d.requestClose();
+            if (!closed) return;
+            try {
+              sessionStorage.setItem('arctos:athena-review-client',String(loaded.id));
+            } catch (error) {
+              console.warn('Client handoff unavailable; open Athena and search for the client.',error);
+            }
+            location.hash='#/athena-medicare';
+          });
+        }
+      }
     };
     if (!id) mount({});
     else repository.getClient(id).then(loaded => {
