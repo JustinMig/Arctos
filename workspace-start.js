@@ -1,6 +1,6 @@
 import { makeClientSearch } from './client-age-search.js?v=shared-notes-search-1';
 import { createCampaignRepository } from './campaigns-repository.js';
-import { createWorkspace } from './workspace.js?v=ma-plans-5';
+import { createWorkspace } from './workspace.js?v=arctos-nav-1';
 import { mhRepository, supabase } from './supabase-repository.js';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
@@ -14,7 +14,7 @@ import { installClientDelete } from './client-delete.js';
 import { installSimpleDashboardNote } from './dashboard-note-simple.js?v=shared-notes-search-1';
 import { installClientDateAndDragDrop } from './client-date-dragdrop.js';
 import { installClientDuplicateCheck } from './client-duplicate-check.js?v=duplicate-override-1';
-import { installFastNavigation } from './navigation-speed.js?v=2';
+import { installFastNavigation } from './navigation-speed.js?v=arctos-nav-1';
 
 const root = document.querySelector('#app');
 installPullToRefresh();
