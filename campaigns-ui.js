@@ -141,7 +141,7 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
       const result=await api.recordContact({p_member_id:row.id,p_operation_id:operationId,p_expected_version:row.version,p_outcome:v.outcome,p_note:v.note||'',p_next_action:scheduled?v.next_action||'':'',p_event_date:scheduled?dateISO(v.event_date):null,p_start_time:scheduled?v.start_time:null,p_duration_minutes:scheduled?bookingMinutes:30,p_agent_id:scheduled?v.agent_id:null,p_replace_event:scheduled&&v.replace_event==='on'});
       if(!result?.saved)throw new Error('The contact update was not confirmed. Your notes remain open.');
       state.message=scheduled?'Contact result and calendar entry saved.':'Contact result saved.';
-      if(result.event_id)onCalendarChange();
+      if(result.event_id){window.MHCalendarSync?.refresh({force:true});onCalendarChange();}
       void loadDetail();
     }});
     const form=d.node.querySelector('form'), schedule=form.querySelector('[data-cmp-schedule]'),date=form.elements.event_date,time=form.elements.start_time,duration=form.elements.duration,agent=form.elements.agent_id,replace=form.elements.replace_event;
