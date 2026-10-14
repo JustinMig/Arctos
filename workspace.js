@@ -1,7 +1,7 @@
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js';
 import { Dialogs } from './dialogs.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup } from './views.js?v=arctos-medicare-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=arctos-dashboard-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository) {
@@ -66,7 +66,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   const info = connected ? '' : note(pending);
 
   function pageBody(route) {
-    if (route === 'dashboard') return `<div id="calendar-host"></div><div class="metric-grid">${['Clients', 'Appointments', 'Notifications', 'Documents'].map(label => `<div class="metric-card"><span>${label}</span><strong>—</strong><small>${connected ? 'Summary not loaded' : 'Not connected'}</small></div>`).join('')}</div><section class="panel-card dark-card"><h2>Quick Actions</h2><div class="quick-actions"><button type="button" class="btn secondary" data-add-client>Client Information</button><a class="btn secondary" href="#/clients">Search Clients</a><button type="button" class="btn secondary" data-new-appointment>Set Appointment</button><a class="btn secondary" href="#/communications">Communications</a></div></section>`;
+    if (route === 'dashboard') return '<div id="daily-summary-host"></div><details class="daily-calendar" data-daily-calendar><summary><span class="daily-calendar-label">Monthly Calendar <small>Open the full appointment calendar when you need it</small></span><span class="daily-calendar-toggle-label">Show calendar ↓</span></summary><div id="calendar-host"></div></details><p class="daily-dashboard-error" data-daily-error hidden role="status"></p>';
     if (route === 'campaigns') return '<div id="campaigns-host"><p class="subtle">Loading campaigns…</p></div>';
     if (route === 'ma-plans') return '<div id="ma-plans-host"><p class="subtle">Loading 2027 Mississippi MA plans…</p></div>';
     if (route === 'athena-medicare') return '<div id="athena-medicare-host"><p class="subtle">Opening Athena\'s Medicare…</p></div>';
@@ -125,6 +125,11 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (route === 'ma-plans') {
       const host = root.querySelector('#ma-plans-host');
       maPlans().then(feature => { if (host.isConnected && !state.destroyed) feature.mount(host); }).catch(error => { if (host.isConnected) host.innerHTML = empty('MA Plans unavailable', error.message); });
+    }
+    if (route === 'dashboard') {
+      const details = root.querySelector('[data-daily-calendar]');
+      details?.addEventListener('toggle', () => { if(details.open) drawCalendar(); });
+      drawDailyDashboard();
     }
     if (root.querySelector('#calendar-host')) drawCalendar();
   }
@@ -355,12 +360,50 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     host.querySelector('[data-new-appointment]')?.addEventListener('click', () => openAppointment());
   }
 
+  function drawDailyDashboard() {
+    const host=root.querySelector('#daily-summary-host');
+    if(!host || !host.isConnected)return;
+    const thisMonth=calendarMonthKey(new Date());
+    let rows=[],loaded=false;
+    if(state.calendarLoadedKey===thisMonth){
+      rows=state.events;loaded=true;
+    } else {
+      const cached=readCalendarSession(thisMonth);
+      if(cached){rows=cached.events;loaded=true;}
+    }
+    host.innerHTML=dailyDashboardMarkup(rows,connected&&loaded,new Date());
+    host.querySelectorAll('[data-new-appointment]').forEach(button=>button.onclick=()=>openAppointment());
+    host.querySelectorAll('[data-daily-open-today]').forEach(button=>button.onclick=()=>openDay('today',todayKey()));
+    host.querySelectorAll('[data-daily-open-followups]').forEach(button=>button.onclick=()=>openDay('reschedule',todayKey()));
+    host.querySelectorAll('[data-daily-event-day]').forEach(button=>button.onclick=()=>openDay('day',button.dataset.dailyEventDay));
+    host.querySelectorAll('[data-daily-open-calendar]').forEach(button=>button.onclick=()=>{
+      const details=root.querySelector('[data-daily-calendar]');
+      if(!details)return;
+      details.open=true;
+      details.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  }
+
+  function renderVisibleCalendar() {
+    const host=root.querySelector('#calendar-host');
+    if(!host || !host.isConnected)return;
+    // A month grid contains 35-42 date cells. Do not render or bind them
+    // while the dashboard's calendar is closed.
+    const collapsed=state.route==='dashboard' && !root.querySelector('[data-daily-calendar]')?.open;
+    if(collapsed){
+      host.replaceChildren();
+      return;
+    }
+    host.innerHTML=calendarMarkup(state.month,state.events,connected,agents);
+    bindCalendarHost(host);
+  }
+
   function drawCalendar({ force = false } = {}) {
     const host = root.querySelector('#calendar-host');
     if (!host) return;
     const key = calendarMonthKey(state.month);
-    host.innerHTML = calendarMarkup(state.month, state.events, connected, agents);
-    bindCalendarHost(host);
+    renderVisibleCalendar();
+    drawDailyDashboard();
     if (connected && state.calendarLoadedKey !== key) {
       const status = host.querySelector('.calendar-status');
       if (status) status.textContent = 'Loading appointments…';
@@ -415,13 +458,17 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       // Always update the CURRENT host, not the detached host from request start.
       const visibleHost = root.querySelector('#calendar-host');
       if (visibleHost?.isConnected) {
-        visibleHost.innerHTML = calendarMarkup(state.month, events, connected, agents);
-        bindCalendarHost(visibleHost);
+        renderVisibleCalendar();
+        drawDailyDashboard();
+        const notice=root.querySelector('[data-daily-error]');
+        if(notice)notice.hidden=true;
       }
     } catch (e) {
       if (!background && token === state.calendarToken && calendarMonthKey(state.month) === key) {
         const status = root.querySelector('#calendar-host .calendar-status');
         if (status) status.textContent = e.message || 'Calendar could not load. Try another month or Today to retry.';
+        const dailyError=root.querySelector('[data-daily-error]');
+        if(dailyError){dailyError.textContent=e.message || 'Could not load your appointments. Open the calendar to try again.';dailyError.hidden=false;}
       }
     } finally {
       if (state.calendarLoadingKey === key) state.calendarLoadingKey = '';
@@ -433,6 +480,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (state.calendarLoadedKey === key) {
       state.calendarLoadedAt = Date.now();
       writeCalendarSession(key, state.events);
+      drawDailyDashboard();
     }
   }
 
@@ -890,6 +938,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     state.calendarLoadedAt = Date.now();
     writeCalendarSession(state.calendarLoadedKey, events);
     drawCalendar();
+    drawDailyDashboard();
   };
 
   window.addEventListener('hashchange', changeRoute);
