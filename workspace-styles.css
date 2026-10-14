@@ -68,10 +68,34 @@
   transition: transform .18s ease;
 }
 .appointment-card[open] > summary::after { transform: rotate(180deg); }
+.appointment-summary-time {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 83px;
+  padding: 7px 9px;
+  border: 1px solid #cbdedb;
+  border-radius: 8px;
+  background: #edf5f2;
+  color: #245c50;
+  font-size: .82rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.appointment-card > summary { gap: 11px; }
 .appointment-summary-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: .01em;
+}
+@media (max-width: 520px) {
+  .appointment-summary-time { min-width: 72px; padding: 6px 8px; font-size: .76rem; }
+  .appointment-summary-name { font-size: .92rem; }
 }
 .appointment-card-body {
   border-top: 1px solid rgba(20,49,67,.10);
