@@ -11,8 +11,8 @@ test('reference contains exactly the five Mississippi carriers', () => {
   assert.deepEqual([...MA_CARRIERS], [
     'Humana','Aetna','UnitedHealthcare','Devoted','Cigna/HealthSpring'
   ]);
-  assert.equal(MA_PLANS_2027.length,72);
-  assert.equal(MA_PLANS_2027.filter(p=>p.carrier==='Cigna/HealthSpring').length,8);
+  assert.equal(MA_PLANS_2027.length,74);
+  assert.equal(MA_PLANS_2027.filter(p=>p.carrier==='Cigna/HealthSpring').length,10);
   const ids=new Set(MA_PLANS_2027.map(p=>p.plan_number));
   assert.equal(ids.size,MA_PLANS_2027.length,'Duplicate plan IDs can silently switch selections');
 });
