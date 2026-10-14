@@ -16,7 +16,6 @@ export function buildWorkQueue({leads=[],campaigns=[],members=[],appointments=[]
  const activeCampaign=new Map(campaigns.filter(c=>status(c.status)==='active').map(c=>[c.id,c]));
  const linkedEvents=new Set();
  const contactByClient=new Map();
- const recent=()=>Date.now();
  for(const lead of leads){
   const item={key:'lead:'+lead.id,kind:'lead',id:lead.id,clientId:lead.client_id||null,
    name:person(lead),phone:lead.phone||'',note:lead.notes||'',campaign:'',
@@ -35,7 +34,8 @@ export function buildWorkQueue({leads=[],campaigns=[],members=[],appointments=[]
    source:'Campaign',date:member.last_contacted_at||member.added_at||'',
    sortTime:member.last_contacted_at||member.added_at||'',due:member.next_event_date||'',
    eventId:member.next_event_id||'',label:'Contact client'};
-  if(member.next_event_id && scheduled(member.next_event_status))linkedEvents.add(member.next_event_id);
+  // The member is the single source shown for its calendar-linked action.
+  if(member.next_event_id)linkedEvents.add(member.next_event_id);
   if(['not_contacted','no_answer','voicemail'].includes(action)){
    // One visible contact entry per client; repeated memberships are still
    // accessible in their respective campaigns.
