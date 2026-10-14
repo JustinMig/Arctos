@@ -30,7 +30,7 @@ let browser;
    if(u.hostname!=='127.0.0.1')return route.abort();
    if(!built&&u.pathname==='/supabase-repository.js')return route.fulfill({contentType:'application/javascript',body:stub});
    if(!built&&auth&&u.pathname==='/supabase-client.js')return route.fulfill({contentType:'application/javascript',body:authStub});
-   if(u.pathname==='/harness.html')return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/client-texting.css"><link rel="stylesheet" href="/communications-ui.css"></head><body><div id="app"></div></body></html>'});
+   if(u.pathname==='/harness.html')return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/mobile-bottom-toolbar.css"><link rel="stylesheet" href="/arctos-quick-toolbar.css"><link rel="stylesheet" href="/client-texting.css"><link rel="stylesheet" href="/communications-ui.css"></head><body><div id="app"></div></body></html>'});
    if(u.pathname.startsWith('/api/')){
     if(u.pathname==='/api/twilio-sync')await new Promise(r=>setTimeout(r,2000));
     return route.fulfill({contentType:'application/json',body:'{"skipped":true,"matched":0,"synced":0,"events":[]}'});
