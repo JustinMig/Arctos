@@ -244,16 +244,19 @@ export function applyVerified2027Benefits(plan) {
 }
 export function audit2027Plan(plan) {
   const confirmedSB=VERIFIED_2027_BENEFITS[plan?.plan_number] || {};
-  const cms=new Set(plan?._cms_verified_fields || []);
+  const cms=new Set((plan?._cms_verified_fields || []).filter(key=>MA_BENEFIT_FIELDS.includes(key)));
+  const sb=new Set(Object.keys(confirmedSB).filter(key=>MA_BENEFIT_FIELDS.includes(key)));
+  const independentlyChecked=new Set([...cms,...sb]);
   const missing=MA_BENEFIT_FIELDS.filter(key => {
     const raw=String(plan?.[key] ?? '').trim();
     return !raw || /^(?:N\/A|Not listed|Not available)$/i.test(raw)
       || /verify (?:in|with|2027)|not listed (?:on|in)|not confirmed/i.test(raw);
   });
   return {
-    verifiedSBFields:Object.keys(confirmedSB).filter(key=>MA_BENEFIT_FIELDS.includes(key)).length,
+    verifiedSBFields:sb.size,
     cmsVerifiedFields:cms.size,
     fieldsNeedingReview:missing,
+    fieldsWithoutVerifiedSource:MA_BENEFIT_FIELDS.filter(key=>!independentlyChecked.has(key)),
     total:MA_BENEFIT_FIELDS.length
   };
 }
