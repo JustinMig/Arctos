@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const js = fs.readFileSync(new URL('../campaign-workflow-polish.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../campaign-workflow-polish.css', import.meta.url), 'utf8');
-const html = fs.readFileSync(new URL('../workspace-extensions.js', import.meta.url), 'utf8');
+const html = fs.readFileSync(new URL('../workspace-campaign-extensions.js', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../workspace-styles.css', import.meta.url), 'utf8');
 
 test('client search gets a select-all results campaign action', () => {
