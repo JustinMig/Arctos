@@ -1,21 +1,13 @@
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js';
 import { Dialogs } from './dialogs.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup } from './views.js?v=arctos-clients-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup } from './views.js?v=arctos-medicare-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository) {
   if (!(root instanceof HTMLElement)) throw new TypeError('Arctos needs an application root.');
   const dialogs = new Dialogs();
   let campaignFeature = null, campaignModule = null;
-  let intakeFeature = null, intakeModule = null;
-  async function medicareIntake() {
-    if (!intakeModule) intakeModule = import('./medicare-intake.js').then(({ createMedicareIntakeFeature }) => {
-      intakeFeature = createMedicareIntakeFeature();
-      return intakeFeature;
-    }).catch(error => { intakeModule = null; throw error; });
-    return intakeModule;
-  }
   let athenaFeature = null, athenaModule = null;
   async function athenaMedicare() {
     if (!athenaModule) athenaModule = import('./athena-medicare.js')
@@ -77,7 +69,6 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (route === 'dashboard') return `<div id="calendar-host"></div><div class="metric-grid">${['Clients', 'Appointments', 'Notifications', 'Documents'].map(label => `<div class="metric-card"><span>${label}</span><strong>—</strong><small>${connected ? 'Summary not loaded' : 'Not connected'}</small></div>`).join('')}</div><section class="panel-card dark-card"><h2>Quick Actions</h2><div class="quick-actions"><button type="button" class="btn secondary" data-add-client>Client Information</button><a class="btn secondary" href="#/clients">Search Clients</a><button type="button" class="btn secondary" data-new-appointment>Set Appointment</button><a class="btn secondary" href="#/communications">Communications</a></div></section>`;
     if (route === 'campaigns') return '<div id="campaigns-host"><p class="subtle">Loading campaigns…</p></div>';
     if (route === 'ma-plans') return '<div id="ma-plans-host"><p class="subtle">Loading 2027 Mississippi MA plans…</p></div>';
-    if (route === 'medicare-intake') return '<div id="medicare-intake-host"><p class="subtle">Opening Medicare Reviews…</p></div>';
     if (route === 'athena-medicare') return '<div id="athena-medicare-host"><p class="subtle">Opening Athena\'s Medicare…</p></div>';
     if (route === 'clients') return clientSearchMarkup(state.search, agents);
     if (route === 'appointments') return '<div id="calendar-host"></div>';
@@ -89,7 +80,6 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   function render(route) {
     campaignFeature?.unmount();
     maPlansFeature?.unmount();
-    intakeFeature?.unmount();
     athenaFeature?.unmount();
     state.route = route;
     root.innerHTML = shell(route, connected, pageBody(route));
@@ -123,11 +113,6 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (route === 'campaigns') {
       const host = root.querySelector('#campaigns-host');
       campaigns().then(feature => { if (host.isConnected && !state.destroyed) feature.mount(host); }).catch(error => { if (host.isConnected) host.innerHTML = empty('Campaigns unavailable', error.message); });
-    }
-    if (route === 'medicare-intake') {
-      const host = root.querySelector('#medicare-intake-host');
-      medicareIntake().then(feature => { if (host.isConnected && !state.destroyed) feature.mount(host); })
-        .catch(error => { if (host.isConnected) host.innerHTML = empty('Medicare Reviews unavailable', error.message); });
     }
     if (route === 'athena-medicare') {
       const host = root.querySelector('#athena-medicare-host');
@@ -839,11 +824,10 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     const requested = location.hash.replace(/^#\/?/, '') || 'dashboard';
     const isLegacyClient = requested === 'client';
     const removedSection = ['medicare', 'life', 'retirement', 'documents'].includes(requested);
-    const next = NAV.some(([id]) => id === requested) ? requested : (isLegacyClient || removedSection ? 'clients' : 'dashboard');
-    if (state.route === 'medicare-intake' && next !== 'medicare-intake' && intakeFeature && !intakeFeature.canLeave()) {
-      history.replaceState(null, '', '#/medicare-intake');
-      return;
-    }
+    // Retired Medicare Reviews bookmarks now open the Athena workspace. The
+    // old database rows are retained; no data is migrated or deleted here.
+    const next = ['medicare-intake','medicare-reviews'].includes(requested) ? 'athena-medicare' :
+      NAV.some(([id]) => id === requested) ? requested : (isLegacyClient || removedSection ? 'clients' : 'dashboard');
     if (state.route === 'athena-medicare' && next !== 'athena-medicare' && athenaFeature && !athenaFeature.canLeave()) {
       history.replaceState(null, '', '#/athena-medicare');
       return;
@@ -894,7 +878,6 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     state.destroyed = true;
     campaignFeature?.destroy();
     maPlansFeature?.destroy();
-    intakeFeature?.destroy();
     athenaFeature?.destroy();
     dialogs.destroy();
     window.removeEventListener('hashchange', changeRoute);
