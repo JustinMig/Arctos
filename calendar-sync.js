@@ -167,6 +167,18 @@ export function installMayerJustinCalendar() {
 
   mhRepository.deleteEvent = async function(eventId) {
     if (!eventId) throw new Error('Missing calendar event ID.');
+    // Campaign bookings are stored in Arctos appointments, not the separate
+    // Mayer/Justin workspace calendar. Delete from the correct source.
+    const { data: local, error: lookupError } = await supabase
+      .from('appointments').select('id').eq('id', eventId).maybeSingle();
+    if (lookupError) throw lookupError;
+    if (local) {
+      const { error } = await supabase.from('appointments').delete().eq('id', eventId);
+      if (error) throw error;
+      invalidateCalendarCache();
+      window.dispatchEvent(new CustomEvent('mig:calendar-refresh-request'));
+      return { deleted: true };
+    }
     const result = await calendarRequest('DELETE', { id: eventId });
     invalidateCalendarCache();
     await supabase.from('calendar_event_client_links').delete().eq('event_id', eventId);
