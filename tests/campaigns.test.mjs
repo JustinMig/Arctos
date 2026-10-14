@@ -10,7 +10,7 @@ test('time parsing supports database seconds',()=>{assert.equal(timeMinutes('10:
 test('slots match Mayer 8 AM–8 PM half hours',()=>{const s=appointmentSlots();assert.equal(s.length,25);assert.equal(s[0],'08:00');assert.equal(s.at(-1),'20:00')});
 const events=[{id:'a',start_time:'10:00:00',end_time:'11:00:00',status:'scheduled'}];
 test('overlapping durations block, adjacent intervals allowed',()=>{assert.equal(slotIsBooked('09:30',60,events),true);assert.equal(slotIsBooked('10:30',30,events),true);assert.equal(slotIsBooked('11:00',30,events),false)});
-test('cancelled events do not block, all-day events do',()=>{assert.equal(slotIsBooked('10:00',30,[{...events[0],status:'cancelled'}]),false);assert.equal(slotIsBooked('12:00',30,[{id:'all',start_time:null}]),true)});
+test('cancelled and untimed legacy records do not falsely block all appointment choices',()=>{assert.equal(slotIsBooked('10:00',30,[{...events[0],status:'cancelled'}]),false);assert.equal(slotIsBooked('12:00',30,[{id:'all',start_time:null}]),false);assert.equal(slotIsBooked('08:30',30,[{id:'invalid',start_time:'invalid'}]),false);});
 test('replacement excludes only explicitly chosen old event',()=>{assert.equal(slotIsBooked('10:00',30,events,'a'),false);assert.equal(slotIsBooked('10:00',30,events,'different'),true)});
 test('empty end time has a 30 minute default',()=>{assert.equal(slotIsBooked('10:00',30,[{start_time:'10:00'}]),true);assert.equal(slotIsBooked('10:30',30,[{start_time:'10:00'}]),false)});
 test('invalid or overnight duration cannot book',()=>{assert.equal(slotIsBooked('23:30',60,[]),true);assert.equal(slotIsBooked('09:00',0,[]),true)});
