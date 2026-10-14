@@ -25,15 +25,36 @@ export function installFastNavigation(root) {
         if (nextContent && currentContent) {
           currentContent.replaceChildren(...Array.from(nextContent.childNodes));
 
+          // A group may contain both a primary link and a submenu link for
+          // the same route. Match by role as well as href to keep both states
+          // accurate when the shell is preserved between navigation changes.
+          const keyForLink = link => link.getAttribute('href') + '|' +
+            (link.classList.contains('nav-primary') ? 'primary' : 'child');
           const nextLinks = new Map(
-            Array.from(nextShell.querySelectorAll('.nav a[href]')).map(link => [link.getAttribute('href'), link])
+            Array.from(nextShell.querySelectorAll('.nav a[href]')).map(link => [keyForLink(link), link])
           );
           currentShell.querySelectorAll('.nav a[href]').forEach(link => {
-            const next = nextLinks.get(link.getAttribute('href'));
-            const active = Boolean(next?.classList.contains('active'));
-            link.classList.toggle('active', active);
-            if (active) link.setAttribute('aria-current', 'page');
+            const next = nextLinks.get(keyForLink(link));
+            link.classList.toggle('active', Boolean(next?.classList.contains('active')));
+            if (next?.hasAttribute('aria-current')) link.setAttribute('aria-current', next.getAttribute('aria-current'));
             else link.removeAttribute('aria-current');
+          });
+          // Keep More highlighted on Carriers and Agents, and reveal the
+          // selected submenu on deep-link or programmatic navigation.
+          const nowMore = currentShell.querySelector('.nav-more-trigger');
+          const nextMore = nextShell.querySelector('.nav-more-trigger');
+          if (nowMore && nextMore) {
+            nowMore.classList.toggle('active', nextMore.classList.contains('active'));
+          }
+          currentShell.querySelectorAll('.nav-section[data-nav-section]').forEach(section => {
+            const selected = nextShell.querySelector('.nav-section[data-nav-section="' + section.dataset.navSection + '"]');
+            if (!selected || !selected.querySelector('.nav-primary.active')) return;
+            const children = section.querySelector('.nav-children');
+            const toggle = section.querySelector('[data-nav-toggle]');
+            if (children && toggle) {
+              children.hidden = false;
+              toggle.setAttribute('aria-expanded', 'true');
+            }
           });
 
           // Close mobile navigation immediately after a route switch.
