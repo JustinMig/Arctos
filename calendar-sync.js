@@ -14,7 +14,7 @@ function invalidateCalendarCache() {
 
 async function authHeaders() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error('Your M&H CRM session expired. Sign in again.');
+  if (!session?.access_token) throw new Error('Your Arctos session expired. Sign in again.');
   return { Authorization: `Bearer ${session.access_token}` };
 }
 
