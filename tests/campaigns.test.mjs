@@ -18,3 +18,15 @@ test('server sort uses allowlist and stable tie breakers',()=>{assert.deepEqual(
 test('search values are quoted rather than executable filter fragments',()=>{assert.equal(JSON.parse(safeSearchPattern('O\'Neil, (Jones)')),"%O'Neil, (Jones)%");assert.equal(safeSearchPattern('%%__'),'')});
 test('invalid result rejects before contacting database',async()=>{let called=false;const repo=createCampaignRepository({rpc:()=>{called=true}});await assert.rejects(()=>repo.recordContact({p_outcome:'unexpected'}));assert.equal(called,false)});
 test('workspace integration preserves canonical opener and lazy loading',()=>{const source=readFileSync(new URL('../workspace.js',import.meta.url),'utf8');assert.match(source,/import\('\.\/campaigns-ui.js'\)/);assert.match(source,/createCampaignFeature\(\{ repository, dialogs, openClient/);assert.match(source,/#client-results \[data-client-id/)});
+
+test('hidden campaign duration stays in FormData and never causes false overlap warnings',()=>{
+  const hide=readFileSync(new URL('../campaign-hide-duration.js',import.meta.url),'utf8');
+  const ui=readFileSync(new URL('../campaigns-ui.js',import.meta.url),'utf8');
+  assert.match(hide,/label\.hidden = true/);
+  assert.doesNotMatch(hide,/label\.remove\(\)/);
+  assert.match(ui,/bookingMinutes=Number\(v\.duration \|\| 30\)/);
+  assert.match(ui,/slotIsBooked\(v\.start_time,bookingMinutes,blocks/);
+  assert.match(ui,/p_duration_minutes:scheduled\?bookingMinutes:30/);
+  assert.equal(slotIsBooked('10:00',30,[]),false,'no scheduled appointments means an open time');
+  assert.equal(slotIsBooked('10:00',Number(undefined),[]),true,'missing duration was the original bug');
+});
