@@ -1,6 +1,6 @@
-# M&H CRM
+# Arctos
 
-Standalone CRM framework for M&H Insurance Group.
+Arctos — the CRM workspace used by the insurance group. The existing GitHub repository, database, and deployment identifiers are retained for compatibility.
 
 - New CRM target: `MH.mayerig.com`
 - Existing CRM remains: `crm.mayerig.com`
