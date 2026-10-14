@@ -48,7 +48,24 @@ export function createCampaignRepository(db) {
     },
     async availability(agentId, day) {
       if (!agentId || !day) throw new Error('Choose an agent and valid date.');
-      return check(await db.from('appointments').select('id,start_time,end_time,status').eq('assigned_agent_id', agentId).eq('event_date', day).eq('status', 'scheduled')) || [];
+      // Campaigns store bookings in Arctos, while the visible Justin calendar
+      // also contains events from the Mayer calendar bridge. Both sources must
+      // be checked before offering a time as available.
+      const local = check(await db.from('appointments').select('id,start_time,end_time,status').eq('assigned_agent_id', agentId).eq('event_date', day).eq('status', 'scheduled')) || [];
+      // Only the signed-in agent's Justin calendar is exposed by this bridge.
+      const { data: { session } } = await db.auth.getSession();
+      if (!session?.access_token) throw new Error('Sign in again to check the shared calendar.');
+      if (agentId !== session.user.id) return local;
+      const response = await fetch(`/api/calendar-events?start=${encodeURIComponent(day)}&end=${encodeURIComponent(day)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !Array.isArray(payload.events)) throw new Error(payload.error || 'Unable to check the shared calendar.');
+      const shared = payload.events
+        .filter(event => event.status === 'scheduled' && event.start_time)
+        .map(event => ({ id: event.id, start_time: event.start_time, end_time: event.end_time, status: 'scheduled' }));
+      return [...local, ...shared.filter(event => !local.some(item => item.id === event.id))];
     },
     async history(memberId) {
       return check(await db.from('campaign_contact_log').select('id,outcome,note,next_action,created_at,appointment_id').eq('member_id', memberId).order('created_at', { ascending: false }).limit(30)) || [];
