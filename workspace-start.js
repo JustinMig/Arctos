@@ -1,11 +1,10 @@
 import { makeClientSearch } from './client-age-search.js?v=shared-notes-search-1';
 import { createCampaignRepository } from './campaigns-repository.js';
-import { createWorkspace } from './workspace.js?v=arctos-medicare-1';
+import { createWorkspace } from './workspace.js?v=arctos-dashboard-1';
 import { mhRepository, supabase } from './supabase-repository.js';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
 import { installPullToRefresh } from './pull-to-refresh.js';
-import { installDashboardCleanup } from './dashboard-cleanup.js';
 import { installAppointmentSingleAgent } from './appointment-ui.js?v=optimization-2';
 import { installCarrierVault } from './carriers-ui.js';
 import { installMayerJustinCalendar } from './calendar-sync.js?v=appointment-actions-1';
@@ -70,7 +69,6 @@ export async function startWorkspace() {
   installClientDelete(root, mhRepository);
   installSimpleDashboardNote(root);
   installClientDateAndDragDrop(root);
-  installDashboardCleanup(root);
   installAppointmentSingleAgent(root, mhRepository);
   installAdminUsers(root, mhRepository);
   installCarrierVault(root);
