@@ -49,7 +49,32 @@ export function installMayerJustinCalendar() {
         includeToday: criteria.includeToday ? '1' : '',
         includeReschedule: criteria.includeReschedule ? '1' : ''
       });
-      const events = Array.isArray(payload.events) ? payload.events : [];
+      const sharedEvents = Array.isArray(payload.events) ? payload.events : [];
+      // Campaign bookings live in Arctos's appointments table, not in the
+      // upstream Mayer calendar. Show both sources in the same calendar.
+      let localQuery = supabase.from('appointments').select('*').gte('event_date', criteria.start).lte('event_date', criteria.end);
+      const { data: localEvents, error: localError } = await localQuery.order('event_date').order('start_time');
+      if (localError) throw localError;
+      let extras = [];
+      if (criteria.includeToday || criteria.includeReschedule) {
+        const centralDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const filters = [];
+        if (criteria.includeToday) filters.push(`event_date.eq.${centralDate}`);
+        if (criteria.includeReschedule) filters.push('status.eq.needs_reschedule');
+        if (filters.length) {
+          const extraResult = await supabase.from('appointments').select('*').or(filters.join(','));
+          if (extraResult.error) throw extraResult.error;
+          extras = extraResult.data || [];
+        }
+      }
+      const seen = new Set(sharedEvents.map(event => event.id));
+      const events = [...sharedEvents];
+      for (const event of [...(localEvents || []), ...extras]) {
+        if (seen.has(event.id)) continue;
+        seen.add(event.id);
+        events.push({ ...event, calendar_source: 'arctos_campaign' });
+      }
+      events.sort((a, b) => `${a.event_date || ''} ${a.start_time || ''}`.localeCompare(`${b.event_date || ''} ${b.start_time || ''}`));
       const record = { events, loadedAt: Date.now() };
       calendarCache.set(key, record);
 
@@ -164,8 +189,8 @@ export function installMayerJustinCalendar() {
   window.MHCalendarSync = {
     source: 'Mayer CRM · Justin calendar',
     refresh({ force = false } = {}) {
-      if (!(location.hash.startsWith('#/dashboard') || location.hash.startsWith('#/appointments'))) return;
       if (force) invalidateCalendarCache();
+      if (!(location.hash.startsWith('#/dashboard') || location.hash.startsWith('#/appointments'))) return;
       window.dispatchEvent(new CustomEvent('mig:calendar-refresh-request'));
     }
   };
