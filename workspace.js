@@ -1,7 +1,7 @@
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js';
 import { Dialogs } from './dialogs.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup } from './views.js?v=arctos-nav-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup } from './views.js?v=arctos-clients-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository) {
@@ -227,19 +227,69 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     if (row && record) row.innerHTML = clientResultContent(record);
   }
   function wireTabs(node) {
-    const buttons = Array.from(node.querySelectorAll('[data-tab]'));
-    function choose(button) {
-      buttons.forEach(b => { b.setAttribute('aria-selected', String(b === button)); b.tabIndex = b === button ? 0 : -1; });
-      node.querySelectorAll('[data-panel]').forEach(panel => panel.hidden = panel.dataset.panel !== button.dataset.tab);
+    const form=node.querySelector('form.client-form');
+    if (!form || !form.classList.contains('client-four-tabs')) return;
+    const buttons=[...form.querySelectorAll('[data-client-group-tab]')];
+    const panels=[...form.querySelectorAll('[data-client-group-panel]')];
+    const sectionToGroup={
+      information:'overview',medicare:'coverage',life:'coverage',
+      hospital_indemnity:'coverage',retirement:'coverage',
+      doctors:'medical',medications:'medical',notes:'files'
+    };
+    function show(group,{section=null,focus=false}={}) {
+      const selected=buttons.find(button=>button.dataset.clientGroupTab===group);
+      if(!selected)return;
+      buttons.forEach(button=>{
+        const active=button===selected;
+        button.setAttribute('aria-selected',String(active));
+        button.tabIndex=active?0:-1;
+      });
+      panels.forEach(panel=>{
+        panel.hidden=panel.dataset.clientGroupPanel!==group;
+      });
+      if(section){
+        const category=form.querySelector('[data-client-category="'+section+'"]');
+        if(category)category.open=true;
+      }
+      if(focus)selected.focus();
     }
-    buttons.forEach((button, i) => {
-      button.onclick = () => choose(button);
-      button.onkeydown = e => {
-        const index = e.key === 'ArrowRight' ? (i + 1) % buttons.length : e.key === 'ArrowLeft' ? (i + buttons.length - 1) % buttons.length : e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1 : -1;
-        if (index < 0) return;
-        e.preventDefault(); choose(buttons[index]); buttons[index].focus();
+    buttons.forEach((button,i)=>{
+      button.onclick=()=>show(button.dataset.clientGroupTab);
+      button.onkeydown=event=>{
+        const index=event.key==='ArrowRight'?(i+1)%buttons.length:
+          event.key==='ArrowLeft'?(i+buttons.length-1)%buttons.length:
+          event.key==='Home'?0:event.key==='End'?buttons.length-1:-1;
+        if(index<0)return;
+        event.preventDefault();show(buttons[index].dataset.clientGroupTab,{focus:true});
       };
     });
+    // Existing integrations can still click the old [data-tab] hooks. Those
+    // hooks reveal the corresponding group and expand the requested card.
+    form.querySelectorAll('[data-tab]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const section=button.dataset.tab;
+        show(sectionToGroup[section]||'overview',{section});
+      });
+    });
+    form.querySelectorAll('[data-client-jump]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const section=button.dataset.clientJump;
+        show(sectionToGroup[section]||'overview',{section});
+      });
+    });
+    const updateSummary=()=>{
+      const value=name=>form.elements.namedItem(name)?.value?.trim()||'';
+      const name=[value('first_name'),value('last_name')].filter(Boolean).join(' ')||'New Client';
+      const dob=value('date_of_birth'),location=[value('city'),value('state')].filter(Boolean).join(', ');
+      const details=[dob?'DOB: '+dob:'',value('phone'),location].filter(Boolean);
+      const title=form.querySelector('[data-client-summary-name]');
+      const meta=form.querySelector('[data-client-summary-meta]');
+      if(title)title.textContent=name;
+      if(meta)meta.textContent=details.join('  •  ')||'Contact information not entered yet.';
+    };
+    form.addEventListener('input',updateSummary);
+    form.addEventListener('change',updateSummary);
+    updateSummary();
   }
   function openClient(id = null) {
     let record = {};
