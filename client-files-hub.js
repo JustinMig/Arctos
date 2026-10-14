@@ -134,8 +134,8 @@ function bind(dialog){
  contexts.set(dialog,state);
  const currentId=()=>dialog.dataset.clientId||'';
  async function reload(){
-  const id=currentId(),ticket=++state.request;
   if(state.loading)return;
+  const id=currentId(),ticket=++state.request;
   state.clientId=id;
   if(!id){state.records=[];state.notes=[];state.loaded=true;renderFiles(state);renderNotes(state);return;}
   state.loading=true;state.error='';renderFiles(state);
