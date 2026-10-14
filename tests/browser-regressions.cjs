@@ -72,6 +72,46 @@ let browser;
   assert.equal(layout.overflow,false,JSON.stringify(layout));assert.equal(layout.overlap,false,JSON.stringify(layout));result.layout.push(layout);await page.screenshot({path:path.join(out,`communications-${width}.png`),fullPage:true});
  }
  assert.deepEqual(errors,[]);await page.close();
+ // Four-tab client record, using a synthetic new client and no database writes.
+ ({page,errors}=await createPage());await page.goto('http://127.0.0.1/harness.html#/dashboard');
+ await page.addStyleTag({url:'http://127.0.0.1/client-four-tabs.css'});
+ await page.evaluate(async()=>{
+   const {mhRepository}=await import('/supabase-repository.js');
+   const {createWorkspace}=await import('/workspace.js');
+   createWorkspace(document.querySelector('#app'),mhRepository);
+ });
+ await page.locator('[data-add-client]').click();
+ const clientForm=page.locator('dialog.client-dialog form.client-four-tabs');
+ await clientForm.waitFor();
+ assert.deepEqual(await clientForm.locator('[data-client-group-tab]').allTextContents(),['Overview','Coverage','Medical','Notes & Files']);
+ assert.equal(await clientForm.locator('[data-panel]').count(),8);
+ assert.equal(await clientForm.locator('[data-client-group-panel]').count(),4);
+ await clientForm.locator('[name="first_name"]').fill('Synthetic');
+ await clientForm.locator('[name="last_name"]').fill('Client');
+ await clientForm.locator('[name="phone"]').fill('6625550158');
+ assert.match(await clientForm.locator('[data-client-summary-name]').innerText(),/Synthetic Client/);
+ await clientForm.locator('[data-client-jump="medicare"]').click();
+ assert.equal(await clientForm.locator('[data-client-group-panel="coverage"]').isVisible(),true);
+ assert.equal(await clientForm.locator('[data-client-category="medicare"]').getAttribute('open'),'');
+ await clientForm.locator('[data-client-category="life"] > summary').click();
+ assert.equal(await clientForm.locator('[data-client-category="life"]').getAttribute('open'),'');
+ await clientForm.locator('[data-client-group-tab="medical"]').click();
+ assert.equal(await clientForm.locator('[data-client-category="doctors"]').isVisible(),true);
+ assert.equal(await clientForm.locator('[data-client-category="medications"]').isVisible(),true);
+ await clientForm.locator('[data-client-group-tab="files"]').click();
+ assert.equal(await clientForm.locator('[name="notes"]').isVisible(),true);
+ await page.evaluate(()=>document.querySelector('dialog.client-dialog [data-tab="life"]').click());
+ assert.equal(await clientForm.locator('[data-client-group-panel="coverage"]').isVisible(),true);
+ assert.equal(await clientForm.locator('[data-client-category="life"]').getAttribute('open'),'');
+ await clientForm.locator('[data-client-group-tab="overview"]').click();
+ assert.equal(await clientForm.locator('[name="phone"]').inputValue(),'6625550158');
+ await page.setViewportSize({width:390,height:844});
+ assert.equal(await clientForm.locator('[data-client-group-tab]').count(),4);
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ assert.deepEqual(errors,[]);
+ result.tests.push('four-tab client UI retains eight CRM panels, legacy links, unsaved field data, and mobile layout');
+ await page.close();
+
  // Recovery UI state is tested without consuming a real recovery link or changing a real password.
  for(const suffix of ['?recovery=1','?recovery=1#error=access_denied&error_code=otp_expired']){
   ({page,errors}=await createPage({auth:true}));await page.goto('http://127.0.0.1/'+suffix);await page.waitForSelector('[data-new-reset]');assert.equal(await page.locator('h1').innerText(),'Reset Link Unavailable');
