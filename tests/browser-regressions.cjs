@@ -128,6 +128,7 @@ let browser;
  const primaryNav=await page.evaluate(()=>Array.from(document.querySelectorAll('.nav > .nav-primary, .nav > .nav-section > .nav-line > .nav-primary, .nav > .nav-section > .nav-more-trigger')).map(el=>el.querySelector(':scope > span:not(.nav-chevron)')?.textContent.trim()));
  assert.deepEqual(primaryNav,['Home','Clients','Medicare','Work','Messages','More']);
  assert.equal(await page.locator('#nav-children-medicare').isVisible(),false);
+ assert.equal(await page.locator('.nav a[href="#/medicare-intake"]').count(),0);
  await page.locator('[data-nav-toggle="medicare"]').click();
  assert.equal(await page.locator('#nav-children-medicare').isVisible(),true);
  assert.equal(await page.locator('.nav-child[href="#/ma-plans"]').count(),1);
