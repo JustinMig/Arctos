@@ -101,6 +101,57 @@ export function clientForm(connected, agents = []) {
       '<section id="client-panel-notes" data-panel="notes">'+panels.notes+'</section></section>' +
     '</form>';
 }
+// The Home screen uses the already loaded appointment collection. No extra
+// database request is needed for these dashboard totals or today's agenda.
+export function dailyDashboardMarkup(events = [], loaded = false, date = new Date()) {
+  const pad = value => String(value).padStart(2, '0');
+  const today = isoDate(date);
+  const monthPrefix = today.slice(0,7);
+  const openStatuses = new Set(['completed','cancelled','canceled','deleted']);
+  const rows = Array.isArray(events) ? events : [];
+  const active = rows.filter(e => !openStatuses.has(String(e.status||'').toLowerCase()));
+  const todays = active.filter(e => e.event_date === today && e.status !== 'needs_reschedule')
+    .sort((a,b) => String(a.start_time||'99:99').localeCompare(String(b.start_time||'99:99')));
+  const followups = active.filter(e => e.status === 'needs_reschedule')
+    .sort((a,b) => String(a.event_date||'').localeCompare(String(b.event_date||'')));
+  const upcoming = active.filter(e => e.event_date > today && e.event_date?.startsWith(monthPrefix) && e.status !== 'needs_reschedule');
+  const readableDate = date.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  const metric = (label,value,note,kind) => '<article class="daily-stat daily-stat-'+kind+'"><span>'+esc(label)+'</span><strong>'+ (loaded ? String(value) : '—') +'</strong><small>'+esc(note)+'</small></article>';
+  const appointment = e => '<button type="button" class="daily-agenda-item" data-daily-event-day="'+esc(e.event_date)+'">' +
+      '<span class="daily-agenda-time">'+esc(timeLabel(e.start_time||''))+'</span>' +
+      '<span class="daily-agenda-copy"><strong>'+esc(e.title||'Appointment')+'</strong><small>'+esc(e.event_type||'Appointment')+'</small></span>' +
+      '<span aria-hidden="true" class="daily-agenda-arrow">›</span></button>';
+  const followup = e => '<button type="button" class="daily-agenda-item" data-daily-open-followups>' +
+    '<span class="daily-agenda-time daily-followup-date">'+esc(e.event_date||'Date not set')+'</span>' +
+    '<span class="daily-agenda-copy"><strong>'+esc(e.title||'Follow-up')+'</strong><small>Needs rescheduling</small></span>' +
+    '<span aria-hidden="true" class="daily-agenda-arrow">›</span></button>';
+  return '<section class="daily-dashboard" aria-label="Daily work overview">' +
+    '<header class="daily-hero"><div><span class="daily-date">'+esc(readableDate)+'</span><h2>Today\'s Work</h2><p>Appointments, follow-ups, and your next actions in one place.</p></div>' +
+    '<div class="daily-hero-actions"><button type="button" class="btn primary" data-new-appointment>+ Appointment</button>' +
+    '<a class="btn secondary" href="#/clients">Find Client</a></div></header>' +
+    '<div class="daily-stats" aria-label="Appointment overview">' +
+    metric('Today',todays.length,'Active appointments','today') +
+    metric('Follow-ups',followups.length,'Need rescheduling','followups') +
+    metric('Coming up',upcoming.length,'Later this month','upcoming') + '</div>' +
+    '<div class="daily-work-grid">' +
+    '<section class="daily-work-section"><header><div><h3>Today\'s Schedule</h3><p>Your scheduled visits and calls</p></div>' +
+    '<button type="button" class="daily-text-action" data-daily-open-today>View day →</button></header>' +
+    '<div class="daily-work-list">' +
+    (!loaded?'<p class="daily-empty" data-daily-loading>Loading today\'s schedule…</p>':
+      todays.length?todays.slice(0,6).map(appointment).join('') :'<p class="daily-empty">No appointments scheduled for today.</p>')+
+    '</div>'+ (loaded&&todays.length>6?'<button type="button" class="daily-more-action" data-daily-open-today>See all '+todays.length+' appointments →</button>':'')+
+    '</section><section class="daily-work-section"><header><div><h3>Needs Attention</h3><p>Appointments awaiting a new date</p></div>' +
+    '<button type="button" class="daily-text-action" data-daily-open-followups>View all →</button></header>' +
+    '<div class="daily-work-list">' +
+    (!loaded?'<p class="daily-empty">Loading follow-ups…</p>':
+      followups.length?followups.slice(0,5).map(followup).join(''):'<p class="daily-empty">No appointments waiting to be rescheduled.</p>')+
+    '</div>'+ (loaded&&followups.length>5?'<button type="button" class="daily-more-action" data-daily-open-followups>See all '+followups.length+' follow-ups →</button>':'') +
+    '</section></div><div class="daily-work-footer">' +
+    '<a class="daily-work-link" href="#/campaigns">Open campaigns and lead lists →</a>' +
+    '<button type="button" class="daily-text-action" data-daily-open-calendar>Open monthly calendar ↓</button>' +
+    '</div></section>';
+}
+
 export function calendarMarkup(month, events = [], connected = false, agents = []) {
   const days = monthDays(month.getFullYear(), month.getMonth());
   const today = todayKey();
