@@ -157,7 +157,7 @@ export const MA_BENEFIT_FIELDS = Object.freeze([
   'dental','vision','hearing','otc_food_utilities','transportation','fitness'
 ]);
 export function get2027PlanDocuments(plan) {
-  const id = String(plan?.plan_number || '').replace(/-\d{3}$/, '');
+  const id = String(plan?.plan_number || '').replace(/^(\w\d{4}-\d{3})-\d{3}$/, '$1');
   const devoted = DEVOTED_2027_DOCS[id];
   if (devoted) return {
     sb:devoted.sb, eoc:devoted.eoc || devoted.page,
