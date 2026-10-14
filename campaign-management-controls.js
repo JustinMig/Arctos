@@ -73,8 +73,15 @@ async function removeCampaignMember(select) {
       .select('campaign_id')
       .single();
     if (error) throw error;
-    if (data?.campaign_id) sessionStorage.setItem(RETURN_KEY, data.campaign_id);
-    location.reload();
+    // Stay inside the current campaign instead of reloading the entire CRM.
+    // Removing the card immediately also keeps its count/list responsive.
+    card?.remove();
+    const campaignRoot = document.querySelector('.campaigns-root');
+    const list = campaignRoot?.querySelector('.cmp-members');
+    const displayed = campaignRoot?.querySelector('.cmp-results-foot span');
+    if (displayed && list) displayed.textContent = `${list.querySelectorAll('.cmp-member').length} displayed`;
+    // Trigger a fresh campaign fetch through the existing campaign route.
+    campaignRoot?.querySelector('.cmp-member-filters button[type="submit"]')?.click();
   } catch (error) {
     select.disabled = false;
     alert(`Client could not be removed from the campaign. ${errorMessage(error)}`);
