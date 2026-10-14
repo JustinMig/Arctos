@@ -3,7 +3,7 @@ import {mhRepository,supabase} from './supabase-repository.js';
 import {FILE_GROUPS,fileGroup,fileCategoryLabel,fileIndex,fileGroupCounts} from './client-files-hub-model.js';
 
 const BUCKET='mh-client-documents';
-const PAGE=200,MAX_ROWS=4000;
+const PAGE=200,MAX_ROWS=4000,FILES_REFRESH_MS=20000;
 const contexts=new WeakMap();
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const humanSize=value=>{const n=Number(value||0);return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B';};
@@ -131,14 +131,16 @@ function bind(dialog){
  const wrap=document.createElement('div');wrap.innerHTML=markup();
  const host=wrap.firstElementChild;
  notesPanel.prepend(host);
- const state={host,dialog,records:[],notes:[],loaded:false,loading:false,limited:false,error:'',filter:'all',query:'',clientId:'',request:0};
+ const state={host,dialog,records:[],notes:[],loaded:false,loadedAt:0,loading:false,refreshPending:false,limited:false,error:'',filter:'all',query:'',clientId:'',request:0};
  contexts.set(dialog,state);
  const currentId=()=>dialog.dataset.clientId||'';
- async function reload(){
-  if(state.loading)return;
-  const id=currentId(),ticket=++state.request;
+ async function reload(force=false){
+  if(state.loading){if(force)state.refreshPending=true;return;}
+  const id=currentId();
+  if(!force && state.loaded && state.clientId===id && Date.now()-state.loadedAt<FILES_REFRESH_MS)return;
+  const ticket=++state.request;
   state.clientId=id;
-  if(!id){state.records=[];state.notes=[];state.loaded=true;renderFiles(state);renderNotes(state);return;}
+  if(!id){state.records=[];state.notes=[];state.loaded=true;state.loadedAt=Date.now();renderFiles(state);renderNotes(state);return;}
   state.loading=true;state.error='';renderFiles(state);
   const [files,notes]=await Promise.allSettled([readFiles(id),readNotes(id)]);
   if(!dialog.isConnected||ticket!==state.request)return;
@@ -147,9 +149,10 @@ function bind(dialog){
   }else state.error='Files: '+(files.reason?.message||'Could not load documents.');
   if(notes.status==='fulfilled')state.notes=notes.value;
   else state.error+=(state.error?' · ':'')+'Notes: '+(notes.reason?.message||'Could not load notes.');
-  state.loaded=true;state.loading=false;renderFiles(state);renderNotes(state);
+  state.loaded=true;state.loadedAt=Date.now();state.loading=false;renderFiles(state);renderNotes(state);
+  if(state.refreshPending){state.refreshPending=false;void reload(true);}
  }
- host.querySelector('[data-cfh-refresh]').onclick=()=>void reload();
+ host.querySelector('[data-cfh-refresh]').onclick=()=>void reload(true);
  host.querySelector('[data-cfh-search]').oninput=e=>{state.query=e.target.value;renderFiles(state);};
  host.querySelector('.cfh-categories').addEventListener('click',event=>{
   const b=event.target.closest('[data-cfh-filter]');
@@ -212,7 +215,7 @@ function bind(dialog){
  dialog.addEventListener('click',event=>{
   if(event.target.closest('[data-client-group-tab="files"],[data-tab="notes"]'))void reload();
  });
- dialog.addEventListener('arctos:client-file-change',()=>void reload());
+ dialog.addEventListener('arctos:client-file-change',()=>void reload(true));
  renderFiles(state);renderNotes(state);
  if(dialog.querySelector('[data-client-group-tab="files"]')?.getAttribute('aria-selected')==='true')void reload();
 }
