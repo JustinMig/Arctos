@@ -89,3 +89,13 @@ test('Aetna H3239-028 2027 SB/EOC corrects Medicaid eligibility and uncovered em
   assert.match(links.sb,/plan\.H3239\.028\.html/);
   assert.equal(links.directSB,false,'Do not mislabel plan document landing pages as direct PDFs');
 });
+
+test('a populated but unsourced MA benefit is still marked as needing confirmation', () => {
+  const populated=MA_PLANS_2027.find(p=>p.plan_number==='H5008-011');
+  const audit=audit2027Plan({...populated,
+    _cms_verified_fields:['premium','medical_moop','drug_deductible','rx_oop']});
+  assert.ok(audit.fieldsWithoutVerifiedSource.includes('transportation'));
+  assert.ok(audit.fieldsWithoutVerifiedSource.includes('dental'));
+  assert.ok(!audit.fieldsWithoutVerifiedSource.includes('medical_moop'));
+  assert.ok(audit.fieldsWithoutVerifiedSource.length>=10);
+});
