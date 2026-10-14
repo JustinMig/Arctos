@@ -790,8 +790,8 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     const form = d.node.querySelector('form');
     const parseAppointmentDay = raw => {
       const value = String(raw || '').trim();
-      if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return value;
-      const m = /^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})$/.exec(value);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+      const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
       if (!m) return '';
       const date = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]));
       return date.getFullYear() === Number(m[3]) && date.getMonth() + 1 === Number(m[1]) && date.getDate() === Number(m[2])
