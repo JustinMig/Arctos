@@ -7,7 +7,7 @@ const contents=file=>readFile(new URL('../'+file,import.meta.url),'utf8');
 test('five permanent shortcuts appear in top chrome and not in the More submenu',()=>{
  const toolbar=quickToolbarMarkup();
  const expected=['New Client','Appointments','Notes','Contacts','Height & Weight'];
- assert.deepEqual([...toolbar.matchAll(/aria-label="(New Client|Appointments|Notes|Contacts|Height & Weight)"/g)].map(m=>m[1]),expected);
+ assert.deepEqual([...toolbar.matchAll(/aria-label="(New Client|Appointments|Notes|Contacts|Height &amp; Weight)"/g)].map(m=>m[1].replace(/&amp;/g,'&')),expected);
  assert.equal((toolbar.match(/class="quick-tool"/g)||[]).length,5);
  assert.match(toolbar,/data-add-client/);
  for(const key of ['appointments','notes','contacts','build']){
