@@ -118,7 +118,9 @@ async function loadLandscape() {
     premium:get('Monthly Consolidated Premium (Part C + D)','Monthly Consolidated Premium'),
     partCPremium:get('Part C Premium','Monthly Part C Premium'),
     moop:get('In-Network Maximum Out-of-Pocket (MOOP) Amount','In-Network MOOP Amount','In-Network MOOP'),
-    rx:get('Annual Drug Deductible','Annual Prescription Drug Deductible','Drug Deductible','Part D Deductible'),
+    rx:get('Annual Part D Deductible Amount','Annual Drug Deductible','Annual Prescription Drug Deductible','Drug Deductible','Part D Drug Deductible'),
+    rxOop:get('Part D Out-of-Pocket (OOP) Threshold','Part D OOP Threshold'),
+    partD:get('Part D Coverage Indicator','Part D Coverage'),
     giveback:get('Part B Premium Reduction','Monthly Part B Premium Reduction','Part B Giveback')
   };
   if ([c.state,c.county,c.contract,c.plan].some(i=>i<0))
@@ -135,14 +137,17 @@ async function loadLandscape() {
     if(/PDP|Prescription Drug Plan/i.test(category) && !/MA-PD/i.test(category))continue;
     const name=val(row,c.name),org=val(row,c.org),type=val(row,c.type),snp=val(row,c.snp);
     const flags=name+' '+type+' '+snp;
+    const coverage=val(row,c.partD);
+    const partD = c.partD < 0 ? null : /^(?:y|yes|1|true)$/i.test(coverage);
     result.push({
       county:val(row,c.county),plan_number:contract+'-'+id,plan_name:name,carrier:carrierFor(name,org),
       plan_type:type,
       is_dsnp:/\bD-?SNP\b|dual.eligible|dual eligible/i.test(flags),
       is_csnp:/\bC-?SNP\b|chronic.condition/i.test(flags),
       premium:amount(val(row,c.premium)) || amount(val(row,c.partCPremium)),
-      medical_moop:amount(val(row,c.moop)),drug_deductible:amount(val(row,c.rx)),
-      part_b_giveback:amount(val(row,c.giveback)),segment:val(row,c.segment)
+      medical_moop:amount(val(row,c.moop)),drug_deductible:partD===false?'Not applicable: no Part D coverage':amount(val(row,c.rx)),
+      rx_oop:partD===false?'Not applicable: no Part D coverage':amount(val(row,c.rxOop)),
+      part_d:partD,part_b_giveback:amount(val(row,c.giveback)),segment:val(row,c.segment)
     });
   }
   if(!result.length)throw new Error('CMS 2027 Landscape returned no Mississippi Medicare Advantage rows.');
@@ -164,7 +169,7 @@ export async function GET(request) {
       if(!r.carrier)continue;
       const prior=entries.get(r.plan_number);
       if(prior){
-        for(const key of ['premium','medical_moop','drug_deductible','part_b_giveback']){
+        for(const key of ['premium','medical_moop','drug_deductible','rx_oop','part_b_giveback']){
           if(r[key] && prior[key] && prior[key]!==r[key])prior[key]='Varies by segment — verify 2027 SB/EOC';
           else if(!prior[key])prior[key]=r[key];
         }
@@ -175,8 +180,8 @@ export async function GET(request) {
         carrier:r.carrier,plan_type:r.plan_type,is_dsnp:r.is_dsnp,is_csnp:r.is_csnp,
         medicaid_levels:r.is_dsnp?['DUAL_VERIFY']:['NONE'],
         medicaid_label:r.is_dsnp?'Dual eligible — verify exact Medicaid level':r.is_csnp?'Chronic condition eligibility required':'No Medicaid required',
-        premium:r.premium,medical_moop:r.medical_moop,drug_deductible:r.drug_deductible,
-        part_b_giveback:r.part_b_giveback,service_area:county+' County, Mississippi (CMS 2027)',
+        premium:r.premium,medical_moop:r.medical_moop,drug_deductible:r.drug_deductible,rx_oop:r.rx_oop,
+        part_d:r.part_d,part_b_giveback:r.part_b_giveback,service_area:county+' County, Mississippi (CMS 2027)',
         source_note:'CMS CY2027 Landscape (202609.1), county-specific; consult official 2027 SB/EOC for full benefits.'
       });
     }
