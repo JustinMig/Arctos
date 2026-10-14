@@ -25,11 +25,11 @@ function loginEmail(value) {
   return `${identity.toLowerCase()}@users.mayerig.com`;
 }
 function frame(title, copy, content, message = '', error = false) {
-  root.innerHTML = `<main class="auth-shell"><section class="auth-card"><img src="/assets/mayer-bear.webp" width="192" height="192" alt="Mayer MIG bear"><h1>${esc(title)}</h1><p>${esc(copy)}</p>${message ? `<div class="auth-message" role="${error ? 'alert' : 'status'}">${esc(message)}</div>` : ''}${content}</section></main>`;
+  root.innerHTML = `<main class="auth-shell"><section class="auth-card"><img src="/assets/mayer-bear.webp" width="192" height="192" alt="Arctos bear"><h1>${esc(title)}</h1><p>${esc(copy)}</p>${message ? `<div class="auth-message" role="${error ? 'alert' : 'status'}">${esc(message)}</div>` : ''}${content}</section></main>`;
 }
 function signInScreen(message = '', error = false) {
   forgetRecovery(); clearCallback();
-  frame('Mayer MIG CRM','Sign in to Mayer MIG CRM.', `<form id="signin-form"><label>Username or Email <input name="identity" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label><label>Password <input name="password" type="password" autocomplete="current-password" required></label><div class="auth-actions"><button class="btn primary" type="submit">Sign In</button><button class="btn secondary" type="button" data-forgot-password>Forgot password?</button></div></form><small>Use the username created by the CRM Owner, or your existing email login.</small>`,message,error);
+  frame('Arctos','Sign in to Arctos.', `<form id="signin-form"><label>Username or Email <input name="identity" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label><label>Password <input name="password" type="password" autocomplete="current-password" required></label><div class="auth-actions"><button class="btn primary" type="submit">Sign In</button><button class="btn secondary" type="button" data-forgot-password>Forgot password?</button></div></form><small>Use the username created by the CRM Owner, or your existing email login.</small>`,message,error);
   root.querySelector('[data-forgot-password]').onclick = () => requestResetScreen();
   root.querySelector('form').onsubmit = async event => {
     event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('[type="submit"]'); button.disabled = true;
@@ -44,7 +44,7 @@ function signInScreen(message = '', error = false) {
 }
 function requestResetScreen(message = '', error = false) {
   forgetRecovery(); clearCallback();
-  frame('Reset Password','Enter the email you use for Mayer MIG CRM.', `<form id="reset-request-form"><label>Email <input name="email" type="email" autocomplete="username" inputmode="email" required></label><div class="auth-actions"><button class="btn primary" type="submit">Send Reset Link</button><button class="btn secondary" type="button" data-back-signin>Back to Sign In</button></div></form><small>Username-only accounts should have their password reset by the CRM Owner.</small>`,message,error);
+  frame('Reset Password','Enter the email you use for Arctos.', `<form id="reset-request-form"><label>Email <input name="email" type="email" autocomplete="username" inputmode="email" required></label><div class="auth-actions"><button class="btn primary" type="submit">Send Reset Link</button><button class="btn secondary" type="button" data-back-signin>Back to Sign In</button></div></form><small>Username-only accounts should have their password reset by the CRM Owner.</small>`,message,error);
   root.querySelector('[data-back-signin]').onclick = () => signInScreen();
   root.querySelector('form').onsubmit = async event => {
     event.preventDefault(); const form = event.currentTarget; form.querySelector('[type="submit"]').disabled = true;
@@ -63,7 +63,7 @@ function invalidReset(message = 'This password-reset link has expired or is inva
   root.querySelector('[data-back-signin]').onclick = () => signInScreen();
 }
 function passwordResetScreen(message = '', error = false) {
-  frame('Choose New Password','Set a new password for your Mayer MIG CRM account.', '<form id="new-password-form"><label>New Password <input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirm New Password <input name="confirm_password" type="password" autocomplete="new-password" minlength="8" required></label><div class="auth-actions"><button class="btn primary" type="submit">Save New Password</button><button class="btn secondary" type="button" data-new-reset>Request New Link</button></div></form><small>Use at least 8 characters. You will sign in again after saving.</small>',message,error);
+  frame('Choose New Password','Set a new password for your Arctos account.', '<form id="new-password-form"><label>New Password <input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirm New Password <input name="confirm_password" type="password" autocomplete="new-password" minlength="8" required></label><div class="auth-actions"><button class="btn primary" type="submit">Save New Password</button><button class="btn secondary" type="button" data-new-reset>Request New Link</button></div></form><small>Use at least 8 characters. You will sign in again after saving.</small>',message,error);
   root.querySelector('[data-new-reset]').onclick = () => requestResetScreen();
   root.querySelector('form').onsubmit = async event => {
     event.preventDefault(); const form = event.currentTarget; const values = new FormData(form);
