@@ -180,3 +180,8 @@
   .appointment-overview { display: grid; }
   .appointment-actions .btn { flex: 1 1 100%; }
 }
+
+/* Shared appointment-booking availability styling (calendar + quick tool). */
+.appointment-dialog select[name="start_time"] option:disabled{background:#d7dbdf;color:#555;font-weight:750}
+.appointment-dialog select[name="start_time"] option[data-booked="true"]{text-decoration:line-through}
+.appointment-slot-status{font-size:12px;min-height:18px;line-height:1.4}
