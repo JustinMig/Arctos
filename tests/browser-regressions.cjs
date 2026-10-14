@@ -81,7 +81,7 @@ let browser;
    const {createWorkspace}=await import('/workspace.js');
    createWorkspace(document.querySelector('#app'),mhRepository);
  });
- await page.locator('[data-add-client]').click();
+ await page.locator('.top .toolbar-quick-tools [data-add-client]').click();
  const clientForm=page.locator('dialog.client-dialog form.client-four-tabs');
  await clientForm.waitFor();
  assert.deepEqual(await clientForm.locator('[data-client-group-tab]').allTextContents(),['Overview','Coverage','Medical','Notes & Files']);
@@ -169,6 +169,15 @@ let browser;
  result.tests.push('signed-in startup does not download client, lead, or campaign extension bundles');
  const primaryNav=await page.evaluate(()=>Array.from(document.querySelectorAll('.nav > .nav-primary, .nav > .nav-section > .nav-line > .nav-primary, .nav > .nav-section > .nav-more-trigger')).map(el=>el.querySelector(':scope > span:not(.nav-chevron)')?.textContent.trim()));
  assert.deepEqual(primaryNav,['Home','Clients','Medicare','Work','Messages','More']);
+ const quickActions = await page.locator('.top .toolbar-quick-tools .quick-tool').evaluateAll(buttons=>
+   buttons.map(button=>({tool:button.dataset.tool||'',newClient:button.hasAttribute('data-add-client'),label:button.getAttribute('aria-label')})));
+ assert.deepEqual(quickActions.map(item=>item.label),['New Client','Appointments','Notes','Contacts','Height & Weight']);
+ assert.equal(quickActions.filter(item=>item.newClient).length,1);
+ assert.equal(await page.locator('.nav-section-more .quick-tools').count(),0);
+ await page.locator('[data-nav-toggle="more"]').click();
+ assert.equal(await page.locator('.nav-section-more [data-tool="commissions"]').count(),1);
+ await page.locator('[data-nav-toggle="more"]').click();
+ result.tests.push('all five requested quick shortcuts are in desktop header, while commissions remains in More');
  assert.equal(await page.locator('#nav-children-medicare').isVisible(),false);
  assert.equal(await page.locator('.nav a[href="#/medicare-intake"]').count(),0);
  await page.locator('[data-nav-toggle="medicare"]').click();
@@ -183,6 +192,20 @@ let browser;
  await page.waitForFunction(()=>location.hash==='#/communications');
  result.tests.push('five navigation destinations plus More, expandable Medicare and Work, correct active page after fast route switching');
  await page.setViewportSize({width:390,height:844});
+ const dock=await page.evaluate(()=>{
+   const bar=document.querySelector('.top'),tools=[...document.querySelectorAll('.top .toolbar-quick-tools .quick-tool')];
+   const barRect=bar.getBoundingClientRect();
+   return {position:getComputedStyle(bar).position,bottom:barRect.bottom,viewport:innerHeight,
+     items:tools.map(t=>({visible:t.getBoundingClientRect().width>0 &&
+       t.getBoundingClientRect().left>=-1 && t.getBoundingClientRect().right<=innerWidth+1,
+       phoneLabel:getComputedStyle(t.querySelector('.quick-phone-label')).display,
+       name:t.getAttribute('aria-label')}))};
+ });
+ assert.equal(dock.position,'fixed');
+ assert.ok(Math.abs(dock.bottom-dock.viewport)<2,'quick dock anchored to phone bottom');
+ assert.equal(dock.items.length,5);
+ assert.ok(dock.items.every(item=>item.visible && item.phoneLabel!=='none'));
+ result.tests.push('iPhone bottom toolbar displays all five usable shortcuts with safe labels');
  await page.locator('.menu-toggle').click();
  assert.equal(await page.locator('.sidebar').evaluate(el=>el.classList.contains('open')),true);
  await page.locator('.nav-primary[href="#/dashboard"]').click();
@@ -194,7 +217,7 @@ let browser;
  // Home is a daily agenda; the expensive month grid should remain unopened.
  await page.waitForSelector('.daily-dashboard');
  assert.equal(await page.locator('.daily-stat').count(),3);
- assert.equal(await page.locator('[data-add-client]').count(),1);
+ assert.equal(await page.locator('.daily-dashboard [data-add-client]').count(),1);
  assert.equal(await page.locator('[data-new-appointment]').count(),1);
  assert.equal(await page.locator('.daily-calendar').getAttribute('open'),null);
  assert.equal(await page.locator('#calendar-host .calendar-grid').count(),0);
@@ -224,7 +247,6 @@ let browser;
  await page.waitForFunction(()=>location.hash==='#/dashboard');
  result.tests.push('Work Queue opens four statuses, embeds existing campaigns and returns without leaving the Work page');
 
- await page.locator('[data-nav-toggle="more"]').click();
-    await page.locator('[data-tool="build"]').click();await page.waitForSelector('dialog.build-dialog[open]');await page.locator('dialog.build-dialog [name="company"]').selectOption({label:'Mutual of Omaha'});await page.locator('dialog.build-dialog [name="height"]').selectOption('74');await page.waitForFunction(()=>document.querySelector('dialog.build-dialog [data-build-result]')?.textContent?.includes('321 lb'));const buildText=await page.locator('dialog.build-dialog [data-build-result]').innerText();assert.match(buildText,/Mutual of Omaha/);assert.match(buildText,/6′ 2″/);assert.match(buildText,/129 lb/);assert.match(buildText,/321 lb/);assert.deepEqual(made.errors,[]);result.tests.push('built Height & Weight icon renders saved Mutual of Omaha chart values');await page.locator('dialog.build-dialog [data-close]').first().click();await page.waitForSelector('dialog.build-dialog',{state:'detached'});await page.close();
+ await page.locator('.top .toolbar-quick-tools [data-tool="build"]').click();await page.waitForSelector('dialog.build-dialog[open]');await page.locator('dialog.build-dialog [name="company"]').selectOption({label:'Mutual of Omaha'});await page.locator('dialog.build-dialog [name="height"]').selectOption('74');await page.waitForFunction(()=>document.querySelector('dialog.build-dialog [data-build-result]')?.textContent?.includes('321 lb'));const buildText=await page.locator('dialog.build-dialog [data-build-result]').innerText();assert.match(buildText,/Mutual of Omaha/);assert.match(buildText,/6′ 2″/);assert.match(buildText,/129 lb/);assert.match(buildText,/321 lb/);assert.deepEqual(made.errors,[]);result.tests.push('built Height & Weight icon renders saved Mutual of Omaha chart values');await page.locator('dialog.build-dialog [data-close]').first().click();await page.waitForSelector('dialog.build-dialog',{state:'detached'});await page.close();
  await browser.close();fs.writeFileSync(path.join(out,'browser-regressions.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 })().catch(async error=>{fs.writeFileSync(path.join(out,'browser-regressions.json'),JSON.stringify({...result,failure:error.message,stack:error.stack},null,2));console.error(error);await browser?.close();process.exitCode=1});
