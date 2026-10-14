@@ -1,4 +1,4 @@
-import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, hydrate, serializable } from './core.js';
+import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, sortAppointmentsByStartTime, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js';
 import { Dialogs } from './dialogs.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=arctos-work-1';
@@ -622,6 +622,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       return `
         <details class="event-card appointment-card" data-event-id="${esc(event.id || '')}">
           <summary>
+            <span class="appointment-summary-time">${esc(event.start_time ? timeLabel(event.start_time) : 'Time not set')}</span>
             <span class="appointment-summary-name">${esc(clientName)}</span>
           </summary>
           <div class="appointment-card-body">
@@ -659,14 +660,14 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
 
     const renderCards = () => {
       if (!host?.isConnected) return;
-      const entries = state.events.filter(matchesMode);
+      const entries = sortAppointmentsByStartTime(state.events.filter(matchesMode));
       host.innerHTML = entries.length
         ? entries.map(cardMarkup).join('')
         : empty(connected ? 'Nothing scheduled' : 'No appointments loaded', connected ? 'Use Add Appointment / Activity to schedule this day.' : 'Scheduling and reschedule queues require the standalone backend.');
     };
 
     const loadClients = async () => {
-      const entries = state.events.filter(matchesMode);
+      const entries = sortAppointmentsByStartTime(state.events.filter(matchesMode));
       const ids = [...new Set(entries.map(event => event.client_id).filter(Boolean))];
       const rows = await Promise.all(ids.map(async id => {
         try { return [id, await repository.getClient(id)]; }
