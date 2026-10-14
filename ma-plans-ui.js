@@ -222,7 +222,10 @@ export function createMAPlansFeature({ dialogs }) {
                   <input type="checkbox" data-ma-plan="${esc(plan.plan_number)}" ${checked ? 'checked' : ''} ${!checked && selected.size >= 5 ? 'disabled' : ''}>
                   <span class="ma-plan-copy">
                     <strong>${esc(plan.plan_name)}</strong>
-                    <small>${esc(plan.plan_number)}</small>
+                    <small>${esc(plan.display_plan_id || plan.plan_number)}</small>
+                    ${plan.is_isnp ? '<em class="ma-plan-special-eligibility">I-SNP requires qualifying institutional status</em>' : ''}
+                    ${plan.is_dsnp && plan.medicaid_levels.includes("DUAL_VERIFY") ? '<em class="ma-plan-special-eligibility">Medicaid level NOT verified: check 2027 SB/EOC</em>' : ''}
+                    ${plan.part_d === false ? '<em class="ma-plan-no-rx">No Part D prescription drug coverage</em>' : ''}
                     <em>${esc(plan.is_csnp || /C-SNP/i.test(plan.plan_type || '') ? 'C-SNP — qualifying chronic condition required; no Medicaid requirement' : plan.medicaid_label)}</em>
                   </span>
                 </label>
@@ -240,7 +243,7 @@ export function createMAPlansFeature({ dialogs }) {
           <div>
             <span class="eyebrow">Mississippi • ${MA_PLAN_YEAR}</span>
             <h2>Medicare Advantage Plans</h2>
-            <p>Select a Mississippi county or enter a ZIP, then compare up to 5 plans side by side.</p>
+            <p>Select a Mississippi county or ZIP and compare up to 5 plans. Plan segments may differ by county.</p>
           </div>
           <div class="ma-plan-actions">
             <span data-ma-count>${selected.size} of 5 selected</span>
@@ -284,13 +287,17 @@ export function createMAPlansFeature({ dialogs }) {
         </section>
         <div class="ma-plan-note">
           <strong>2027 Mississippi • five carriers • ${countySelection ? esc(countySelection) + ' County' : 'statewide reference'}.</strong>
-          ${countySelection ? 'Plan availability, names, premiums, and medical MOOP are checked against the CMS 2027 county Landscape where published. Verified fields are marked in the comparison. Remaining reference benefits must be checked against official 2027 SB/EOC.' : 'Select a county or enter a ZIP to load the complete 2027 CMS plan inventory. The statewide list below is a partial carrier reference, not a confirmation of county availability. Official 2027 document links or carrier lookup links appear beneath each plan.'}
+          ${countySelection ? 'CMS 2027 county-specific contract/PBP and segment, premiums, deductibles and MOOP are checked against the official CMS Landscape. All other benefits still require exact-plan 2027 SB/EOC verification.' : 'Choose a county to see the official 2027 plan inventory. The static statewide reference is not sufficient to determine service-area or segment-specific benefits.'}
           <a href="https://www.cms.gov/medicare/coverage/prescription-drug-coverage" target="_blank" rel="noopener noreferrer">CMS 2027 Landscape</a> ·
-          <a href="https://q1medicare.com/2026/medicare-advantage/ms" target="_blank" rel="noopener noreferrer">Q1Medicare (2026 historical reference)</a>
+          <a href="https://q1medicare.com/2027/medicare-advantage/ms" target="_blank" rel="noopener noreferrer">Q1Medicare 2027 Mississippi plans</a>
         </div>
+        <p class="ma-plan-caution">The medical MOOP is the plan maximum, not necessarily a QMB enrollee's own cost-sharing. Extra food/utility benefits have separate eligibility. ZIP codes can cross county lines; verify the beneficiary's actual county.</p>
+        ${medicaidFilter !== 'ALL' && medicaidFilter !== 'NONE' ? '<p class="ma-plan-caution">D-SNPs without confirmed accepted Medicaid levels are hidden under this specific filter. Select All Medicaid levels to review unverified D-SNPs.</p>' : ''}
         <div class="ma-carrier-grid">
           ${chosenCarriers().length
-  ? (zipCode && zipCode.length !== 5
+  ? (!countySelection && !zipCode
+      ? '<div class="ma-no-results">Select a Mississippi county or enter a complete ZIP code to see available 2027 plans.</div>'
+      : zipCode && zipCode.length !== 5
       ? '<div class="ma-no-results">Enter the complete 5-digit ZIP code to filter plan availability.</div>'
       : zipLoading
         ? '<div class="ma-no-results">Checking CMS 2027 plan availability for this county…</div>'
@@ -314,7 +321,7 @@ export function createMAPlansFeature({ dialogs }) {
                   <th>
                     <span>${esc(plan.carrier)}</span>
                     <strong>${esc(plan.plan_name)}</strong>
-                    <small>${esc(plan.plan_number)}</small>
+                    <small>${esc(plan.display_plan_id || plan.plan_number)}</small>
                   </th>`).join('')}
               </tr>
             </thead>
@@ -386,6 +393,7 @@ export function createMAPlansFeature({ dialogs }) {
           selected.clear();
           zipError = '';
           if (status) status.textContent = value ? 'Enter the complete 5-digit Mississippi ZIP' : 'Enter a 5-digit Mississippi ZIP';
+          render(true);
           return;
         }
 
