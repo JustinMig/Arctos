@@ -191,6 +191,16 @@ export function get2027PlanDocuments(plan) {
     page:devoted.page, directSB:true, directEOC:Boolean(devoted.eoc),
     label:'Official 2027 Devoted plan-specific documents'
   };
+  // Exact 2027 Aetna member plan pages display both the SB and EOC
+  // through Aetna's own dynamic document links; these URLs are not PDFs.
+  // Only add IDs whose 2027 document landing page was checked.
+  const aetnaPages = new Set(['H3239-028','H5521-553','H5521-218']);
+  if (plan?.carrier === 'Aetna' && aetnaPages.has(id)) {
+    const [contract, pbp] = id.split('-');
+    const page = 'https://www.aetna.com/medicare/plan.' + contract + '.' + pbp + '.html';
+    return { sb:page, eoc:page, page, directSB:false, directEOC:false,
+      label:'Official Aetna plan-specific 2027 SB and EOC document landing page' };
+  }
   const lookup=LOOKUPS[plan?.carrier];
   return lookup ? {
     ...lookup,directSB:false,directEOC:false,
