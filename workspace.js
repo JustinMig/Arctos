@@ -4,7 +4,7 @@ import { Dialogs } from './dialogs.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=arctos-work-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
-export function createWorkspace(root, repository = disconnectedRepository, { ensureClientFeatures, ensureCampaignFeatures, ensureLeadFeatures } = {}) {
+export function createWorkspace(root, repository = disconnectedRepository, { ensureClientFeatures, ensureCampaignFeatures, ensureLeadFeatures, ensureQuickFeatures } = {}) {
   if (!(root instanceof HTMLElement)) throw new TypeError('Arctos needs an application root.');
   const dialogs = new Dialogs();
   let campaignFeature = null, campaignModule = null;
@@ -962,6 +962,15 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     load();
   }
   function openTool(key) {
+    if (key === 'commissions' && ensureQuickFeatures) {
+      void ensureQuickFeatures().then(() => {
+        root.querySelector('[data-tool="commissions"]')?.click();
+      }).catch(error => {
+        console.error('Commissions could not load:', error);
+        alert('Commission reports could not load. Please retry.');
+      });
+      return;
+    }
     if (key === 'leads') {
       // The Leads extension owns the click handler once loaded; replay only
       // after its capture listener is installed, so there is no competing editor.
