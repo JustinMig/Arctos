@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NAV, CLIENT_TABS, esc, monthDays, isoDate, dateISO, dateText, stable, snapshot, disconnectedRepository, NotConnectedError } from '../core.js';
-import { shell } from '../views.js';
+import { shell, clientForm } from '../views.js';
 
 test('sidebar contains only workspace pages, not client sections', () => {
   const names = NAV.map(([key]) => key);
@@ -13,6 +13,26 @@ test('client sections are nested in the information dialog', () => {
     'information','medicare','doctors','medications','hospital_indemnity','life','retirement','notes'
   ]);
 });
+test('client records expose only four main tabs while retaining all eight original data panels', () => {
+  const markup = clientForm(true);
+  for(const label of ['Overview','Coverage','Medical','Notes & Files']){
+    assert.ok(markup.includes('>'+label+'</button>'),label+' main tab exists');
+  }
+  assert.equal((markup.match(/data-client-group-tab="/g)||[]).length,4);
+  assert.equal((markup.match(/data-client-group-panel="/g)||[]).length,4);
+  for(const key of CLIENT_TABS.map(([id])=>id)){
+    assert.ok(markup.includes('data-panel="'+key+'"'),key+' remains available to CRM integrations');
+    assert.ok(markup.includes('data-tab="'+key+'"'),key+' legacy navigation hook remains');
+  }
+  assert.match(markup,/data-client-category="medicare"/);
+  assert.match(markup,/data-client-category="life"/);
+  assert.match(markup,/data-client-category="hospital_indemnity"/);
+  assert.match(markup,/data-client-category="retirement"/);
+  assert.match(markup,/data-client-category="doctors"/);
+  assert.match(markup,/data-client-category="medications"/);
+  assert.match(markup,/data-client-jump="notes"/);
+});
+
 test('Documents is merged into Notes Extras', () => {
   const labels = Object.fromEntries(CLIENT_TABS);
   assert.equal('documents' in labels, false);
