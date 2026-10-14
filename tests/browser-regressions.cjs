@@ -162,6 +162,11 @@ let browser;
  let made=await createPage({built:true});page=made.page;await page.goto('http://127.0.0.1/');await page.waitForSelector('#signin-form');await page.waitForTimeout(300);
  assert.ok(!made.requests.includes('/workspace-styles.css'));result.builtLoginRequests=made.requests.length;assert.deepEqual(made.errors,[]);await page.screenshot({path:path.join(out,'built-login.png')});await page.close();
  made=await createPage({built:true,session:true});page=made.page;await page.goto('http://127.0.0.1/#/communications');await page.waitForSelector('[data-channel="calls"]',{timeout:25000});await page.waitForTimeout(500);assert.deepEqual(made.errors,[]);assert.equal(await page.locator('.top-brand strong').innerText(),'Arctos');result.tests.push('built signed-in refresh restores Communications after authenticated initialization');
+ // Initial authenticated Communications screen must not request client, lead,
+ // or campaign feature chunks before those workflows are opened.
+ const prematureFeatures=made.requests.filter(p=>/\\/assets\\/workspace-(?:extensions|campaign-extensions|lead-extensions)-/.test(p));
+ assert.deepEqual(prematureFeatures,[]);
+ result.tests.push('signed-in startup does not download client, lead, or campaign extension bundles');
  const primaryNav=await page.evaluate(()=>Array.from(document.querySelectorAll('.nav > .nav-primary, .nav > .nav-section > .nav-line > .nav-primary, .nav > .nav-section > .nav-more-trigger')).map(el=>el.querySelector(':scope > span:not(.nav-chevron)')?.textContent.trim()));
  assert.deepEqual(primaryNav,['Home','Clients','Medicare','Work','Messages','More']);
  assert.equal(await page.locator('#nav-children-medicare').isVisible(),false);
