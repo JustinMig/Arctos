@@ -131,7 +131,7 @@ function openClientCallDialog(clientId, clientDialog) {
   const dialog = document.createElement('dialog');
   dialog.className = 'mh-call-data-dialog';
   dialog.dataset.clientId = clientId;
-  dialog.innerHTML = `<div class="mh-call-data-frame"><header class="mh-call-data-head"><div><span class="eyebrow">RingCentral</span><h2>${esc(name)} — Call Data</h2><p>Read-only call history and recordings. Calling is not enabled in Mayer MIG CRM.</p></div><div class="mh-call-data-actions"><button type="button" class="btn secondary" data-client-call-refresh>Refresh</button><button type="button" class="btn secondary" data-client-call-close>Close</button></div></header><div class="mh-call-data-status" data-client-call-dialog-status>Loading call history…</div><div class="mh-call-data-list" data-client-call-dialog-list></div></div>`;
+  dialog.innerHTML = `<div class="mh-call-data-frame"><header class="mh-call-data-head"><div><span class="eyebrow">RingCentral</span><h2>${esc(name)} — Call Data</h2><p>Read-only call history and recordings. Calling is not enabled in Arctos.</p></div><div class="mh-call-data-actions"><button type="button" class="btn secondary" data-client-call-refresh>Refresh</button><button type="button" class="btn secondary" data-client-call-close>Close</button></div></header><div class="mh-call-data-status" data-client-call-dialog-status>Loading call history…</div><div class="mh-call-data-list" data-client-call-dialog-list></div></div>`;
   document.body.append(dialog);
   dialog.showModal();
   communicationsRendered(dialog);
