@@ -1,5 +1,4 @@
 @import "./styles.css";
-@import "./nav-word-colors.css";
 @import "./arctos-navigation.css";
 @import "./auth.css";
 @import "./single-user.css";
@@ -44,6 +43,7 @@
 @import "./arctos-daily-dashboard.css";
 @import "./work-queue.css";
 @import "./client-files-hub.css";
+@import "./arctos-visual-system.css";
 
 
 /* Appointment day cards */
