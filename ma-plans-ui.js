@@ -142,7 +142,7 @@ export function createMAPlansFeature({ dialogs }) {
   }
 
   async function loadZipAvailability(value, preserveFocus = false) {
-    zipCode = String(value || '').replace(/\\D/g, '').slice(0,5);
+    zipCode = String(value || '').replace(/\D/g, '').slice(0,5);
     if (!zipCode) {
       countySelection = '';
       zipCounty = null;
