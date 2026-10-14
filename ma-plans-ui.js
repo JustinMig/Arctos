@@ -22,6 +22,9 @@ const ROWS = Object.freeze([
   ['Urgent care', 'urgent_care'],
   ['Drug deductible', 'drug_deductible'],
   ['Prescription max out-of-pocket', 'rx_oop'],
+  ['Part D prescription drug coverage', 'part_d'],
+  ['CMS 2027 overall star rating', 'overall_star_rating'],
+  ['CMS D-SNP zero-dollar cost-sharing designation', 'zero_dollar_cost_sharing_dsnp'],
   ['Dental', 'dental'],
   ['Vision', 'vision'],
   ['Hearing', 'hearing'],
@@ -34,7 +37,7 @@ const ROWS = Object.freeze([
 export function createMAPlansFeature({ dialogs }) {
   let host = null;
   const selected = new Set();
-  let carrierFilters = [];
+  let carrierFilters = [...MA_CARRIERS];
   let medicaidFilter = 'ALL';
   let zipCode = '';
   let zipCounty = null;
@@ -77,18 +80,24 @@ export function createMAPlansFeature({ dialogs }) {
         medicaid_label:saved?.is_dsnp === entry.is_dsnp && saved?.medicaid_levels?.[0] !== 'DUAL_VERIFY'
           ? saved.medicaid_label : entry.medicaid_label,
         source_note:'2027 CMS county values; other benefit lines may be unverified references except for explicit 2027 SB corrections.',
-        _cms_verified_fields:['premium','medical_moop','drug_deductible','rx_oop','part_b_giveback'].filter(key=>Boolean(entry[key]))
+        _cms_verified_fields:Array.isArray(entry._cms_verified_fields) ? entry._cms_verified_fields : ['premium','medical_moop','drug_deductible','rx_oop'].filter(key=>Boolean(entry[key]))
       }));
     }
     for (const plan of MA_PLANS_2027) {
       if (availablePlanIds.has(plan.plan_number) && !combined.has(plan.plan_number))
         combined.set(plan.plan_number,verifiedPlan(plan));
     }
-    return [...combined.values()];
+    return [...combined.values()].sort((a,b)=>a.carrier.localeCompare(b.carrier) || a.plan_name.localeCompare(b.plan_name));
   }
 
   function selectedPlans() {
     return catalog().filter(plan => selected.has(plan.plan_number));
+  }
+
+  function displayValue(plan,key) {
+    if (key === 'part_d') return plan.part_d === true ? 'Included' : plan.part_d === false ? 'NOT included — no Part D coverage' : 'Verify 2027 carrier documents';
+    const value = plan?.[key];
+    return value == null || String(value).trim() === '' ? 'Not verified in 2027 SB/EOC' : String(value);
   }
 
   function chosenCarriers() {
@@ -105,7 +114,8 @@ export function createMAPlansFeature({ dialogs }) {
   function matchesMedicaid(plan) {
     if (medicaidFilter === 'ALL') return true;
     if (medicaidFilter === 'NONE') return !plan.is_dsnp;
-    return plan.medicaid_levels.includes(medicaidFilter) || plan.medicaid_levels.includes('DUAL_VERIFY');
+    // Unverified D-SNP Medicaid levels are not proof of eligibility for a chosen level.
+    return plan.is_dsnp === true && Array.isArray(plan.medicaid_levels) && plan.medicaid_levels.includes(medicaidFilter);
   }
 
   function matchesCounty(plan) {
@@ -131,6 +141,7 @@ export function createMAPlansFeature({ dialogs }) {
     zipError = '';
     if (!county) { zipLoading = false; render(preserveFocus); return; }
     zipLoading = true;
+    render(preserveFocus);
     try {
       const headers = await authHeaders();
       const response = await fetch('/api/ma-plan-availability?county=' + encodeURIComponent(county), {
