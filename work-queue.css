@@ -1,0 +1,51 @@
+/* Arctos Work Queue: one uncluttered view over leads, campaigns, and follow-ups */
+.work-queue{display:grid;gap:15px;min-width:0;color:#203b4e}
+.wq-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:21px 23px;border:1px solid #cbdde5;border-radius:17px;background:linear-gradient(120deg,#f5f9fb,#eaf3f4)}
+.wq-header h2{font-size:24px;color:#17394d;margin:4px 0 5px;font-weight:850}
+.wq-header p{font-size:13px;color:#647c8e;line-height:1.55;max-width:540px;margin:0}
+.wq-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wq-actions .btn{min-height:39px;font-size:12px;font-weight:750}
+.wq-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.wq-tabs button{display:flex;align-items:center;justify-content:space-between;gap:7px;border:1px solid #d6e1e7;border-radius:11px;background:#f7fafb;color:#476276;min-height:50px;padding:9px 12px;text-align:left;font-size:13px;font-weight:800}
+.wq-tabs button:hover{background:#ebf3f7}
+.wq-tabs button.active{background:#193a4c;color:#fff;border-color:#193a4c}
+.wq-number{background:#e0eaf0;color:#345970;font-size:11px;min-width:25px;border-radius:20px;padding:5px 7px;text-align:center;font-variant-numeric:tabular-nums}
+.wq-tabs button.active .wq-number{background:#436575;color:#fff}
+.wq-filter{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
+.wq-filter label{display:grid;gap:5px;flex:1;max-width:560px;min-width:200px}
+.wq-filter label span{font-size:12px;color:#587083;font-weight:750}
+.wq-filter input{border:1px solid #bfd1dc;border-radius:9px;padding:11px 12px;min-height:43px;color:#203e50;background:#fff;font-size:14px;width:100%;box-sizing:border-box}
+.wq-list-total{font-size:12px;color:#647f8e;font-weight:700;padding-bottom:9px}
+.wq-status{border:1px solid #d3dfe6;border-radius:10px;padding:11px 13px;color:#5b7383;font-size:12px;background:#f5fafb}
+.wq-status[hidden]{display:none}
+.wq-list{display:grid;gap:9px}
+.wq-card{background:#fff;border:1px solid #dbe4eb;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 16px;min-width:0}
+.wq-card-main{min-width:0;flex:1}
+.wq-card-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wq-card-title strong{font-size:15px;color:#243f51;overflow-wrap:anywhere}
+.wq-tag{background:#eff4f6;color:#507486;border:1px solid #d8e4ea;border-radius:99px;font-size:10px;font-weight:800;padding:5px 8px;white-space:nowrap}
+.wq-meta{font-size:11px;color:#6c8394;margin:6px 0 0;overflow-wrap:anywhere}
+.wq-note{font-size:12px;color:#465f72;margin:7px 0 0;line-height:1.5;overflow-wrap:anywhere;max-width:80ch;white-space:pre-line}
+.wq-card-actions{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex:none}
+.wq-due{font-size:11px;color:#7b5f49;font-weight:750}
+.wq-open{background:#eef5f7;color:#225f72;border:1px solid #ccdee5;border-radius:8px;min-height:35px;padding:8px 12px;font-size:12px;font-weight:800;white-space:nowrap}
+.wq-open:hover{background:#e1f0f5}
+.wq-link{border:0;background:transparent;color:#3f7285;font-size:11px;font-weight:750;text-decoration:none;padding:4px;white-space:nowrap}
+.wq-link:hover{text-decoration:underline}
+.wq-empty{font-size:13px;color:#748b99;padding:23px 16px;background:#fff;border:1px dashed #cfdde5;border-radius:12px;text-align:center}
+.wq-footnote{color:#738996;font-size:11px;line-height:1.55;margin:0}
+.wq-campaign-panel[hidden],#work-queue-host[hidden]{display:none!important}
+.wq-campaign-back{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;border:1px solid #d5e2e8;background:#f4f8fa;border-radius:11px;padding:10px 14px;margin-bottom:15px}
+.wq-campaign-back h3{font-size:15px;color:#254557;margin:0}
+@media(max-width:900px){.wq-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.wq-header{padding:16px}}
+@media(max-width:630px){
+ .work-queue{gap:11px}.wq-header{padding:13px;border-radius:12px}.wq-header h2{font-size:21px}
+ .wq-actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .wq-actions .btn{min-width:0;font-size:11px;padding:9px 4px}
+ .wq-tabs{gap:5px}.wq-tabs button{padding:10px 8px;min-height:47px;font-size:12px}
+ .wq-card{padding:12px;align-items:stretch;flex-direction:column;gap:8px}
+ .wq-card-actions{align-items:flex-start;flex-direction:row;flex-wrap:wrap;gap:10px}
+ .wq-due{align-self:center}
+ .wq-card-title strong{font-size:14px}
+ .wq-filter label{min-width:0}
+}
