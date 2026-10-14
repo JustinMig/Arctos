@@ -94,13 +94,15 @@ test('no demo rows, users or financial data are seeded by the provider', async (
 
 test('Arctos groups the sidebar into five primary destinations plus More while preserving routes', () => {
   const markup = shell('dashboard', true, '<div>Dashboard</div>');
-  const entries = ['dashboard','clients','athena-medicare','campaigns','communications'];
+  const entries = ['dashboard','clients','athena-medicare','work','communications'];
   for(const route of entries) assert.match(markup, new RegExp('class="nav-primary[^"]*" href="#/' + route + '"'));
   assert.match(markup, /data-nav-toggle="medicare"/);
   assert.match(markup, /data-nav-toggle="work"/);
   assert.match(markup, /data-nav-toggle="more"/);
   assert.doesNotMatch(markup, /href="#\/medicare-intake"/);
   assert.match(markup, /href="#\/ma-plans"/);
+  assert.match(markup, /href="#\/campaigns"/);
+  assert.match(markup, /href="#\/work"/);
   assert.match(markup, /href="#\/carriers"/);
   assert.match(markup, /href="#\/agents"/);
   assert.match(markup, /data-tool="leads"/);
