@@ -32,6 +32,8 @@ let browser;
     window.__athenaFeature.mount(document.querySelector('#athena-medicare-host'));
   });
   assert.equal(await page.locator('[data-at-new]').count(),2);
+  assert.equal(await page.locator('[data-at-compare]').getAttribute('href'),'#/ma-plans');
+  assert.equal(await page.locator('.at-home-grid [data-at-saved]').count(),1);
   await page.locator('[data-at-new="annual_review"]').click();
   assert.equal(await page.locator('[data-at-step]').count(),9);
   await page.locator('[data-at-client-search]').fill('Jane');
