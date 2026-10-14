@@ -350,17 +350,27 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     form.addEventListener('change',updateSummary);
     updateSummary();
   }
+  const pendingClientOpens = new Map();
   function openClient(id = null) {
-    // New client and existing-client editors must not open until their
-    // specialized form/save handlers have registered. This avoids a race
-    // with offline/slow iPads while skipping the same modules on Home.
+    // New client and existing-client editors must not open until specialized
+    // form/save handlers are ready. Coalesce rapid taps on a slow iPad.
     if (ensureClientFeatures) {
-      return Promise.resolve().then(ensureClientFeatures)
-        .then(() => openClientReady(id))
+      const key = id || 'new-client';
+      if (pendingClientOpens.has(key)) return pendingClientOpens.get(key);
+      const fromRoute = state.route;
+      const task = Promise.resolve().then(ensureClientFeatures)
+        .then(() => {
+          // Do not open a delayed dialog after the user has left the screen.
+          if (state.destroyed || state.route !== fromRoute) return;
+          return openClientReady(id);
+        })
         .catch(error => {
           console.error('Client feature loading failed:', error);
-          alert('Client information could not load. Check your connection and try again. No changes were made.');
-        });
+          if (!state.destroyed) alert('Client information could not load. Check your connection and try again. No changes were made.');
+        })
+        .finally(() => pendingClientOpens.delete(key));
+      pendingClientOpens.set(key, task);
+      return task;
     }
     return openClientReady(id);
   }
