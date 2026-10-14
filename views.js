@@ -137,7 +137,7 @@ const navLink = (route, text, current) => '<a class="nav-child' + (route===curre
 const navAction = (tool, text) => '<button type="button" class="nav-child nav-action" data-tool="' + tool + '">' + esc(text) + '</button>';
 
 export function navigationMarkup(route) {
-  const medicareActive=['athena-medicare','medicare-intake','ma-plans'].includes(route);
+  const medicareActive=['athena-medicare','ma-plans'].includes(route);
   const workActive=route==='campaigns';
   const moreActive=['carriers','agents','settings'].includes(route);
   const direct=(key,label,iconKey=key)=>{
@@ -165,7 +165,7 @@ export function navigationMarkup(route) {
   return direct('dashboard','Home','home')+
     direct('clients','Clients')+
     group('medicare','Medicare','athena-medicare','medicare',medicareActive,
-      navLink('athena-medicare',"Athena's Medicare",route)+navLink('ma-plans','Compare MA Plans',route)+navLink('medicare-intake','Previous Reviews',route))+
+      navLink('athena-medicare','Medicare Workspace',route)+navLink('ma-plans','Compare MA Plans',route))+
     group('work','Work','campaigns','work',workActive,
       navAction('leads','Leads')+navLink('campaigns','Campaigns',route)+
       '<a class="nav-child" href="#/dashboard">Today & Follow-ups</a>')+
