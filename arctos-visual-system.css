@@ -1,0 +1,260 @@
+/*
+ * ARCTOS / STEP 7 — Visual system
+ *
+ * Purpose: one consistent app palette and interaction treatment. This is
+ * imported LAST so old incremental coloring can be retired progressively
+ * without changing any element IDs, form fields, or data behaviors.
+ *
+ * Navy = navigation and active views; sage = primary action;
+ * Red = errors and destructive controls. Carrier brand tints on MA Plans
+ * remain intentionally untouched.
+ */
+:root{
+  --arctos-navy-950:#091c29;
+  --arctos-navy-900:#102b3a;
+  --arctos-navy-800:#193c50;
+  --arctos-ink:#233d4f;
+  --arctos-muted:#607789;
+  --arctos-surface:#ffffff;
+  --arctos-app:#f3f6f8;
+  --arctos-surface-soft:#f7f9fa;
+  --arctos-border:#d7e2e9;
+  --arctos-border-strong:#b9ccd7;
+  --arctos-sage:#246857;
+  --arctos-sage-hover:#195446;
+  --arctos-sage-soft:#e9f3ef;
+  --arctos-danger:#9d3434;
+  --arctos-danger-soft:#fff3f2;
+  --arctos-focus:#327a92;
+  --arctos-radius:11px;
+}
+.main{background:var(--arctos-app);color:var(--arctos-ink);min-height:100vh}
+.main .content{color:var(--arctos-ink)}
+.main .content .page-heading{margin-bottom:15px}
+.main .content .page-heading h1{color:var(--arctos-navy-900);font-weight:800;letter-spacing:-.02em}
+.main .content .eyebrow{color:var(--arctos-muted)}
+.main .content .muted,.main .content .subtle{color:var(--arctos-muted)}
+.top{background:var(--arctos-navy-950);border-color:#1d3a4a;color:#eef5f8}
+.sidebar{background:var(--arctos-navy-950);border-color:#1d3a4a}
+.sidebar .nav .nav-primary.active{background:#1b3c4f!important;color:#fff!important;border-color:#35586a!important;box-shadow:inset 3px 0 0 #7dadb2}
+.sidebar .nav .nav-child.active{background:#1b3c4f!important;border-color:#35586a!important;color:#fff!important}
+.sidebar .nav .nav-primary:hover,.sidebar .nav .nav-child:hover{background:#193648!important;color:#fff!important}
+.sidebar .nav .nav-primary:focus-visible,.sidebar .nav .nav-child:focus-visible,
+.sidebar .nav button:focus-visible{outline-color:#a5d6dc}
+.main .panel-card:not(.dark-card),.main .work-queue .wq-card,
+.main .cfh-file,.main .daily-work-section{border-color:var(--arctos-border);background:var(--arctos-surface);box-shadow:none}
+.workspace-dialog,.mh-file-preview-dialog{color-scheme:light}
+.workspace-dialog .modal-head,.workspace-dialog .modal-footer{background:var(--arctos-surface);border-color:var(--arctos-border)}
+.workspace-dialog .modal-body{background:var(--arctos-surface-soft)}
+.workspace-dialog .modal-title h2{color:var(--arctos-navy-900)}
+.main .content .dark-card{color:#edf4f8}
+.main .content .dark-card .subtle,.main .content .dark-card .muted{color:#b9cbd5}
+
+/* One recognizable button hierarchy in all ordinary CRM screens. */
+:where(.main,.workspace-dialog) .btn,
+:where(.main,.workspace-dialog) button.btn{
+  border-radius:var(--arctos-radius);
+  font-family:inherit;
+  font-weight:750;
+  line-height:1.3;
+  box-shadow:none;
+  transition:background-color .13s ease,border-color .13s ease,color .13s ease;
+}
+:where(.main,.workspace-dialog) .btn.primary,
+:where(.main,.workspace-dialog) button.btn.primary{
+  background:var(--arctos-sage)!important;
+  border-color:var(--arctos-sage)!important;
+  color:#fff!important;
+}
+:where(.main,.workspace-dialog) .btn.primary:hover:not(:disabled){
+  background:var(--arctos-sage-hover)!important;
+  border-color:var(--arctos-sage-hover)!important;
+  filter:none;
+}
+:where(.main,.workspace-dialog) .btn.secondary,
+:where(.main,.workspace-dialog) button.btn.secondary{
+  background:#f0f5f7!important;
+  border-color:var(--arctos-border-strong)!important;
+  color:#2c5164!important;
+}
+:where(.main,.workspace-dialog) .btn.secondary:hover:not(:disabled){
+  background:#e5eef2!important;
+  border-color:#98b5c2!important;
+  filter:none;
+}
+:where(.main,.workspace-dialog) .btn.danger,
+:where(.main,.workspace-dialog) button.btn.danger{
+  background:var(--arctos-danger-soft)!important;
+  border-color:#ddb9b8!important;
+  color:var(--arctos-danger)!important;
+}
+:where(.main,.workspace-dialog) .btn.danger:hover:not(:disabled){
+  background:#fae5e5!important;
+  filter:none;
+}
+:where(.main,.workspace-dialog) .modal-close{
+  background:#f6f9fa;border-color:var(--arctos-border);color:#476175;
+}
+:where(.main,.workspace-dialog) .modal-close:hover{background:#e8eff3}
+:where(.main,.workspace-dialog) input:focus-visible,
+:where(.main,.workspace-dialog) select:focus-visible,
+:where(.main,.workspace-dialog) textarea:focus-visible,
+:where(.main,.workspace-dialog) button:focus-visible,
+:where(.main,.workspace-dialog) a:focus-visible,
+:where(.main,.workspace-dialog) summary:focus-visible{
+  outline:3px solid var(--arctos-focus);
+  outline-offset:2px;
+}
+:where(.main,.workspace-dialog) :is(.field input,.field select,.field textarea){
+  background:#fff;color:var(--arctos-ink);border:1px solid var(--arctos-border-strong);
+  border-radius:9px;box-shadow:none;min-height:43px;
+}
+:where(.main,.workspace-dialog) :is(.field input,.field select,.field textarea):focus{
+  border-color:var(--arctos-focus);
+}
+:where(.main,.workspace-dialog) :is(.field input,.field select,.field textarea):disabled{
+  background:#ebf0f3;color:#708391;
+}
+:where(.main,.workspace-dialog) .field{color:#456073}
+:where(.main,.workspace-dialog) .field :is(input,textarea)::placeholder{color:#758b9a;opacity:1}
+
+/* Keep the existing high-contrast action inside dark hero backgrounds. */
+.daily-hero .daily-hero-actions .btn.primary{
+  background:#fff!important;border-color:#fff!important;color:#183c4f!important;
+}
+.daily-hero .daily-hero-actions .btn.primary:hover{
+  background:#e8f1f2!important;border-color:#e8f1f2!important;color:#183c4f!important;
+}
+.daily-hero .daily-hero-actions .btn.secondary{
+  background:#2d5462!important;border-color:#80a3ad!important;color:#fff!important;
+}
+.daily-hero{background:linear-gradient(112deg,#163748,#285466)!important;border-color:#365f70!important;box-shadow:none!important}
+.wq-header{background:#f7f9fa;border-color:var(--arctos-border)}
+.daily-stat{border-color:var(--arctos-border)}
+.daily-calendar{border-color:var(--arctos-border)}
+.wq-tabs button.active,.cfh-categories button[aria-pressed="true"]{
+  background:var(--arctos-navy-800);border-color:var(--arctos-navy-800);color:#fff;
+}
+.wq-open,.cfh-jumps button{border-radius:9px}
+.main .cfh-intro,.main .client-files-hub{box-shadow:none}
+
+/* Eliminate the old rainbow accordion palette. Tiny, low-key left accents
+ * identify a type without relying on color alone; every heading is labelled. */
+.client-four-tabs [data-panel] details.field-group,
+.client-four-tabs [data-panel] .health-record-card,
+.client-four-tabs [data-panel] .life-policy-card{
+  border:1px solid var(--arctos-border)!important;
+  border-radius:11px;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.client-four-tabs [data-panel] details.field-group>summary,
+.client-four-tabs [data-panel] .health-record-card>summary,
+.client-four-tabs [data-panel] .life-policy-card>summary{
+  background:#f1f5f7!important;
+  color:var(--arctos-ink)!important;
+  border-color:var(--arctos-border)!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+  min-height:46px;
+}
+.client-four-tabs [data-panel] details.field-group>summary:hover,
+.client-four-tabs [data-panel] .health-record-card>summary:hover,
+.client-four-tabs [data-panel] .life-policy-card>summary:hover{
+  background:#e8eff3!important;
+}
+.client-four-tabs [data-panel] details.field-group[open]>summary,
+.client-four-tabs [data-panel] .health-record-card[open]>summary,
+.client-four-tabs [data-panel] .life-policy-card[open]>summary{
+  background:#e8f0f1!important;
+  border-bottom:1px solid var(--arctos-border)!important;
+}
+.client-four-tabs [data-panel="information"]>details.field-group>summary,
+.client-four-tabs [data-panel="medicare"]>details.field-group>summary,
+.client-four-tabs [data-panel="life"] .life-policy-card>summary,
+.client-four-tabs [data-panel="doctors"] .health-record-card>summary,
+.client-four-tabs [data-panel="medications"] .health-record-card>summary,
+.client-four-tabs [data-panel="hospital_indemnity"] .health-record-card>summary{
+  border-left:3px solid #74949e!important;
+}
+.client-four-tabs [data-panel="medicare"]>details.field-group>summary,
+.client-four-tabs [data-panel="doctors"] .health-record-card>summary,
+.client-four-tabs [data-panel="medications"] .health-record-card>summary{
+  border-left-color:#698d84!important;
+}
+.client-four-tabs [data-panel="life"] .life-policy-card>summary,
+.client-four-tabs [data-panel="hospital_indemnity"] .health-record-card>summary{
+  border-left-color:#82919d!important;
+}
+/* Numbered circles are repeated ornaments in the old client form. */
+.client-four-tabs [data-panel="information"]>details.field-group>summary::before,
+.client-four-tabs [data-panel="medicare"]>details.field-group>summary::before{
+  display:none!important;
+}
+.client-four-tabs [data-panel="information"]>details.field-group>summary,
+.client-four-tabs [data-panel="medicare"]>details.field-group>summary{
+  padding-left:15px!important;
+}
+.client-four-tabs [data-panel] :is(.form-grid,.health-record-body){
+  background:#fff!important;
+}
+/* The four major client tabs use exactly one active treatment. */
+.client-four-tabs .client-main-tabs button{
+  background:#f4f7f8!important;border-color:var(--arctos-border)!important;
+  color:#465f70!important;box-shadow:none!important;transform:none!important;
+}
+.client-four-tabs .client-main-tabs button[aria-selected="true"]{
+  background:var(--arctos-navy-800)!important;
+  border-color:var(--arctos-navy-800)!important;
+  color:#fff!important;
+}
+.client-four-tabs .client-main-tabs button:hover:not([aria-selected="true"]){
+  background:#e7eff2!important;
+  color:#23475d!important;
+}
+.client-four-tabs .client-category{
+  border-color:var(--arctos-border);box-shadow:none;
+}
+.client-four-tabs .client-category>summary{
+  background:#f7f9fa;color:var(--arctos-ink);
+}
+.client-four-tabs .client-category[open]>summary{background:#eff4f5}
+.client-four-tabs .client-category>summary:hover{background:#e7eef1}
+.client-four-tabs .client-overview-card{
+  background:#f5f8f9;border-color:var(--arctos-border);
+}
+
+/* Consistent search and filters in Work and Notes & Files. */
+.wq-filter input,.cfh-search input,.cfh-note-editor input,.cfh-note-editor textarea{
+  border:1px solid var(--arctos-border-strong);background:#fff;color:var(--arctos-ink);
+  border-radius:9px;box-shadow:none;
+}
+.cfh-categories button{border-radius:9px}
+.cfh-file,.wq-card{border-radius:var(--arctos-radius)}
+.wq-tag{border-color:var(--arctos-border);background:#f0f5f7;color:#456377}
+.daily-agenda-item:hover{background:#f3f8f8}
+
+/* Athena's Medicare keeps its own functional workflow, now visually aligned
+ * with the same app background, borders and inactive/active control states. */
+#athena-medicare-host{--at-line:var(--arctos-border);--at-light:#f6f9fa;--at-ink:var(--arctos-ink)}
+#athena-medicare-host .at-hero{
+  background:linear-gradient(110deg,#153648,#2b5864)!important;
+  border-color:#416c79!important;box-shadow:none!important;
+}
+#athena-medicare-host .at-start-card{border-color:var(--arctos-border);box-shadow:none}
+#athena-medicare-host .at-start-card:hover{border-color:#9bb9c2;box-shadow:0 3px 12px rgba(15,41,55,.07)}
+#athena-medicare-host .at-step{border-color:var(--arctos-border);box-shadow:none}
+
+/* Intentional exceptions: company/carrier colors in MA plan comparisons,
+ * error/success states, and branded bear artwork should not be recolored. */
+@media(max-width:700px){
+  .main{min-height:100dvh}
+  .main .content{padding-top:16px}
+  .client-four-tabs [data-panel="information"]>details.field-group>summary,
+  .client-four-tabs [data-panel="medicare"]>details.field-group>summary{padding-left:12px!important}
+  .cfh-file,.wq-card{box-shadow:none}
+}
+@media(prefers-reduced-motion:reduce){
+  :where(.main,.workspace-dialog) .btn,
+  :where(.main,.workspace-dialog) button.btn{transition:none}
+}
