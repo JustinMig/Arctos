@@ -114,6 +114,7 @@ let browser;
  assert.equal(await clientForm.locator('[data-client-group-panel="coverage"]').isVisible(),true);
  assert.equal(await clientForm.locator('[data-client-category="life"]').getAttribute('open'),'');
  await clientForm.locator('[data-client-group-tab="files"]').click();
+ await clientForm.locator('.cfh-new-note > summary').click();
  await clientForm.locator('[data-cfh-note-title]').fill('Synthetic review');
  await clientForm.locator('[data-cfh-note-body]').fill('No database write for new client');
  await clientForm.locator('[data-cfh-note-save]').click();
