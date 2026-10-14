@@ -134,3 +134,23 @@
 .ma-carrier-toggle[data-ma-carrier-toggle="Cigna/HealthSpring"].active{background:#006f6f;border-color:#006f6f;color:#fff}
 .ma-county-filter{min-width:0}
 .ma-plan-note a{color:#0b4868;text-decoration:underline;font-weight:800}
+
+/* 2027 SB/EOC source ledger and field-by-field confirmation. */
+.ma-plan-result{border-bottom:1px solid rgba(20,49,67,.11);padding-bottom:8px}
+.ma-plan-result:last-child{border-bottom:0}
+.ma-plan-result .ma-plan-row{border-bottom:0;padding-bottom:5px}
+.ma-plan-documents{padding:0 12px 9px 39px;display:grid;gap:5px}
+.ma-plan-document-links{display:flex;flex-wrap:wrap;gap:6px 12px;margin:5px 0}
+.ma-plan-document-links a{font-size:.78rem;font-weight:800;color:#06496f;text-decoration:underline;text-underline-offset:2px}
+.ma-plan-document-links a:hover{color:#00314a}
+.ma-plan-source-status{display:flex;gap:5px 9px;flex-wrap:wrap;font-size:.72rem;font-weight:700;line-height:1.4}
+.ma-plan-source-status span{display:inline-block;color:#384a53}
+.ma-plan-source-status .ma-sb-ready{color:#176243}
+.ma-plan-source-status .ma-sb-search{color:#7a4e09}
+.ma-document-notice{font-size:.68rem;font-weight:600;line-height:1.35;color:#4b5663}
+.ma-value-status{display:block;margin-top:6px;font-size:.67rem;color:#5b6972;font-weight:700}
+.ma-documents-row td{min-width:170px}
+.ma-documents-row .ma-plan-document-links{display:grid;gap:6px}
+.ma-compare-table .ma-plan-source-status{display:grid}
+.ma-plan-note{line-height:1.5}
+@media(max-width:540px){.ma-plan-documents{padding-left:36px}.ma-plan-document-links{gap:6px}}
