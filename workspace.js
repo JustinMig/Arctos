@@ -1,7 +1,7 @@
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js';
 import { Dialogs } from './dialogs.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup } from './views.js?v=arctos-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup } from './views.js?v=arctos-nav-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository) {
@@ -100,7 +100,25 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     const closeMenu = () => { sidebar.classList.remove('open'); shade.hidden = true; menu.setAttribute('aria-expanded', 'false'); };
     menu.onclick = () => { const open = !sidebar.classList.contains('open'); sidebar.classList.toggle('open', open); shade.hidden = !open; menu.setAttribute('aria-expanded', String(open)); };
     shade.onclick = closeMenu;
-    root.querySelector('.nav').onclick = closeMenu;
+    root.querySelector('.nav').onclick = event => {
+      const trigger = event.target.closest('[data-nav-toggle]');
+      if (trigger) {
+        const section = trigger.dataset.navToggle;
+        const children = root.querySelector('#nav-children-' + section);
+        if (!children) return;
+        const open = children.hidden;
+        children.hidden = !open;
+        trigger.setAttribute('aria-expanded', String(open));
+        return;
+      }
+      const go = event.target.closest('[data-nav-go]');
+      if (go) {
+        closeMenu();
+        location.hash = '#/' + go.dataset.navGo;
+        return;
+      }
+      if (event.target.closest('a[href], [data-tool]')) closeMenu();
+    };
     if (route === 'clients') bindSearch();
     if (route === 'campaigns') {
       const host = root.querySelector('#campaigns-host');
