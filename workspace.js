@@ -772,6 +772,15 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     load();
   }
   function openTool(key) {
+    if (key === 'leads') {
+      // Work remains usable immediately, even before optional enhancements
+      // finish loading after login. Once loaded, the Leads feature handles
+      // the same button through its delegated click listener.
+      void import('./leads-icon-screen.js?v=arctos-nav-1').then(() => {
+        root.querySelector('.nav-section-work [data-tool="leads"]')?.click();
+      }).catch(error => console.error('Leads could not open:', error));
+      return;
+    }
     ({ appointments: openAppointment, notes: openNotes, contacts: openContacts, build: openBuild, commissions: openCommissions })[key]?.();
   }
   let routing = false;
