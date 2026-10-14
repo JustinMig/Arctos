@@ -20,6 +20,9 @@
 #athena-medicare-host .at-card-num{font-size:10px;font-weight:850;letter-spacing:.15em;color:#187266}
 #athena-medicare-host .at-card-link{color:#176a6d;font-weight:850;font-size:12px;margin-top:auto}
 #athena-medicare-host .at-start-card-wide{grid-column:1/-1;min-height:157px;background:#edf7f7;border-color:#c6e3e3}
+#athena-medicare-host a.at-start-card{text-decoration:none;color:inherit}
+#athena-medicare-host .at-compare-card{background:#f3f8fb;border-color:#cbdde8;min-height:151px}
+#athena-medicare-host .at-compare-card:hover{background:#ecf6fa}
 #athena-medicare-host .at-security-line{padding:18px 20px;margin-top:19px;border-radius:11px;border:1px solid #d4e6e8;background:#eaf3f3;color:#415e67;font-size:12px;line-height:1.65}
 #athena-medicare-host .at-security-line strong{color:#195f61}
 #athena-medicare-host .at-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
