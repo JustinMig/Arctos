@@ -93,11 +93,11 @@ async function openWorkspace() {
   root.innerHTML = '<div class="auth-loading" role="status">Opening your workspace…</div>';
   // Download CSS and the authenticated workspace code concurrently rather
   // than paying for two separate network waits on every cold login.
-  const workspaceModule = withTimeout(import('./workspace-start.js?v=arctos-medicare-1'), 20000);
+  const workspaceModule = withTimeout(import('./workspace-start.js?v=arctos-dashboard-1'), 20000);
   let sheet = document.querySelector('[data-workspace-css]');
   let stylesReady = Promise.resolve();
   if (!sheet) {
-    sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/workspace-styles.css?v=arctos-medicare-1'; sheet.dataset.workspaceCss = '';
+    sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/workspace-styles.css?v=arctos-dashboard-1'; sheet.dataset.workspaceCss = '';
     stylesReady = withTimeout(new Promise((resolve,reject) => {
       sheet.onload = resolve;
       sheet.onerror = () => reject(new Error('Unable to load workspace styles. Refresh and retry.'));
