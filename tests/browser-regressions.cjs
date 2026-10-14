@@ -149,6 +149,19 @@ let browser;
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
  await page.setViewportSize({width:1440,height:1000});
  result.tests.push('mobile menu opens and closes after navigation without horizontal overflow');
+ // Home is a daily agenda; the expensive month grid should remain unopened.
+ await page.waitForSelector('.daily-dashboard');
+ assert.equal(await page.locator('.daily-stat').count(),3);
+ assert.equal(await page.locator('[data-add-client]').count(),1);
+ assert.equal(await page.locator('[data-new-appointment]').count(),1);
+ assert.equal(await page.locator('.daily-calendar').getAttribute('open'),null);
+ assert.equal(await page.locator('#calendar-host .calendar-grid').count(),0);
+ await page.locator('[data-daily-open-calendar]').click();
+ await page.waitForSelector('#calendar-host .calendar-grid');
+ assert.equal(await page.locator('.daily-calendar').getAttribute('open'),'');
+ await page.locator('.daily-calendar > summary').click();
+ await page.waitForFunction(()=>!document.querySelector('#calendar-host .calendar-grid'));
+ result.tests.push('Home presents three real schedule summaries, preserved shortcuts and month calendar rendered only when expanded');
 
  await page.locator('[data-nav-toggle="more"]').click();
     await page.locator('[data-tool="build"]').click();await page.waitForSelector('dialog.build-dialog[open]');await page.locator('dialog.build-dialog [name="company"]').selectOption({label:'Mutual of Omaha'});await page.locator('dialog.build-dialog [name="height"]').selectOption('74');await page.waitForFunction(()=>document.querySelector('dialog.build-dialog [data-build-result]')?.textContent?.includes('321 lb'));const buildText=await page.locator('dialog.build-dialog [data-build-result]').innerText();assert.match(buildText,/Mutual of Omaha/);assert.match(buildText,/6′ 2″/);assert.match(buildText,/129 lb/);assert.match(buildText,/321 lb/);assert.deepEqual(made.errors,[]);result.tests.push('built Height & Weight icon renders saved Mutual of Omaha chart values');await page.locator('dialog.build-dialog [data-close]').first().click();await page.waitForSelector('dialog.build-dialog',{state:'detached'});await page.close();
