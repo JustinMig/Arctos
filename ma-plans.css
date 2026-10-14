@@ -122,3 +122,15 @@
 .ma-carrier-toggle[data-ma-carrier-toggle="Humana"].active{background:#5c9a1b;border-color:#5c9a1b;color:#fff}
 .ma-carrier-toggle[data-ma-carrier-toggle="Devoted"].active{background:#287e52;border-color:#287e52;color:#fff}
 .ma-carrier-toggle[data-ma-carrier-toggle="UnitedHealthcare"].active{background:#002677;border-color:#002677;color:#fff}
+
+/* HealthSpring/Cigna 2027 — soft teal, consistent with the five-carrier picker. */
+.ma-carrier-section[data-ma-carrier="Cigna/HealthSpring"]{
+  background:#eff8f7;border-color:rgba(0,111,111,.3)
+}
+.ma-carrier-section[data-ma-carrier="Cigna/HealthSpring"] .ma-carrier-head{background:#dff0ed}
+.ma-carrier-section[data-ma-carrier="Cigna/HealthSpring"] .ma-plan-row{background:rgba(255,255,255,.6)}
+.ma-carrier-section[data-ma-carrier="Cigna/HealthSpring"] .ma-plan-row:hover{background:#e8f4f1}
+.ma-carrier-section[data-ma-carrier="Cigna/HealthSpring"] .ma-plan-row.selected{background:#d4ebe6}
+.ma-carrier-toggle[data-ma-carrier-toggle="Cigna/HealthSpring"].active{background:#006f6f;border-color:#006f6f;color:#fff}
+.ma-county-filter{min-width:0}
+.ma-plan-note a{color:#0b4868;text-decoration:underline;font-weight:800}
