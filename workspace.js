@@ -1,13 +1,27 @@
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js';
 import { Dialogs } from './dialogs.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=arctos-dashboard-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=arctos-work-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository) {
   if (!(root instanceof HTMLElement)) throw new TypeError('Arctos needs an application root.');
   const dialogs = new Dialogs();
   let campaignFeature = null, campaignModule = null;
+  let workFeature = null, workModule = null;
+  async function workQueue() {
+    if(!workModule) workModule=import('./work-queue-ui.js?v=arctos-work-1')
+      .then(({createWorkQueueFeature})=>{
+        workFeature=createWorkQueueFeature({
+          openCampaign:showWorkCampaign,
+          openLead:openWorkLead,
+          openClient,
+          openAppointment:openWorkAppointment
+        });
+        return workFeature;
+      }).catch(error=>{workModule=null;throw error;});
+    return workModule;
+  }
   let athenaFeature = null, athenaModule = null;
   async function athenaMedicare() {
     if (!athenaModule) athenaModule = import('./athena-medicare.js')
@@ -67,6 +81,9 @@ export function createWorkspace(root, repository = disconnectedRepository) {
 
   function pageBody(route) {
     if (route === 'dashboard') return '<div id="daily-summary-host"></div><details class="daily-calendar" data-daily-calendar><summary><span class="daily-calendar-label">Monthly Calendar <small>Open the full appointment calendar when you need it</small></span><span class="daily-calendar-toggle-label">Show calendar ↓</span></summary><div id="calendar-host"></div></details><p class="daily-dashboard-error" data-daily-error hidden role="status"></p>';
+    if (route === 'work') return '<div id="work-queue-host"><p class="subtle">Opening Work Queue…</p></div>'+
+      '<section class="wq-campaign-panel" id="work-campaign-panel" hidden><header class="wq-campaign-back"><h3>Campaigns</h3><button type="button" class="btn secondary" data-work-back>← Back to Work Queue</button></header>'+
+      '<div id="work-campaign-host"></div></section>';
     if (route === 'campaigns') return '<div id="campaigns-host"><p class="subtle">Loading campaigns…</p></div>';
     if (route === 'ma-plans') return '<div id="ma-plans-host"><p class="subtle">Loading 2027 Mississippi MA plans…</p></div>';
     if (route === 'athena-medicare') return '<div id="athena-medicare-host"><p class="subtle">Opening Athena\'s Medicare…</p></div>';
@@ -78,6 +95,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     return `<section class="panel-card dark-card"><h2>Arctos Environment</h2><dl class="settings-list"><dt>Site</dt><dd>mig.mayerig.com</dd><dt>Repository</dt><dd>JustinMig/MayerMig_CRM</dd><dt>Hosting project</dt><dd>mayer-mig-crm</dd><dt>Database / authentication</dt><dd>${connected ? 'Repository connected; review server permissions separately' : 'Not connected'}</dd><dt>Document storage</dt><dd>Not connected</dd><dt>App Store</dt><dd>Native packaging, signing, and submission not configured</dd></dl><p class="muted">Arctos retains the existing CRM records, logins, hosting, and integrations. Technical resource names may still use the original identifiers.</p></section>`;
   }
   function render(route) {
+    workFeature?.unmount();
     campaignFeature?.unmount();
     maPlansFeature?.unmount();
     athenaFeature?.unmount();
@@ -110,6 +128,18 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       if (event.target.closest('a[href], [data-tool]')) closeMenu();
     };
     if (route === 'clients') bindSearch();
+    if (route === 'work') {
+      const host=root.querySelector('#work-queue-host');
+      workQueue().then(feature=>{if(host.isConnected&&!state.destroyed)feature.mount(host);})
+        .catch(error=>{if(host.isConnected)host.innerHTML=empty('Work Queue unavailable',error.message);});
+      root.querySelector('[data-work-back]')?.addEventListener('click',()=>{
+        campaignFeature?.unmount();
+        const panel=root.querySelector('#work-campaign-panel'),list=root.querySelector('#work-queue-host');
+        if(panel)panel.hidden=true;
+        if(list)list.hidden=false;
+        workFeature?.refresh();
+      });
+    }
     if (route === 'campaigns') {
       const host = root.querySelector('#campaigns-host');
       campaigns().then(feature => { if (host.isConnected && !state.destroyed) feature.mount(host); }).catch(error => { if (host.isConnected) host.innerHTML = empty('Campaigns unavailable', error.message); });
@@ -132,6 +162,39 @@ export function createWorkspace(root, repository = disconnectedRepository) {
       drawDailyDashboard();
     }
     if (root.querySelector('#calendar-host')) drawCalendar();
+  }
+
+  async function showWorkCampaign(campaignId=null) {
+    const container=root.querySelector('#work-campaign-panel');
+    const host=root.querySelector('#work-campaign-host');
+    const queue=root.querySelector('#work-queue-host');
+    if(!container||!host||!queue)return;
+    container.hidden=false;
+    queue.hidden=true;
+    host.innerHTML='<p class="subtle">Loading campaign…</p>';
+    try {
+      const feature=await campaigns();
+      if(container.isConnected && !state.destroyed && state.route==='work'){
+        feature.mount(host,{campaignId});
+        container.scrollIntoView({block:'start'});
+      }
+    }catch(error){if(host.isConnected)host.innerHTML=empty('Campaign unavailable',error.message||'Please try again.');}
+  }
+  async function openWorkLead(id) {
+    try {
+      const {openLeadFromQueue}=await import('./leads-icon-screen.js?v=arctos-work-1');
+      await openLeadFromQueue(id);
+    }catch(error){alert(error?.message||'Unable to open the lead. Refresh the Work Queue.');}
+  }
+  async function openWorkAppointment(id) {
+    try {
+      // The appointment is fetched by ID through existing database permissions.
+      const {supabase}=await import('./supabase-repository.js');
+      const {data,error}=await supabase.from('appointments').select('*').eq('id',id).single();
+      if(error)throw error;
+      if(!data?.id)throw Error('Appointment could not be found.');
+      openAppointment(data.event_date,data,()=>workFeature?.refresh());
+    }catch(error){alert(error?.message||'Unable to open appointment.');}
   }
 
   function bindSearch() {
@@ -949,6 +1012,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
   changeRoute();
   return { destroy() {
     state.destroyed = true;
+    workFeature?.destroy();
     campaignFeature?.destroy();
     maPlansFeature?.destroy();
     athenaFeature?.destroy();
