@@ -1,3 +1,4 @@
+import { observeClientDialogs } from './client-dialog-observer.js';
 import {mhRepository,supabase} from './supabase-repository.js';
 import {FILE_GROUPS,fileGroup,fileCategoryLabel,fileIndex,fileGroupCounts} from './client-files-hub-model.js';
 
@@ -215,16 +216,6 @@ function bind(dialog){
  renderFiles(state);renderNotes(state);
  if(dialog.querySelector('[data-client-group-tab="files"]')?.getAttribute('aria-selected')==='true')void reload();
 }
-const observer=new MutationObserver(mutations=>{
- for(const mutation of mutations){
-  for(const node of mutation.addedNodes){
-   if(!(node instanceof Element))continue;
-   if(node.matches?.('dialog.client-dialog'))queueMicrotask(()=>bind(node));
-   node.querySelectorAll?.('dialog.client-dialog').forEach(dialog=>queueMicrotask(()=>bind(dialog)));
-   const parent=node.closest?.('dialog.client-dialog');
-   if(parent && !contexts.has(parent))queueMicrotask(()=>bind(parent));
-  }
- }
-});
-observer.observe(document.body,{childList:true,subtree:true});
-document.querySelectorAll('dialog.client-dialog').forEach(bind);
+// Install on native client dialogs only; unrelated CRM DOM updates no longer
+// trigger Notes & Files binding work.
+observeClientDialogs(bind);
