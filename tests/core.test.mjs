@@ -72,6 +72,30 @@ test('no demo rows, users or financial data are seeded by the provider', async (
   for (const method of ['searchClients','listEvents','listNotes','searchContacts','commissions','getBuildChart']) await assert.rejects(disconnectedRepository[method]({}), NotConnectedError);
 });
 
+test('Arctos groups the sidebar into five primary destinations plus More while preserving routes', () => {
+  const markup = shell('dashboard', true, '<div>Dashboard</div>');
+  const entries = ['dashboard','clients','athena-medicare','campaigns','communications'];
+  for(const route of entries) assert.match(markup, new RegExp('class="nav-primary[^"]*" href="#/' + route + '"'));
+  assert.match(markup, /data-nav-toggle="medicare"/);
+  assert.match(markup, /data-nav-toggle="work"/);
+  assert.match(markup, /data-nav-toggle="more"/);
+  assert.match(markup, /href="#\/medicare-intake"/);
+  assert.match(markup, /href="#\/ma-plans"/);
+  assert.match(markup, /href="#\/carriers"/);
+  assert.match(markup, /href="#\/agents"/);
+  assert.match(markup, /data-tool="leads"/);
+  for(const tool of ['appointments','notes','contacts','build','commissions']) {
+    assert.match(markup, new RegExp('data-tool="' + tool + '"'));
+  }
+  assert.doesNotMatch(markup, /href="#\/settings"/);
+  const plans = shell('ma-plans', true, '');
+  assert.match(plans, /class="nav-primary active" href="#\/athena-medicare"/);
+  assert.match(plans, /id="nav-children-medicare"><a/);
+  const carriers = shell('carriers', true, '');
+  assert.match(carriers, /nav-more-trigger active/);
+  assert.match(carriers, /id="nav-children-more"><a/);
+});
+
 test('Settings is hidden from CRM navigation without removing other pages', () => {
   const markup = shell('dashboard', true, '<div>Dashboard</div>');
   assert.doesNotMatch(markup, /<a href="#\/settings"/);
