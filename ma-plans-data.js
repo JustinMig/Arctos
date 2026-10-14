@@ -1,5 +1,6 @@
+import { HEALTHSPRING_2027 } from './healthspring-ma-2027.js';
 export const MA_PLAN_YEAR = 2027;
-export const MA_CARRIERS = Object.freeze(['Humana', 'Aetna', 'UnitedHealthcare', 'Devoted']);
+export const MA_CARRIERS = Object.freeze(['Humana', 'Aetna', 'UnitedHealthcare', 'Devoted', 'Cigna/HealthSpring']);
 
 export const MA_PLANS_2027 = Object.freeze([
   {
@@ -2150,7 +2151,7 @@ export const MA_PLANS_2027 = Object.freeze([
     "part_d": true,
     "source_note": "2027 Mississippi Medicare Advantage Plan Reference — research snapshot October 10, 2026; verify final enrollment data in official plan materials / Medicare.gov."
   }
-].map(plan => Object.freeze({
+].concat(HEALTHSPRING_2027).map(plan => Object.freeze({
   ...plan,
   medicaid_levels: Object.freeze([...(plan.medicaid_levels || [])])
 })));
