@@ -1,6 +1,8 @@
 # 2027 Mississippi MA plan evidence audit
 
-**Updated:** 2026-10-13. **Coverage:** five requested carriers and all 82 Mississippi counties. Exact available-plan inventory is loaded at runtime from the CMS 2027 county Landscape, not just this fixed 72-plan reference.
+**Updated:** 2026-10-14. **Coverage:** five requested carriers and all 82 Mississippi counties. Exact available-plan inventory is loaded at runtime from the CMS 2027 county Landscape, not just this fixed 72-plan reference.
+
+**Latest CMS audit:** October 14, 2026: downloaded CMS CY2027 Landscape (202609.1) and verified 82 counties, 74 unique five-carrier contract/PBP plans, 78 county-specific segments, and 3,334 county-plan listings. Corrected two omitted HealthSpring plans (H4407-029 and H7849-135). Segments H4407-030-001, -002 and -003 carry different in-network medical MOOP values ($5,700, $6,400, $7,150 respectively); these must never be conflated. CMS file has no Part B giveback amount field; unconfirmed givebacks remain reference only. Three 2027 carrier marketing/benefit sources may differ from CMS base costs and require official document checks.
 
 **Verification hierarchy:** 2027 CMS county Landscape for available plan IDs and published prices; official carrier 2027 Summary of Benefits and Evidence of Coverage for member cost-sharing, extras, exclusions and Medicaid eligibility. A populated internal/reference value is NOT necessarily independently verified.
 
@@ -77,20 +79,22 @@
 | Cigna/HealthSpring | H4407-004 | HealthSpring TotalCare (HMO D-SNP) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 15 |
 | Cigna/HealthSpring | H4407-011 | HealthSpring Courage (HMO) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 16 |
 | Cigna/HealthSpring | H4407-027 | HealthSpring Preferred Plus (HMO) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 15 |
+| Cigna/HealthSpring | H4407-029 | HealthSpring TotalCare Plus (HMO D-SNP) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 14 |
 | Cigna/HealthSpring | H4407-030 | HealthSpring Preferred (HMO) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 16 |
 | Cigna/HealthSpring | H4407-034 | HealthSpring Achieve (HMO C-SNP) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 15 |
 | Cigna/HealthSpring | H4513-049 | HealthSpring Preferred (HMO) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 16 |
+| Cigna/HealthSpring | H7849-135 | HealthSpring True Choice (PPO) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 14 |
 | Cigna/HealthSpring | H7849-144 | HealthSpring True Choice (PPO) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 16 |
 | Cigna/HealthSpring | H7849-153 | HealthSpring True Choice (PPO) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/plan-documents) | [Official document lookup](https://www.healthspring.com/medicare/member-resources/eoc) | 0 | 15 |
 
 ## Evidence counts
 
-- 72 preloaded 2027 reference plan records, with 5 carrier filters.
+- 74 preloaded 2027 reference plan records, with 5 carrier filters.
 - 10 verified direct official 2027 SB PDF links, all Devoted.
 - 10 official direct Devoted 2027 EOC PDF links verified against the carrier plan pages. Not all PDF content could be fetched.
 - Additional Aetna H3239-028 official 2027 SB and EOC source files examined from user's previously uploaded documents; official Aetna 2027 plan-specific document landing page is linked instead of redistributing PDFs.
 - 72 currently overlaid benefit fields checked against 2027 carrier SB (Devoted 10 + Aetna H3239-028).
-- 258 explicit missing/review-pending entries out of 72 × 18 static benefit fields; this excludes existing populated reference values not yet independently audited.
+- 286 explicit missing/review-pending entries out of 74 × 18 static benefit fields; this excludes existing populated reference values not yet independently audited.
 
 ## Corrections of greatest enrollment importance
 
@@ -100,7 +104,7 @@
 
 ## Outstanding plan checks
 
-1. Locate plan-specific downloadable 2027 SB and EOC PDFs for Humana 25, Aetna 12 remaining, UnitedHealthcare 16, and HealthSpring 8 current references (61 plans remaining without independently read full 2027 SB/EOC). Carrier document selectors are linked under each.
+1. Locate plan-specific downloadable 2027 SB and EOC PDFs for Humana 25, Aetna 12 remaining, UnitedHealthcare 16, and HealthSpring 10 current references (63 plans remaining without independently read full 2027 SB/EOC). Carrier document selectors are linked under each.
 2. Verify every populated reference field for those plans against its official 2027 SB/EOC; request missing documents directly from carriers if their official year-specific portals don't expose PDFs.
-3. Check new contract/PBP plans surfaced by CMS for each Mississippi county but not included in the original preloaded 72 records.
+3. Re-verify any newly released CMS Landscape revision against the 202609.1 snapshot and add/remove contract/PBP or county/segment entries accordingly. Always verify the actual county when ZIP codes cross county lines.
 4. Validate Medicare-Medicaid member-specific D-SNP cost sharing and SSBCI health-eligibility rules before enrollment.
