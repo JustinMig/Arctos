@@ -67,5 +67,24 @@ test('do not classify generic carriers document selectors as verified direct PDF
     assert.equal(docs.directSB,false);
     assert.equal(docs.directEOC,false);
   }
-  assert.equal(Object.keys(VERIFIED_2027_BENEFITS).length,10);
+  assert.equal(Object.keys(VERIFIED_2027_BENEFITS).length,11);
+});
+
+test('Aetna H3239-028 2027 SB/EOC corrects Medicaid eligibility and uncovered emergency/transport costs',()=>{
+  const old=MA_PLANS_2027.find(p=>p.plan_number==='H3239-028');
+  assert.ok(old);
+  const corrected=applyVerified2027Benefits(old);
+  assert.deepEqual(corrected.medicaid_levels,['QMB+','SLMB+','FBDE']);
+  assert.match(corrected.medical_deductible,/\$0/);
+  assert.match(corrected.ambulance,/\$0/);
+  assert.match(corrected.emergency_room,/\$0/);
+  assert.match(corrected.urgent_care,/\$0/);
+  assert.match(corrected.transportation,/36 one-way/);
+  assert.match(corrected.transportation,/60 miles/);
+  assert.match(corrected.otc_food_utilities,/\$215\/month/);
+  assert.match(corrected.dental,/\$3,500/);
+  assert.match(corrected.vision,/\$275/);
+  const links=get2027PlanDocuments(old);
+  assert.match(links.sb,/plan\.H3239\.028\.html/);
+  assert.equal(links.directSB,false,'Do not mislabel plan document landing pages as direct PDFs');
 });
