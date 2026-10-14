@@ -14,6 +14,7 @@ import { installSimpleDashboardNote } from './dashboard-note-simple.js?v=shared-
 import { installClientDateAndDragDrop } from './client-date-dragdrop.js';
 import { installClientDuplicateCheck } from './client-duplicate-check.js?v=duplicate-override-1';
 import { installFastNavigation } from './navigation-speed.js?v=arctos-nav-1';
+import { createFeatureLoader } from './feature-loader.js';
 
 const root = document.querySelector('#app');
 installPullToRefresh();
@@ -50,15 +51,25 @@ export async function startWorkspace() {
   // Put the authenticated shell and calendar on screen before loading the
   // large optional client/campaign enhancement chunk. Previously these imports
   // were awaited, delaying EVERY login and dashboard opening.
-  createWorkspace(root, mhRepository);
-  // The basic client/appointment actions already work in createWorkspace.
-  // Progressive enhancements initialize immediately after the first paint.
+  const ensureFeature = createFeatureLoader({
+    client: () => import('./workspace-extensions.js?v=arctos-perf-1'),
+    campaign: () => import('./workspace-campaign-extensions.js?v=arctos-perf-1'),
+    lead: () => import('./workspace-lead-extensions.js?v=arctos-perf-1'),
+    quick: () => import('./workspace-quick-extensions.js?v=arctos-perf-1')
+  });
+  const features = {
+    ensureClientFeatures: () => ensureFeature('client'),
+    ensureCampaignFeatures: () => ensureFeature('campaign'),
+    ensureLeadFeatures: () => ensureFeature('lead')
+  };
+  createWorkspace(root, mhRepository, features);
+  // Only the small toolbar/formatting helpers start after first paint.
+  // Client, lead, and campaign observers load on first use and are cached.
   const loadEnhancements = () => {
     void Promise.allSettled([
-      import('./workspace-extensions.js?v=arctos-files-1'),
       import('./input-formatting.js?v=optimization-2'),
-      import('./campaigns-smooth-load.js?v=1'),
-      import('./top-add-client.js?v=optimization-2')
+      import('./top-add-client.js?v=optimization-2'),
+      ensureFeature('quick')
     ]).then(results => results.forEach((result, index) => {
       if (result.status === 'rejected')
         console.error('CRM enhancement failed to load (' + index + '):', result.reason);
