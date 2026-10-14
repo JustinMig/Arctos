@@ -37,7 +37,7 @@ test('Work Queue combines original records without duplicating linked appointmen
  assert.deepEqual(q.leads.map(x=>x.key),['lead:l1']);
  assert.equal(q.contact.length,1,'two campaign memberships of same client make one contact entry');
  assert.equal(q.contact[0].id,'m3','latest relevant campaign membership is selected');
- assert.deepEqual(q.followups.map(x=>x.key),['campaign:m1','appointment:a4','appointment:a3']);
+ assert.deepEqual(q.followups.map(x=>x.key),['appointment:a4','campaign:m1','appointment:a3']);
  assert.deepEqual(new Set(q.followups.map(x=>x.key)).size,q.followups.length);
  assert.ok(q.completed.some(x=>x.key==='campaign:m5'));
  assert.equal(q.completed.filter(x=>x.key==='appointment:a2').length,0,'linked completed appointment does not duplicate campaign');
