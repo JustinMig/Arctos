@@ -110,7 +110,7 @@ export function createWorkQueueFeature({openCampaign,openLead,openClient,openApp
   finally{if(t===token){loading=false;render();}}
  }
  function refresh(){if(isActive())void load();}
- function mount(node){host=node;view='leads';search='';items={leads:[],contact:[],followups:[],completed:[]};void load();}
- function unmount(){token++;host=null;}
+ function mount(node){host=node;view='leads';search='';items={leads:[],contact:[],followups:[],completed:[]};window.addEventListener('arctos:work-refresh',refresh);void load();}
+ function unmount(){window.removeEventListener('arctos:work-refresh',refresh);token++;host=null;}
  return {mount,unmount,refresh,destroy:unmount};
 }
