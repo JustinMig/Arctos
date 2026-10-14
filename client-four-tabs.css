@@ -42,3 +42,8 @@
   .client-four-tabs .client-category-body{padding:10px}
 }
 @media(max-width:380px){.client-four-tabs .client-overview-shortcuts{grid-template-columns:1fr 1fr}.client-four-tabs .client-overview-shortcuts button:last-child{grid-column:1/-1}}
+
+/* Override legacy per-tab colors, without changing the individual insurance form colors. */
+.client-four-tabs .client-main-tabs button{color:#53677a!important;border-color:#d7e0e8!important;background:#f4f7fa!important;box-shadow:none!important;transform:none!important;border-width:1px!important}
+.client-four-tabs .client-main-tabs button[aria-selected="true"]{color:#fff!important;background:#19374d!important;border-color:#19374d!important;box-shadow:0 2px 7px rgba(25,55,77,.13)!important;transform:none!important}
+.client-four-tabs .client-main-tabs button:hover:not([aria-selected="true"]){background:#e9f0f5!important;color:#234358!important}
