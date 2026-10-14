@@ -13,10 +13,14 @@ test('Athena Medicare is a separate navigation page directly under Agents and Ad
   assert.equal(NAV.find(x=>x[0]==='athena-medicare')[1],"Athena's Medicare");
   const markup=shell('athena-medicare',true,'<div id="athena-medicare-host"></div>');
   assert.match(markup,/href="#\/athena-medicare"/);
+  assert.doesNotMatch(markup,/href="#\/medicare-intake"/);
+  assert.ok(!keys.includes('medicare-intake'), 'Retired Medicare Reviews is not an active route');
   assert.match(markup,/aria-current="page"/);
   assert.doesNotMatch(markup,/href="#\/settings"/);
   const workspace=await read('workspace.js');
   assert.match(workspace,/createAthenaMedicareFeature/);
+  assert.doesNotMatch(workspace,/createMedicareIntakeFeature|import\('\.\/medicare-intake\.js'\)/);
+  assert.match(workspace,/\['medicare-intake','medicare-reviews'\]\.includes\(requested\)/);
   assert.match(workspace,/athenaFeature\?\.unmount\(\)/);
   assert.match(workspace,/athenaFeature && !athenaFeature\.canLeave\(\)/);
 });
@@ -25,6 +29,8 @@ test('new intake and annual Medicare review get separate starter actions and nin
   const s=await read('athena-medicare.js');
   assert.match(s,/data-at-new="new_intake"/);
   assert.match(s,/data-at-new="annual_review"/);
+  assert.match(s,/href="#\/ma-plans" data-at-compare/);
+  assert.match(s,/data-at-saved/);
   assert.match(s,/const SECTIONS = \[/);
   for(const key of ['Doctors & pharmacies','Prescriptions','Needs & priorities','Plan recommendation',
     'Hospital protection','Review, SOA & follow-up','Medicare & Medicaid'])
