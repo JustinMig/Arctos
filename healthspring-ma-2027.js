@@ -147,4 +147,45 @@ export const HEALTHSPRING_2027 = Object.freeze([
     "source_note": "CMS 2027 Medicare Advantage Landscape and 2027 plan references. Confirm final SB/EOC before enrollment.",
     "source_url": "https://plainmedicare.com/plan/H7849-153/"
   }
+,
+  {
+    "carrier": "Cigna/HealthSpring",
+    "plan_number": "H4407-029",
+    "plan_name": "HealthSpring TotalCare Plus (HMO D-SNP)",
+    "plan_type": "HMO D-SNP",
+    "is_dsnp": true,
+    "medicaid_levels": [
+      "DUAL_VERIFY"
+    ],
+    "medicaid_label": "D-SNP — confirm Medicaid category in 2027 SB/EOC",
+    "premium": "$6.30",
+    "medical_moop": "$9,850",
+    "drug_deductible": "$700",
+    "rx_oop": "$2,400",
+    "part_d": true,
+    "eligibility": "Must qualify for D-SNP: Medicare and accepted Medicaid level, subject to county service area. Exact Medicaid levels must be verified in 2027 SB/EOC.",
+    "service_area": "2027 CMS county data determines availability.",
+    "source_note": "Official CMS CY2027 Landscape 202609.1, reviewed October 14, 2026. Other benefit details require official 2027 SB/EOC.",
+    "source_url": "https://q1medicare.com/maplandetails/2027/ms/25320/jefferson-davis/h4407-029-0/healthspring-totalcare-plus-hmo-d-snp"
+  },
+  {
+    "carrier": "Cigna/HealthSpring",
+    "plan_number": "H7849-135",
+    "plan_name": "HealthSpring True Choice (PPO)",
+    "plan_type": "PPO",
+    "is_dsnp": false,
+    "medicaid_levels": [
+      "NONE"
+    ],
+    "medicaid_label": "No Medicaid required",
+    "premium": "$0.00",
+    "medical_moop": "$6,500",
+    "drug_deductible": "$500",
+    "rx_oop": "$2,400",
+    "part_d": true,
+    "eligibility": "Medicare A and B, residence in the plan service area, and an enrollment period.",
+    "service_area": "2027 CMS county data determines availability.",
+    "source_note": "Official CMS CY2027 Landscape 202609.1, reviewed October 14, 2026. Other benefit details require official 2027 SB/EOC.",
+    "source_url": "https://q1medicare.com/maplandetails/2027/ms/25360/lamar/h7849-135-0/healthspring-true-choice-ppo"
+  }
 ].map(plan => Object.freeze({ ...plan, medicaid_levels:Object.freeze(plan.medicaid_levels) })));
