@@ -1,4 +1,5 @@
-// Loaded only after authentication. Bundled into a single deferred feature chunk.
+// Client-specific integrations. Load only when the client editor is needed;
+// install before the first client dialog is created to preserve every listener.
 import './client-product-status.js?v=deceased-products-2';
 import './medicare-gov-credentials.js?v=new-client-isolation-1';
 import './banking-information.js?v=new-client-isolation-1';
@@ -10,12 +11,6 @@ import './medication-autocomplete.js?v=rxterms-1';
 import './hospital-indemnity-documents.js';
 import './client-personal-underwriting.js?v=new-client-isolation-1';
 import './client-intake-sections.js?v=multi-county-1';
-import './campaign-stage-layout.js';
-import './campaign-call-placeholder.js';
-import './campaign-list-compact.js';
-import './campaign-management-controls.js';
-import './campaign-date-picker.js';
-import './campaign-hide-duration.js';
 import './client-collapse.js';
 import './client-medicare-cleanup.js?v=client-audit-1';
 import './client-medicare-assets.js?v=client-audit-1';
@@ -32,10 +27,4 @@ import './client-files-hub.js?v=arctos-files-1';
 import './client-imported-documents.js';
 import './client-summary-commissions.js';
 import './life-commission-filters.js';
-import './commission-icon-screen.js';
-import './leads-icon-screen.js?v=arctos-nav-1';
-import './lead-dob-format.js';
-import './leads-collapse.js';
-import './campaign-workflow-polish.js';
-import './campaign-title-dedupe.js';
 import './new-client-clean-close.js?v=new-client-isolation-1';
