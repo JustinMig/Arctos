@@ -329,7 +329,7 @@ export function createMAPlansFeature({ dialogs }) {
               ${ROWS.map(([label, key]) => `
                 <tr>
                   <th>${esc(label)}</th>
-                  ${plans.map(plan => `<td>${esc(plan[key] || 'Verify in official 2027 SB/EOC')}<small class="ma-value-status">${plan._sb_verified_fields?.includes(key) ? 'Checked: 2027 SB' : plan._cms_verified_fields?.includes(key) ? 'CMS 2027 county data' : 'Reference only — verify SB/EOC'}</small></td>`).join('')}
+                  ${plans.map(plan => `<td>${esc(displayValue(plan,key))}<small class="ma-value-status">${plan._cms_verified_fields?.includes(key) ? 'Official CMS 2027 county/segment' : plan._sb_verified_fields?.includes(key) ? 'Checked: 2027 SB' : 'Reference only — verify 2027 SB/EOC'}</small></td>`).join('')}
                 </tr>`).join('')}
               <tr class="ma-documents-row"><th>2027 plan documents</th>
                 ${plans.map(plan => `<td>${documentsMarkup(plan)}</td>`).join('')}
@@ -337,7 +337,7 @@ export function createMAPlansFeature({ dialogs }) {
             </tbody>
           </table>
         </div>
-        <p class="ma-compare-footnote">CMS CY2027 Landscape controls county availability and base costs. Compare remaining benefits with each carrier's official 2027 Summary of Benefits/Evidence of Coverage before enrollment. HealthSpring: <a href="https://www.healthspring.com/medicare/member-resources/plan-documents" target="_blank" rel="noopener noreferrer">official plan documents</a>.</p>
+        <p class="ma-compare-footnote">Official CMS CY2027 Landscape (as of 2026-09-22) controls county/segment availability and base costs; MOOP is not the same as QMB member costs. Compare remaining benefits with each carrier's official 2027 Summary of Benefits/Evidence of Coverage before enrollment. HealthSpring: <a href="https://www.healthspring.com/medicare/member-resources/plan-documents" target="_blank" rel="noopener noreferrer">official plan documents</a>.</p>
       </div>`;
   }
 
