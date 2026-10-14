@@ -13,7 +13,7 @@ const events=[
   {id:'5',title:'Check renewal',event_date:'2026-10-20',status:'scheduled'},
   {id:'6',title:'Already completed',event_date:'2026-10-21',status:'completed'},
   {id:'7',title:'Next month',event_date:'2026-11-01',status:'scheduled'},
-  {id:'8',title:'<img src=x onerror=alert(1)>',event_date:'2026-10-23',status:'scheduled'}
+  {id:'8',title:'<img src=x onerror=alert(1)>',event_date:'2026-10-14',start_time:'15:45',status:'scheduled'}
 ];
 
 test('daily dashboard prioritizes today and unscheduled followups without overstating totals',()=>{
@@ -28,9 +28,9 @@ test('daily dashboard prioritizes today and unscheduled followups without overst
   assert.match(html,/data-daily-open-followups/);
   assert.match(html,/data-daily-open-calendar/);
   assert.match(html,/Coming up/);
-  assert.match(html,/>2<\/strong><small>Active appointments<\/small>/);
+  assert.match(html,/>3<\/strong><small>Active appointments<\/small>/);
   assert.match(html,/>1<\/strong><small>Need rescheduling<\/small>/);
-  assert.match(html,/>2<\/strong><small>Later this month<\/small>/);
+  assert.match(html,/>1<\/strong><small>Later this month<\/small>/);
   assert.doesNotMatch(html,/<img src=x/);
   assert.match(html,/&lt;img src=x/);
 });
