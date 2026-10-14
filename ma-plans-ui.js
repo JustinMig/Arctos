@@ -1,4 +1,5 @@
-import { MA_CARRIERS, MA_PLAN_YEAR, MA_PLANS_2027, plansByCarrier } from './ma-plans-data.js?v=ma-plans-5';
+import { MA_CARRIERS, MA_PLAN_YEAR, MA_PLANS_2027 } from './ma-plans-data.js?v=ma-plans-5';
+import { get2027PlanDocuments, applyVerified2027Benefits, audit2027Plan } from './ma-plan-documentation-2027.js';
 import { countyForMississippiZip, MS_ZIP_COUNTY } from './ma-ms-zip-county.js?v=ma-plans-4';
 import { supabase } from './supabase-repository.js';
 
@@ -45,7 +46,7 @@ export function createMAPlansFeature({ dialogs }) {
   let zipToken = 0;
 
   function catalog() {
-    if (!countySelection && !zipCode) return MA_PLANS_2027;
+    if (!countySelection && !zipCode) return MA_PLANS_2027.map(applyVerified2027Benefits);
     if (!(availablePlanIds instanceof Set)) return [];
     const detailed = new Map(MA_PLANS_2027.map(plan => [plan.plan_number,plan]));
     const combined = new Map();
@@ -55,7 +56,7 @@ export function createMAPlansFeature({ dialogs }) {
     for (const entry of countyCatalog) {
       if (!MA_CARRIERS.includes(entry.carrier) || !availablePlanIds.has(entry.plan_number)) continue;
       const saved = detailed.get(entry.plan_number);
-      combined.set(entry.plan_number, {
+      combined.set(entry.plan_number, applyVerified2027Benefits({
         ...(saved || {}), ...entry,
         premium:entry.premium || saved?.premium || 'Verify 2027 SOB/EOC',
         medical_moop:entry.medical_moop || 'Verify county-specific 2027 SOB/EOC',
@@ -64,12 +65,13 @@ export function createMAPlansFeature({ dialogs }) {
           ? saved.medicaid_levels : entry.medicaid_levels,
         medicaid_label:saved?.is_dsnp === entry.is_dsnp && saved?.medicaid_levels?.[0] !== 'DUAL_VERIFY'
           ? saved.medicaid_label : entry.medicaid_label,
-        source_note:'CMS CY2027 Landscape for this county; other benefit lines from prior 2027 carrier reference where available. Verify final plan documents.'
-      });
+        source_note:'2027 CMS county values; other benefit lines may be unverified references except for explicit 2027 SB corrections.',
+        _cms_verified_fields:['premium','medical_moop','drug_deductible','part_b_giveback'].filter(key=>Boolean(entry[key]))
+      }));
     }
     for (const plan of MA_PLANS_2027) {
       if (availablePlanIds.has(plan.plan_number) && !combined.has(plan.plan_number))
-        combined.set(plan.plan_number,plan);
+        combined.set(plan.plan_number,applyVerified2027Benefits(plan));
     }
     return [...combined.values()];
   }
@@ -165,6 +167,21 @@ export function createMAPlansFeature({ dialogs }) {
     await loadCountyAvailability(match.county,preserveFocus);
   }
 
+  function documentsMarkup(plan) {
+    const docs = get2027PlanDocuments(plan);
+    const audit = audit2027Plan(plan);
+    const link = (url,label) => url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : '';
+    return `<div class="ma-plan-source-status">
+      <span class="${docs.directSB ? 'ma-sb-ready' : 'ma-sb-search'}">${docs.directSB ? 'Official 2027 SB found' : 'Official 2027 document lookup'}</span>
+      <span>${audit.fieldsNeedingReview.length} of ${audit.total} benefit fields incomplete</span>
+      ${audit.verifiedSBFields ? `<span>${audit.verifiedSBFields} fields checked against 2027 SB</span>` : ''}
+    </div><div class="ma-plan-document-links">
+      ${link(docs.sb,docs.directSB ? '2027 Summary of Benefits PDF' : 'Find 2027 Summary of Benefits')}
+      ${link(docs.eoc,docs.directEOC ? '2027 Evidence of Coverage PDF' : 'Find 2027 Evidence of Coverage')}
+    </div>
+    ${!docs.directSB ? '<small class="ma-document-notice">Select plan year 2027 and verify the exact plan ID in the carrier lookup.</small>' : ''}`;
+  }
+
   function carrierMarkup(carrier) {
     const plans = visiblePlansForCarrier(carrier);
     if (!plans.length) return '';
@@ -178,14 +195,17 @@ export function createMAPlansFeature({ dialogs }) {
           ${plans.map(plan => {
             const checked = selected.has(plan.plan_number);
             return `
-              <label class="ma-plan-row${checked ? ' selected' : ''}">
-                <input type="checkbox" data-ma-plan="${esc(plan.plan_number)}" ${checked ? 'checked' : ''} ${!checked && selected.size >= 5 ? 'disabled' : ''}>
-                <span class="ma-plan-copy">
-                  <strong>${esc(plan.plan_name)}</strong>
-                  <small>${esc(plan.plan_number)}</small>
-                  <em>${esc(plan.medicaid_label)}</em>
-                </span>
-              </label>`;
+              <div class="ma-plan-result">
+                <label class="ma-plan-row${checked ? ' selected' : ''}">
+                  <input type="checkbox" data-ma-plan="${esc(plan.plan_number)}" ${checked ? 'checked' : ''} ${!checked && selected.size >= 5 ? 'disabled' : ''}>
+                  <span class="ma-plan-copy">
+                    <strong>${esc(plan.plan_name)}</strong>
+                    <small>${esc(plan.plan_number)}</small>
+                    <em>${esc(plan.medicaid_label)}</em>
+                  </span>
+                </label>
+                <div class="ma-plan-documents">${documentsMarkup(plan)}</div>
+              </div>`;
           }).join('')}
         </div>
       </section>`;
@@ -242,7 +262,7 @@ export function createMAPlansFeature({ dialogs }) {
         </section>
         <div class="ma-plan-note">
           <strong>2027 Mississippi • five carriers • ${countySelection ? esc(countySelection) + ' County' : 'statewide reference'}.</strong>
-          ${countySelection ? 'Plan availability, names, premiums, and medical MOOP are checked against the CMS 2027 county Landscape where published. Other benefits require confirmation in official 2027 plan documents.' : 'Select a county or enter a ZIP to load the complete 2027 CMS plan inventory. The statewide list below is a partial carrier reference, not a confirmation of county availability.'}
+          ${countySelection ? 'Plan availability, names, premiums, and medical MOOP are checked against the CMS 2027 county Landscape where published. Verified fields are marked in the comparison. Remaining reference benefits must be checked against official 2027 SB/EOC.' : 'Select a county or enter a ZIP to load the complete 2027 CMS plan inventory. The statewide list below is a partial carrier reference, not a confirmation of county availability. Official 2027 document links or carrier lookup links appear beneath each plan.'}
           <a href="https://www.cms.gov/medicare/coverage/prescription-drug-coverage" target="_blank" rel="noopener noreferrer">CMS 2027 Landscape</a> ·
           <a href="https://q1medicare.com/2026/medicare-advantage/ms" target="_blank" rel="noopener noreferrer">Q1Medicare (2026 historical reference)</a>
         </div>
@@ -280,8 +300,11 @@ export function createMAPlansFeature({ dialogs }) {
               ${ROWS.map(([label, key]) => `
                 <tr>
                   <th>${esc(label)}</th>
-                  ${plans.map(plan => `<td>${esc(plan[key] || 'Verify in official 2027 SOB/EOC')}</td>`).join('')}
+                  ${plans.map(plan => `<td>${esc(plan[key] || 'Verify in official 2027 SB/EOC')}<small class="ma-value-status">${plan._sb_verified_fields?.includes(key) ? 'Checked: 2027 SB' : plan._cms_verified_fields?.includes(key) ? 'CMS 2027 county data' : 'Reference only — verify SB/EOC'}</small></td>`).join('')}
                 </tr>`).join('')}
+              <tr class="ma-documents-row"><th>2027 plan documents</th>
+                ${plans.map(plan => `<td>${documentsMarkup(plan)}</td>`).join('')}
+              </tr>
             </tbody>
           </table>
         </div>
