@@ -81,7 +81,62 @@ export function calendarMarkup(month, events = [], connected = false, agents = [
     return `<button type="button" class="calendar-day${day.getMonth() !== month.getMonth() ? ' outside' : ''}${key === today ? ' today' : ''}" data-day="${key}" aria-label="${longDate(key)}${connected ? `, ${entries.length} items` : ''}"${key === today ? ' aria-current="date"' : ''}><span class="day-number">${day.getDate()}</span><span class="day-events">${entries.slice(0, 3).map(e => `<span class="calendar-event"><small>${esc(timeLabel(e.start_time))}</small><strong>${esc(e.title)}</strong></span>`).join('')}${entries.length > 3 ? `<small>+${entries.length - 3} more</small>` : ''}</span><span class="day-dots">${entries.slice(0, 4).map(() => '<i></i>').join('')}</span></button>`;
   }).join('')}</div></div></section>`;
 }
+
+const NAV_SYMBOLS = Object.freeze({
+  home:'<path d="m3 10 9-7 9 7v10h-6v-6H9v6H3z"/>',
+  clients:'<circle cx="12" cy="7.5" r="3.5"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
+  medicare:'<path d="M12 21s-8-4.5-8-10.5a4.5 4.5 0 0 1 8-2.8 4.5 4.5 0 0 1 8 2.8C20 16.5 12 21 12 21Z"/><path d="M8 12h8m-4-4v8"/>',
+  work:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+  messages:'<path d="M20 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h9a4 4 0 0 1 4 4z"/><path d="M7 10h9m-9 4h6"/>',
+  more:'<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>'
+});
+const navSymbol = key => '<svg class="nav-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' + NAV_SYMBOLS[key] + '</svg>';
+const navLink = (route, text, current) => '<a class="nav-child' + (route===current?' active':'') + '" href="#/' + route + '"' + (route===current?' aria-current="page"':'') + '>' + esc(text) + '</a>';
+const navAction = (tool, text) => '<button type="button" class="nav-child nav-action" data-tool="' + tool + '">' + esc(text) + '</button>';
+
+export function navigationMarkup(route) {
+  const medicareActive=['athena-medicare','medicare-intake','ma-plans'].includes(route);
+  const workActive=route==='campaigns';
+  const moreActive=['carriers','agents','settings'].includes(route);
+  const direct=(key,label,iconKey=key)=>{
+    const active=route===key;
+    return '<a class="nav-primary' + (active?' active':'') + '" href="#/' + key + '"' + (active?' aria-current="page"':'') + '>' + navSymbol(iconKey) + '<span>' + esc(label) + '</span></a>';
+  };
+  const group=(section,title,href,iconKey,active,children)=>{
+    return '<div class="nav-section nav-section-' + section + '" data-nav-section="' + section + '">' +
+      '<div class="nav-line"><a class="nav-primary' + (active?' active':'') + '" href="#/' + href + '"' +
+      (route===href?' aria-current="page"':'') + '>' + navSymbol(iconKey) + '<span>' + esc(title) + '</span></a>' +
+      '<button type="button" class="nav-expander" data-nav-toggle="' + section + '" aria-expanded="' + String(active) +
+      '" aria-controls="nav-children-' + section + '" aria-label="Show ' + esc(title) + ' options"><span aria-hidden="true">⌄</span></button></div>' +
+      '<div class="nav-children" id="nav-children-' + section + '"' + (active?'':' hidden') + '>' + children + '</div></div>';
+  };
+  const moreChildren=navLink('carriers','Carriers',route)+navLink('agents','Agents & Admin',route)+
+    '<div class="nav-more-heading">Quick tools</div>' +
+    '<div class="quick-tools nav-extra-tools" aria-label="Additional CRM tools">' +
+    TOOLS.map(([key,label,,hint])=>'<button type="button" class="quick-tool" data-tool="'+key+'" title="'+esc(hint)+'" aria-label="'+esc(label)+'" aria-haspopup="dialog">'+icon(key)+'<strong>'+esc(label)+'</strong></button>').join('')+
+    '</div>';
+  const more='<div class="nav-section nav-section-more" data-nav-section="more">' +
+    '<button type="button" class="nav-primary nav-more-trigger'+(moreActive?' active':'')+
+    '" data-nav-toggle="more" aria-controls="nav-children-more" aria-expanded="'+String(moreActive)+'">' +
+    navSymbol('more')+'<span>More</span><span class="nav-chevron" aria-hidden="true">⌄</span></button>' +
+    '<div class="nav-children" id="nav-children-more"'+(moreActive?'':' hidden')+'>'+moreChildren+'</div></div>';
+  return direct('dashboard','Home','home')+
+    direct('clients','Clients')+
+    group('medicare','Medicare','athena-medicare','medicare',medicareActive,
+      navLink('athena-medicare',"Athena's Medicare",route)+navLink('ma-plans','Compare MA Plans',route)+navLink('medicare-intake','Previous Reviews',route))+
+    group('work','Work','campaigns','work',workActive,
+      navAction('leads','Leads')+navLink('campaigns','Campaigns',route)+
+      '<a class="nav-child" href="#/dashboard">Today & Follow-ups</a>')+
+    direct('communications','Messages','messages')+
+    more;
+}
 export function shell(route, connected, body) {
   const label = NAV.find(([key]) => key === route)?.[1] || 'Dashboard';
-  return `<div class="shell"><button class="sidebar-shade" aria-label="Close navigation" hidden></button><aside class="sidebar" id="sidebar"><a class="brand" href="#/dashboard"><img src="/assets/mayer-bear.webp" width="56" height="56" alt="Arctos bear"><span>Arctos<small>Client Management</small></span></a><nav class="nav" aria-label="Main navigation">${NAV.filter(([key]) => key !== 'settings').map(([key, text]) => `<a href="#/${key}"${key === route ? ' aria-current="page" class="active"' : ''}>${text}</a>`).join('')}</nav><div class="sidebar-footer">Arctos<small>Standalone workspace</small></div></aside><main class="main"><header class="top"><button type="button" class="menu-toggle" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">☰</button><a class="top-brand" href="#/dashboard"><img src="/assets/mayer-bear.webp" alt="Arctos bear" width="40" height="40"><strong>Arctos</strong></a><nav class="quick-tools" aria-label="CRM quick tools">${TOOLS.map(([key, label, short, hint]) => `<button type="button" class="quick-tool" data-tool="${key}" title="${esc(hint)}" aria-label="${esc(label)}" aria-haspopup="dialog">${icon(key)}<strong>${esc(short)}</strong></button>`).join('')}</nav></header><div class="content"><div class="page-heading"><div><span class="eyebrow">${esc(label)}</span><h1>${esc(label)}</h1></div></div>${body}</div></main></div>`;
+  return '<div class="shell"><button class="sidebar-shade" aria-label="Close navigation" hidden></button>' +
+    '<aside class="sidebar" id="sidebar"><a class="brand" href="#/dashboard"><img src="/assets/mayer-bear.webp" width="56" height="56" alt="Arctos bear"><span>Arctos<small>Client Management</small></span></a>' +
+    '<nav class="nav" aria-label="Main navigation">' + navigationMarkup(route) + '</nav>' +
+    '<div class="sidebar-footer">Arctos<small>Client management workspace</small></div></aside>' +
+    '<main class="main"><header class="top"><button type="button" class="menu-toggle" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">☰</button>' +
+    '<a class="top-brand" href="#/dashboard"><img src="/assets/mayer-bear.webp" alt="Arctos bear" width="40" height="40"><strong>Arctos</strong></a>' +
+    '<span class="top-workspace-label">Insurance workspace</span></header><div class="content"><div class="page-heading"><div><span class="eyebrow">'+esc(label)+'</span><h1>'+esc(label)+'</h1></div></div>'+body+'</div></main></div>';
 }
