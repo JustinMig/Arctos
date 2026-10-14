@@ -195,7 +195,7 @@ export function createMAPlansFeature({ dialogs }) {
     const link = (url,label) => url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : '';
     return `<div class="ma-plan-source-status">
       <span class="${docs.directSB ? 'ma-sb-ready' : 'ma-sb-search'}">${docs.directSB ? 'Official 2027 SB found' : 'Official 2027 document lookup'}</span>
-      <span>${audit.fieldsNeedingReview.length} of ${audit.total} benefit fields incomplete</span>
+      <span>${audit.fieldsWithoutVerifiedSource.length} of ${audit.total} benefit fields need confirmation</span>
       ${audit.verifiedSBFields ? `<span>${audit.verifiedSBFields} fields checked against 2027 SB</span>` : ''}
     </div><div class="ma-plan-document-links">
       ${link(docs.sb,docs.directSB ? '2027 Summary of Benefits PDF' : 'Find 2027 Summary of Benefits')}
