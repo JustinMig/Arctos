@@ -42,6 +42,7 @@ test('separate observer groups are imported for the correct Arctos workflows onl
  assert.match(lead,/lead-dob-format\.js/);
  assert.match(workspace,/if \(ensureCampaignFeatures\) await ensureCampaignFeatures\(\)/);
  assert.match(workspace,/if \(ensureLeadFeatures\) await ensureLeadFeatures\(\)/);
- assert.match(workspace,/\.then\(\(\) => openClientReady\(id\)\)/);
+ assert.match(workspace,/return openClientReady\(id\)/);
+ assert.match(workspace,/pendingClientOpens\.has\(key\)/);
  assert.match(workspace,/if \(route === 'clients'\)/);
 });
