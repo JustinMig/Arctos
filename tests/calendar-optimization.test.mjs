@@ -29,11 +29,14 @@ test('month grid handles many appointments without filtering the full list per d
   assert.match(markup, /calendar-event/);
 });
 
-test('startup paints the calendar without waiting for optional screen modules', async () => {
+test('startup paints Home without importing client, lead, or campaign screens', async () => {
   const start = await source('workspace-start.js');
-  const atShell = start.indexOf('createWorkspace(root, mhRepository)');
-  const atExtras = start.indexOf("import('./workspace-extensions.js");
-  assert.ok(atShell >= 0 && atExtras > atShell);
+  assert.match(start, /createWorkspace\(root, mhRepository, features\)/);
+  assert.match(start, /client: \(\) => import\('\.\/workspace-extensions\.js/);
+  assert.match(start, /lead: \(\) => import\('\.\/workspace-lead-extensions\.js/);
+  assert.match(start, /campaign: \(\) => import\('\.\/workspace-campaign-extensions\.js/);
+  const afterMount = start.slice(start.indexOf('createWorkspace(root, mhRepository, features)'));
+  assert.doesNotMatch(afterMount, /ensureFeature\('(client|campaign|lead)'\)/);
   assert.match(start, /Promise\.allSettled/);
   const app = await source('app.js');
   assert.match(app, /Promise\.all\(\[stylesReady, workspaceModule\]\)/);
