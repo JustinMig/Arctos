@@ -38,7 +38,7 @@ test('Communications only shows saved M&H clients and M&H-era texts', async () =
   assert.match(center, /const client = byId\.get\(message\.client_id\)/);
   assert.match(center, /if \(!client\) continue/);
   assert.doesNotMatch(center, /byId\.get\(message\.client_id\) \|\|/);
-  assert.match(center, /Saved Mayer MIG clients · Mayer MIG texting activity only/);
+  assert.match(center, /Saved Arctos clients · CRM texting activity only/);
 });
 
 test('Texting UI is loaded without broad mutation observers', async () => {
