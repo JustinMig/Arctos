@@ -1,0 +1,74 @@
+/* Arctos Step 4: purposeful daily dashboard with on-demand calendar */
+.daily-dashboard{color:#1f3648;display:grid;gap:15px;margin-bottom:17px}
+.daily-hero{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:15px;padding:22px 24px;border-radius:17px;background:linear-gradient(112deg,#133348,#205566 78%,#23695f);color:#fff;border:1px solid #2c5d69}
+.daily-date{font-size:11px;letter-spacing:.045em;color:#c5e0e7;font-weight:750}
+.daily-hero h2{font-size:clamp(22px,3vw,29px);font-weight:850;color:#fff;margin:6px 0 4px}
+.daily-hero p{font-size:12px;line-height:1.55;color:#d2e4ea;margin:0}
+.daily-hero-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.daily-hero-actions .btn{min-height:39px;font-size:12px;font-weight:750;text-decoration:none}
+.daily-hero-actions .btn.primary{background:#fff;color:#173b4e;border-color:#fff}
+.daily-hero-actions .btn.secondary{background:#294d5e;color:#eaf4f6;border-color:#7297a3}
+.daily-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.daily-stat{border:1px solid #d8e3e9;background:#fff;border-radius:14px;padding:14px 17px;display:grid;gap:5px;min-height:101px}
+.daily-stat>span{font-size:12px;font-weight:750;color:#536e80}
+.daily-stat>strong{font-size:27px;line-height:1.15;font-weight:850;color:#183f52;font-variant-numeric:tabular-nums}
+.daily-stat>small{font-size:11px;color:#758b99}
+.daily-stat-followups>strong{color:#9e5337}
+.daily-work-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:13px;align-items:start}
+.daily-work-section{background:#fff;border:1px solid #d8e3e9;border-radius:15px;overflow:hidden;min-width:0}
+.daily-work-section>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 17px;border-bottom:1px solid #e7edf0}
+.daily-work-section h3{color:#234354;font-size:15px;line-height:1.3;margin:0}
+.daily-work-section>header p{font-size:11px;color:#8192a0;line-height:1.35;margin:4px 0 0}
+.daily-text-action{background:none;color:#256f7c;border:0;font-size:12px;font-weight:750;padding:5px 0;white-space:nowrap}
+.daily-text-action:hover{text-decoration:underline}
+.daily-work-list{display:grid}
+.daily-agenda-item{display:flex;align-items:center;gap:14px;padding:12px 16px;width:100%;min-width:0;min-height:59px;text-align:left;border:0;border-bottom:1px solid #eaf0f4;background:#fff;color:#25475b}
+.daily-agenda-item:hover{background:#f5f9fb}
+.daily-agenda-item:last-child{border-bottom:0}
+.daily-agenda-time{flex:0 0 75px;width:75px;font-size:11px;font-weight:850;color:#2b6572;line-height:1.45}
+.daily-followup-date{font-size:10px;color:#9a563d}
+.daily-agenda-copy{display:grid;gap:4px;flex:1;min-width:0}
+.daily-agenda-copy>strong{font-size:13px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#244052}
+.daily-agenda-copy>small{font-size:11px;color:#7c90a0}
+.daily-agenda-arrow{font-size:21px;color:#7f99a9}
+.daily-empty{font-size:12px;color:#788b99;padding:23px 17px;margin:0;line-height:1.55}
+.daily-more-action{display:block;width:100%;text-align:center;background:#f5f9fb;border:0;border-top:1px solid #e3eaf0;padding:11px;font-size:12px;color:#29677a;font-weight:750}
+.daily-more-action:hover{background:#eaf3f7}
+.daily-work-footer{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap;padding:0 3px}
+.daily-work-link{font-size:12px;color:#437588;font-weight:750;text-decoration:none}
+.daily-work-link:hover{text-decoration:underline}
+.daily-calendar{border:1px solid #d5e2e8;background:#fff;border-radius:15px;overflow:hidden;color:#23475c;margin:0 0 16px}
+.daily-calendar>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:62px;padding:13px 18px;background:#f6f9fb;cursor:pointer;font-weight:800}
+.daily-calendar>summary::-webkit-details-marker{display:none}
+.daily-calendar>summary:hover{background:#edf4f7}
+.daily-calendar-label{display:grid;gap:4px;font-size:14px}
+.daily-calendar-label small{font-size:11px;font-weight:500;color:#738b9b}
+.daily-calendar-toggle-label{font-size:12px;color:#327181;white-space:nowrap}
+.daily-calendar[open]>summary{border-bottom:1px solid #dce7ed}
+.daily-calendar[open] .daily-calendar-toggle-label{font-size:0}
+.daily-calendar[open] .daily-calendar-toggle-label::after{content:'Hide calendar ↑';font-size:12px}
+.daily-calendar #calendar-host{padding:13px}
+.daily-calendar #calendar-host:empty{display:none}
+.daily-calendar .dashboard-calendar{min-width:0}
+.daily-dashboard-error{font-size:12px;color:#8d3235;background:#fff0f1;border:1px solid #e8c4c5;padding:12px 14px;border-radius:10px}
+@media(max-width:880px){.daily-work-grid{grid-template-columns:1fr}.daily-work-section{min-height:0}}
+@media(max-width:620px){
+ .daily-dashboard{gap:10px;margin-bottom:12px}
+ .daily-hero{border-radius:13px;padding:17px 14px;gap:13px}
+ .daily-hero h2{font-size:23px}
+ .daily-hero-actions{width:100%}
+ .daily-hero-actions .btn{flex:1 1 0;min-width:0;text-align:center}
+ .daily-stats{gap:7px}
+ .daily-stat{border-radius:11px;min-height:89px;padding:11px 10px}
+ .daily-stat>span{font-size:11px}
+ .daily-stat>strong{font-size:25px}
+ .daily-stat>small{font-size:10px;line-height:1.3}
+ .daily-work-section{border-radius:12px}
+ .daily-work-section>header{padding:13px 12px}
+ .daily-agenda-item{padding:11px 12px;gap:9px}
+ .daily-agenda-time{flex-basis:69px;width:69px;font-size:10px}
+ .daily-agenda-copy>strong{font-size:12px}
+ .daily-calendar>summary{padding:12px}
+ .daily-calendar #calendar-host{padding:6px}
+ .daily-work-footer{align-items:flex-start}
+}
