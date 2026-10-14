@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../commission-icon-screen.js', import.meta.url), 'utf8');
-const index = readFileSync(new URL('../workspace-extensions.js', import.meta.url), 'utf8');
+const index = readFileSync(new URL('../workspace-quick-extensions.js', import.meta.url), 'utf8');
 
 test('top Commissions icon is intercepted directly before the legacy onclick runs', () => {
   assert.match(source, /\[data-tool=\\?"commissions\\?"\]/);
