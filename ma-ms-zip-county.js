@@ -323,7 +323,7 @@ export const MS_ZIP_COUNTY = Object.freeze({
   "39440": Object.freeze({ county: "Jones", fips: "28067" }),
   "39443": Object.freeze({ county: "Jones", fips: "28067" }),
   "39451": Object.freeze({ county: "Greene", fips: "28041" }),
-  "39452": Object.freeze({ county: "Jackson", fips: "28059" }),
+  "39452": Object.freeze({ county: "George", fips: "28039" }),
   "39455": Object.freeze({ county: "Forrest", fips: "28035" }),
   "39456": Object.freeze({ county: "Greene", fips: "28041" }),
   "39459": Object.freeze({ county: "Jones", fips: "28067" }),
