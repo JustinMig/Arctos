@@ -291,7 +291,7 @@ export function createMAPlansFeature({ dialogs }) {
           <a href="https://www.cms.gov/medicare/coverage/prescription-drug-coverage" target="_blank" rel="noopener noreferrer">CMS 2027 Landscape</a> ·
           <a href="https://q1medicare.com/2027/medicare-advantage/ms" target="_blank" rel="noopener noreferrer">Q1Medicare 2027 Mississippi plans</a>
         </div>
-        <p class="ma-plan-caution">The medical MOOP is the plan maximum, not necessarily a QMB enrollee's own cost-sharing. Extra food/utility benefits have separate eligibility. ZIP codes can cross county lines; verify the beneficiary's actual county.</p>
+        <p class="ma-plan-caution">The medical MOOP is the plan maximum, not necessarily what a QMB/D-SNP member owes. CMS lists the standard Part D deductible and premium; Extra Help/LIS may reduce what an individual pays. Food/utility cards require separate eligibility. ZIP codes can cross county lines; verify the beneficiary's actual county.</p>
         ${medicaidFilter !== 'ALL' && medicaidFilter !== 'NONE' ? '<p class="ma-plan-caution">D-SNPs without confirmed accepted Medicaid levels are hidden under this specific filter. Select All Medicaid levels to review unverified D-SNPs.</p>' : ''}
         <div class="ma-carrier-grid">
           ${chosenCarriers().length
