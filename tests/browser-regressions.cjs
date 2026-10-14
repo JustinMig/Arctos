@@ -141,7 +141,7 @@ let browser;
  assert.equal(themed.main,'rgb(243, 246, 248)');
  assert.equal(themed.primary,'rgb(36, 104, 87)');
  assert.equal(themed.tabs,'rgb(25, 60, 80)');
- assert.equal(themed.disclosure,'rgb(241, 245, 247)');
+ assert.equal(themed.disclosure,'rgb(232, 240, 241)');
  assert.equal(themed.radius,'11px');
  result.tests.push('standard Arctos light workspace, sage primary buttons, navy selected tabs and neutral client accordions');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
