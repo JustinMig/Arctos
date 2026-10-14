@@ -67,18 +67,18 @@ async function decorateConversationCards() {
     button.type = 'button';
     button.className = 'mh-comm-delete';
     button.textContent = 'Delete';
-    button.title = 'Remove this conversation from Mayer MIG CRM';
+    button.title = 'Remove this conversation from Arctos';
     wrap.append(button);
     button.onclick = async event => {
       event.preventDefault();
       event.stopPropagation();
-      if (!window.confirm('Delete this entire text conversation from Mayer MIG CRM?\n\nThe original Twilio records will not be deleted, and this conversation will stay hidden after future syncs.')) return;
+      if (!window.confirm('Delete this entire text conversation from Arctos?\n\nThe original Twilio records will not be deleted, and this conversation will stay hidden after future syncs.')) return;
       button.disabled = true;
       try {
         await hideTextConversation(clientId);
         wrap.remove();
         await refreshTextMetrics(clientId);
-        toast('Text conversation removed from Mayer MIG CRM.');
+        toast('Text conversation removed from Arctos.');
       } catch (error) {
         button.disabled = false;
         toast(error instanceof Error ? error.message : 'Unable to delete the text conversation.', true);
@@ -110,7 +110,7 @@ async function decorateTextDialogs() {
       button.onclick = async event => {
         event.preventDefault();
         event.stopPropagation();
-        if (!window.confirm('Delete this text from Mayer MIG CRM?\n\nThe original Twilio record will remain, but this text will stay hidden in Mayer MIG after future syncs.')) return;
+        if (!window.confirm('Delete this text from Arctos?\n\nThe original Twilio record will remain, but this text will stay hidden in Arctos after future syncs.')) return;
         button.disabled = true;
         try {
           await hideTextMessage(row.id);
@@ -118,7 +118,7 @@ async function decorateTextDialogs() {
           const thread = dialog.querySelector('[data-sms-thread]');
           if (thread && !thread.querySelector('.sms-bubble')) thread.innerHTML = '<div class="sms-empty">No visible messages in this conversation.</div>';
           await refreshTextMetrics(clientId);
-          toast('Text removed from Mayer MIG CRM.');
+          toast('Text removed from Arctos.');
         } catch (error) {
           button.disabled = false;
           toast(error instanceof Error ? error.message : 'Unable to delete the text.', true);
@@ -143,7 +143,7 @@ function addCallDeleteButton(rowNode, callId, afterDelete) {
   button.onclick = async event => {
     event.preventDefault();
     event.stopPropagation();
-    if (!window.confirm('Delete this call record from Mayer MIG CRM?\n\nThe original RingCentral call and recording will remain in RingCentral, but this call will stay hidden in Mayer MIG after future syncs.')) return;
+    if (!window.confirm('Delete this call record from Arctos?\n\nThe original RingCentral call and recording will remain in RingCentral, but this call will stay hidden in Arctos after future syncs.')) return;
     button.disabled = true;
     try {
       await hideCall(callId);
@@ -152,7 +152,7 @@ function addCallDeleteButton(rowNode, callId, afterDelete) {
         if (node.dataset.callId === callId) { releaseRecordings(node); node.remove(); }
       });
       await afterDelete?.();
-      toast('Call record removed from Mayer MIG CRM.');
+      toast('Call record removed from Arctos.');
     } catch (error) {
       button.disabled = false;
       toast(error instanceof Error ? error.message : 'Unable to delete the call record.', true);
