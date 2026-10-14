@@ -72,13 +72,37 @@ export const VERIFIED_2027_BENEFITS = Object.freeze({
     "ambulance": "Ground/air ambulance: $0 IN; OON $0 or 50% coinsurance depending on Medicaid",
     "urgent_care": "Urgent care/walk-in: $0 IN; OON $0 or 30% coinsurance",
     "emergency_room": "$0 IN; OON $0 or $115",
-    "transportation": "Not covered"
+    "transportation": "Not covered",
+    "inpatient": "$0 copay/stay IN; $0 or $2,241/stay OON depending on Medicaid assistance",
+    "pcp": "$0 IN; $0 or 30% coinsurance OON (Medicaid-dependent)",
+    "specialist": "$0 IN; $0 or 30% coinsurance OON (Medicaid-dependent)",
+    "medicaid_levels": [
+      "QMB",
+      "QMB+",
+      "SLMB+",
+      "FBDE"
+    ],
+    "medicaid_label": "QMB, QMB+, SLMB+, FBDE"
   },
   "H7355-004": {
     "ambulance": "With Medicaid cost-share assistance: $0 ground/air; without: $360 ground, 20% air",
     "urgent_care": "Urgent care/walk-in: $0 IN with Medicaid assistance; $45 without; OON varies",
     "emergency_room": "$0 with Medicaid cost-share assistance; $130 without",
-    "transportation": "Not covered"
+    "transportation": "Not covered",
+    "inpatient": "With Medicaid cost-share assistance: $0/stay IN; without: $305/day days 1–9, $0 after",
+    "pcp": "$0 IN; $0 or $5 OON with Medicaid cost-share assistance; $5 OON without",
+    "specialist": "With Medicaid cost-share assistance: $0 IN; $0 or $45 OON; without: $45 IN/OON",
+    "medical_deductible": "No medical deductible",
+    "medicaid_levels": [
+      "QMB",
+      "QMB+",
+      "SLMB",
+      "SLMB+",
+      "QI",
+      "QDWI",
+      "FBDE"
+    ],
+    "medicaid_label": "QMB, QMB+, SLMB, SLMB+, QI, QDWI, FBDE"
   },
   "H7355-006": {
     "ambulance": "Ground ambulance: $360 one-way; air ambulance: 20% coinsurance",
@@ -108,7 +132,10 @@ export const VERIFIED_2027_BENEFITS = Object.freeze({
     "otc_food_utilities": "$50/quarter OTC; $301/month Food & Home ONLY if chronic-condition/other eligibility requirements are met",
     "dental": "$4,000/year dental allowance; see 2027 SB/EOC for services/cost sharing",
     "vision": "$400/year eyewear allowance",
-    "hearing": "Hearing aids: $399 or $699 per aid; check fitting/service terms"
+    "hearing": "Hearing aids: $399 or $699 per aid; check fitting/service terms",
+    "inpatient": "$0 copay/stay IN; OON $0 or $2,241/stay (Medicaid-dependent)",
+    "pcp": "$0 IN; $0 or 30% coinsurance OON",
+    "specialist": "$0 IN; $0 or 30% coinsurance OON"
   },
   "H7355-010": {
     "ambulance": "Ground and air ambulance: 50% coinsurance per one-way trip",
