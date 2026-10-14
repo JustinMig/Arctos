@@ -163,6 +163,25 @@ let browser;
  await page.waitForFunction(()=>!document.querySelector('#calendar-host .calendar-grid'));
  result.tests.push('Home presents three real schedule summaries, preserved shortcuts and month calendar rendered only when expanded');
 
+ // Work Queue must remain a standalone responsive page, not a modal or
+ // a duplicate set of editable lead/campaign records.
+ await page.locator('.nav-primary[href="#/work"]').click();
+ await page.waitForSelector('.work-queue [data-work-tab="leads"]');
+ assert.deepEqual(await page.locator('.work-queue [data-work-tab]').allTextContents().then(x=>x.map(s=>s.replace(/\s*[—0-9]+\s*$/,'').trim())),
+   ['New Leads','Need Contact','Follow-ups','Completed']);
+ await page.locator('[data-work-tab="contact"]').click();
+ assert.equal(await page.locator('[data-work-tab="contact"]').getAttribute('aria-selected'),'true');
+ await page.locator('[data-work-tab="followups"]').click();
+ assert.equal(await page.locator('[data-work-tab="followups"]').getAttribute('aria-selected'),'true');
+ await page.locator('[data-work-campaigns]').click();
+ assert.equal(await page.locator('#work-campaign-panel').isVisible(),true);
+ await page.locator('[data-work-back]').click();
+ assert.equal(await page.locator('#work-campaign-panel').isVisible(),false);
+ assert.equal(await page.locator('#work-queue-host').isVisible(),true);
+ await page.locator('.nav-primary[href="#/dashboard"]').click();
+ await page.waitForFunction(()=>location.hash==='#/dashboard');
+ result.tests.push('Work Queue opens four statuses, embeds existing campaigns and returns without leaving the Work page');
+
  await page.locator('[data-nav-toggle="more"]').click();
     await page.locator('[data-tool="build"]').click();await page.waitForSelector('dialog.build-dialog[open]');await page.locator('dialog.build-dialog [name="company"]').selectOption({label:'Mutual of Omaha'});await page.locator('dialog.build-dialog [name="height"]').selectOption('74');await page.waitForFunction(()=>document.querySelector('dialog.build-dialog [data-build-result]')?.textContent?.includes('321 lb'));const buildText=await page.locator('dialog.build-dialog [data-build-result]').innerText();assert.match(buildText,/Mutual of Omaha/);assert.match(buildText,/6′ 2″/);assert.match(buildText,/129 lb/);assert.match(buildText,/321 lb/);assert.deepEqual(made.errors,[]);result.tests.push('built Height & Weight icon renders saved Mutual of Omaha chart values');await page.locator('dialog.build-dialog [data-close]').first().click();await page.waitForSelector('dialog.build-dialog',{state:'detached'});await page.close();
  await browser.close();fs.writeFileSync(path.join(out,'browser-regressions.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
