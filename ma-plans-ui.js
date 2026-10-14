@@ -212,7 +212,7 @@ export function createMAPlansFeature({ dialogs }) {
                   <span class="ma-plan-copy">
                     <strong>${esc(plan.plan_name)}</strong>
                     <small>${esc(plan.plan_number)}</small>
-                    <em>${esc(plan.medicaid_label)}</em>
+                    <em>${esc(plan.is_csnp || /C-SNP/i.test(plan.plan_type || '') ? 'C-SNP — qualifying chronic condition required; no Medicaid requirement' : plan.medicaid_label)}</em>
                   </span>
                 </label>
                 <div class="ma-plan-documents">${documentsMarkup(plan)}</div>
@@ -259,7 +259,7 @@ export function createMAPlansFeature({ dialogs }) {
             <select data-ma-medicaid-filter>
               ${[
                 ['ALL','All Medicaid levels'],
-                ['NONE','No Medicaid / regular MA'],
+                ['NONE','No Medicaid requirement (MA or C-SNP)'],
                 ['QMB','QMB'],
                 ['QMB+','QMB+'],
                 ['SLMB','SLMB'],
