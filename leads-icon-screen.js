@@ -252,6 +252,7 @@ function openLeadEditor(lead, refresh) {
       const file = values.get('lead_file');
       if (file instanceof File && file.size) saved = await uploadLeadFile(saved, file);
       await refresh();
+      window.dispatchEvent(new Event('arctos:work-refresh'));
       return saved;
     }
   });
@@ -264,6 +265,19 @@ function openLeadEditor(lead, refresh) {
   });
   const phone = form.elements.namedItem('phone');
   phone?.addEventListener('input', () => { phone.value = formatPhone(phone.value); });
+}
+
+// Expose the existing editor to the Work Queue rather than making a second
+// lead form or a competing lead record.
+export async function openLeadFromQueue(leadId = null) {
+  if (!leadId) {
+    openLeadEditor(null,async()=>{});
+    return;
+  }
+  const {data,error}=await supabase.from('workspace_leads').select('*').eq('id',leadId).single();
+  if(error)throw error;
+  if(!data?.id)throw new Error('Lead unavailable. Refresh the Work Queue and try again.');
+  openLeadEditor(data,async()=>{});
 }
 
 function leadCard(lead) {
