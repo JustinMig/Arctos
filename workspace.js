@@ -373,6 +373,7 @@ export function createWorkspace(root, repository = disconnectedRepository) {
     }
     host.innerHTML=dailyDashboardMarkup(rows,connected&&loaded,new Date());
     host.querySelectorAll('[data-new-appointment]').forEach(button=>button.onclick=()=>openAppointment());
+    host.querySelectorAll('[data-add-client]').forEach(button=>button.onclick=()=>openClient());
     host.querySelectorAll('[data-daily-open-today]').forEach(button=>button.onclick=()=>openDay('today',todayKey()));
     host.querySelectorAll('[data-daily-open-followups]').forEach(button=>button.onclick=()=>openDay('reschedule',todayKey()));
     host.querySelectorAll('[data-daily-event-day]').forEach(button=>button.onclick=()=>openDay('day',button.dataset.dailyEventDay));
