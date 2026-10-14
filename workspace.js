@@ -44,7 +44,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     if (!repository.campaigns) throw new Error('Campaign storage is not connected.');
     if (ensureCampaignFeatures) await ensureCampaignFeatures();
     if (!campaignModule) campaignModule = import('./campaigns-ui.js').then(({ createCampaignFeature }) => {
-      campaignFeature = createCampaignFeature({ repository, dialogs, openClient, onCalendarChange: drawCalendar });
+      campaignFeature = createCampaignFeature({ repository, dialogs, openClient, onCalendarChange: () => { state.calendarLoadedKey = ''; state.calendarLoadedAt = 0; state.events = []; drawCalendar({ force: true }); } });
       return campaignFeature;
     }).catch(error => { campaignModule = null; throw error; });
     return campaignModule;
