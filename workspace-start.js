@@ -55,7 +55,7 @@ export async function startWorkspace() {
   // Progressive enhancements initialize immediately after the first paint.
   const loadEnhancements = () => {
     void Promise.allSettled([
-      import('./workspace-extensions.js?v=pharmacy-notes-1'),
+      import('./workspace-extensions.js?v=arctos-files-1'),
       import('./input-formatting.js?v=optimization-2'),
       import('./campaigns-smooth-load.js?v=1'),
       import('./top-add-client.js?v=optimization-2')
