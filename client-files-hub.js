@@ -170,7 +170,10 @@ function bind(dialog){
  host.querySelectorAll('[data-cfh-jump]').forEach(button=>button.onclick=()=>{
   dialog.querySelector('[data-tab="'+button.dataset.cfhJump+'"]')?.click();
  });
- host.querySelector('[data-cfh-general]').onclick=()=>notesPanel.querySelector('[data-notes-extras-documents]')?.scrollIntoView({block:'center',behavior:'smooth'});
+ host.querySelector('[data-cfh-general]').onclick=()=>{
+  const general=notesPanel.querySelector('.cfh-general-uploader');
+  if(general){general.open=true;general.scrollIntoView({block:'start',behavior:'smooth'});}
+ };
  host.querySelector('[data-cfh-note-save]').onclick=async ()=>{
   const button=host.querySelector('[data-cfh-note-save]');
   const title=host.querySelector('[data-cfh-note-title]'),body=host.querySelector('[data-cfh-note-body]'),message=host.querySelector('[data-cfh-note-message]');
@@ -208,6 +211,7 @@ function bind(dialog){
  dialog.addEventListener('click',event=>{
   if(event.target.closest('[data-client-group-tab="files"],[data-tab="notes"]'))void reload();
  });
+ dialog.addEventListener('arctos:client-file-change',()=>void reload());
  renderFiles(state);renderNotes(state);
  if(dialog.querySelector('[data-client-group-tab="files"]')?.getAttribute('aria-selected')==='true')void reload();
 }
