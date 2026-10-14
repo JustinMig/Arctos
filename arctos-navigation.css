@@ -1,0 +1,39 @@
+/* Arctos phase 1: concise, accessible grouped navigation. */
+.sidebar{display:flex;flex-direction:column}
+.sidebar .nav{display:flex;flex-direction:column;align-items:stretch;gap:5px;flex:1 1 auto;min-height:min-content}
+.sidebar .nav .nav-primary{display:flex;align-items:center;gap:12px;min-height:46px;width:100%;padding:10px 12px;font-size:14px;font-weight:700;letter-spacing:.005em;background:none;color:#c6d4df!important;border:1px solid transparent;border-radius:11px;text-decoration:none;text-align:left}
+.sidebar .nav .nav-primary:hover,.sidebar .nav .nav-primary:focus-visible{background:#132a3b;border-color:#29455b;color:#fff!important}
+.sidebar .nav .nav-primary.active{background:#152e3e;color:#fff!important;border-color:#36576a;box-shadow:inset 3px 0 0 #b9d5e1}
+.sidebar .nav .nav-primary .nav-symbol{width:19px;height:19px;flex:none}
+.sidebar .nav .nav-line{display:flex;align-items:stretch;position:relative;gap:2px}
+.sidebar .nav .nav-line .nav-primary{flex:1 1 auto;padding-right:4px}
+.sidebar .nav .nav-expander{appearance:none;display:grid;place-items:center;flex:none;width:35px;min-width:35px;margin:3px 0;border:1px solid transparent;border-radius:9px;background:transparent;color:#a8bbcb;font-size:22px}
+.sidebar .nav .nav-expander:hover,.sidebar .nav .nav-expander:focus-visible{background:#183246;color:white}
+.sidebar .nav .nav-expander[aria-expanded="true"] span{transform:rotate(180deg)}
+.sidebar .nav .nav-expander span{display:block;transition:transform .16s ease;line-height:1}
+.sidebar .nav .nav-children{display:grid;gap:4px;padding:3px 0 5px 26px}
+.sidebar .nav .nav-children[hidden]{display:none!important}
+.sidebar .nav .nav-child{appearance:none;display:flex;align-items:center;justify-content:flex-start;width:100%;min-height:39px;padding:9px 12px;text-align:left;border:1px solid transparent;background:transparent;color:#acbfcd!important;text-decoration:none;border-radius:9px;font-size:13px;font-weight:600;line-height:1.2}
+.sidebar .nav .nav-child:hover,.sidebar .nav .nav-child:focus-visible{background:#152c3e;color:#fff!important}
+.sidebar .nav .nav-child.active{background:#183449;color:#fff!important;border-color:#314d5e}
+.sidebar .nav .nav-section-more{margin-top:auto;padding-top:16px;border-top:1px solid #203748}
+.sidebar .nav .nav-more-trigger{cursor:pointer}
+.sidebar .nav .nav-chevron{margin-left:auto;font-size:19px;color:#a8bbcb;transition:transform .16s ease}
+.sidebar .nav .nav-more-trigger[aria-expanded="true"] .nav-chevron{transform:rotate(180deg)}
+.sidebar .nav .nav-more-heading{padding:12px 11px 4px;color:#859faf;font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase}
+.sidebar .nav .nav-extra-tools{display:grid!important;align-items:stretch;justify-content:stretch;flex:none;width:100%;margin:0;padding:0;gap:3px}
+.sidebar .nav .nav-extra-tools .quick-tool{display:flex;align-items:center;justify-content:flex-start;min-height:40px;width:100%;gap:11px;padding:5px 10px;border:1px solid transparent;border-radius:9px;color:#adbfcc;background:transparent;text-align:left}
+.sidebar .nav .nav-extra-tools .quick-tool:hover,.sidebar .nav .nav-extra-tools .quick-tool:focus-visible{background:#182d40;border-color:#344b5c;color:#fff}
+.sidebar .nav .nav-extra-tools .quick-tool .tool-icon{height:26px;width:26px;min-height:26px;border-radius:8px}
+.sidebar .nav .nav-extra-tools .quick-tool .tool-icon svg{width:15px;height:15px}
+.sidebar .nav .nav-extra-tools .quick-tool strong{font-size:12px;font-weight:650;white-space:normal;text-align:left;line-height:1.4}
+.top .top-workspace-label{margin-left:auto;font-size:12px;color:#a2b5c5;font-weight:600;letter-spacing:.04em}
+.sidebar-footer{padding-top:18px}
+@media(max-width:760px){
+  .sidebar{width:min(300px,86vw);padding-bottom:max(16px,env(safe-area-inset-bottom))}
+  .sidebar .nav{flex:none}
+  .sidebar .nav .nav-section-more{margin-top:15px}
+  .sidebar .nav .nav-primary{min-height:48px}
+  .sidebar .nav .nav-child{min-height:44px}
+  .top .top-workspace-label{display:none}
+}
