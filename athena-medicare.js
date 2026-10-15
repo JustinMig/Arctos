@@ -85,7 +85,10 @@ function sectionBody(index) {
       area('eligibility_notes','Eligibility / assistance notes') +
       '<div class="at-note at-span"><strong>Medicare.gov account information</strong><br>Record the account username or email and access notes. For security, do not enter passwords, one-time codes, or recovery answers here.</div>' +
       control('medicare_gov_username','Medicare.gov username') + control('medicare_gov_email','Medicare.gov account email','email') +
-      area('medicare_gov_notes','Medicare.gov account / access notes','Account setup, access status, or other non-sensitive details');
+      area('medicare_gov_notes','Medicare.gov account / access notes','Account setup, access status, or other non-sensitive details') +
+      '<div class="at-note at-span">Password and one-time security code are temporary only. They are never saved to the review or CRM. Use a password manager to retain passwords.</div>' +
+      '<label class="at-field"><span>Medicare.gov password (temporary)</span><input name="medicare_gov_password_temporary" type="password" autocomplete="off" spellcheck="false"></label>' +
+      '<label class="at-field"><span>Medicare.gov security code (temporary)</span><input name="medicare_gov_code_temporary" type="password" autocomplete="off" inputmode="numeric" spellcheck="false"></label>';
     case 3: return control('current_carrier','Current carrier') + control('current_plan','Current plan name') +
       control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
       control('current_member_id','Member ID') +
