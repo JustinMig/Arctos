@@ -778,6 +778,18 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const blocks = latest.filter(row => row.event_date === currentDay && row.assigned_agent_id === currentAgent);
       if (slotIsBooked(value.start_time, 30, blocks, existing?.id || ''))
         throw new Error('That appointment time is unavailable. Choose an open time.');
+      // Keep the calendar headline as the person's name. The appointment/
+      // activity title describes the purpose and belongs in the details.
+      const purpose = String(value.title || '').trim();
+      const person = value.person_type === 'new'
+        ? String(value.person_name || '').trim()
+        : String(form.querySelector('[data-person-search]')?.value || '').trim();
+      if (person) {
+        value.title = person;
+        if (purpose && purpose !== person && purpose !== existing?.title) {
+          value.notes = ['Appointment / Activity: ' + purpose, value.notes || ''].filter(Boolean).join('\n');
+        }
+      }
       if (editing) value.event_id = existing.id;
       const saved = await repository.saveEvent(value);
       if (!saved?.id) throw new Error('The calendar did not confirm this appointment. Nothing is marked saved.');
@@ -882,7 +894,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
             form.elements.client_id.value = b.dataset.personId;
             form.querySelector('[data-selected-person]').textContent = `Selected: ${b.textContent}`;
             const firstName = String(client?.first_name || '').trim();
-            if (firstName) form.elements.title.value = firstName;
+            // Purpose is entered separately; the calendar headline uses the client name.
             host.innerHTML = '';
             form.dispatchEvent(new Event('input', { bubbles: true }));
             form.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1106,6 +1118,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
 
   window.addEventListener('hashchange', changeRoute);
   window.addEventListener('keydown', escapeMenu);
+  // Keep other agents' new bookings visible without requiring navigation or reload.
+  const calendarPoll = window.setInterval(() => {
+    if (document.visibilityState !== 'visible' || state.destroyed) return;
+    if (state.route !== 'dashboard' && state.route !== 'appointments') return;
+    window.MHCalendarSync?.refresh({ force: true });
+  }, 15000);
   window.addEventListener('mig:calendar-refresh-request', refreshVisibleCalendar);
   window.addEventListener('mig:calendar-refreshed', applyCalendarRefresh);
   changeRoute();
@@ -1118,6 +1136,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     dialogs.destroy();
     window.removeEventListener('hashchange', changeRoute);
     window.removeEventListener('keydown', escapeMenu);
+    clearInterval(calendarPoll);
     window.removeEventListener('mig:calendar-refresh-request', refreshVisibleCalendar);
     window.removeEventListener('mig:calendar-refreshed', applyCalendarRefresh);
     root.replaceChildren();
