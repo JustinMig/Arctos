@@ -232,3 +232,13 @@
 #athena-medicare-host .at-steps>.at-step>summary{
   gap:12px;
 }
+
+
+/* Section 2: individual, distinct Medicare, Medicaid and Medicare.gov panels. */
+#athena-medicare-host .at-subsection{min-width:0;margin:0;padding:14px 16px 16px;border:1.5px solid #343f49;border-radius:11px;background:#fff}
+#athena-medicare-host .at-subsection legend{padding:5px 12px;border:1.5px solid #343f49;border-radius:7px;background:#fff;color:#172b39;font-size:13px;font-weight:850}
+#athena-medicare-host .at-subsection .at-grid{width:100%}
+#athena-medicare-host .at-subsection-medicare{background:#f1f7fb}
+#athena-medicare-host .at-subsection-medicaid{background:#f0f8f2}
+#athena-medicare-host .at-subsection-medicare-gov{background:#f7f3fa}
+@media(max-width:650px){#athena-medicare-host .at-subsection{padding:12px 10px}#athena-medicare-host .at-subsection>.at-grid{grid-template-columns:1fr}}
