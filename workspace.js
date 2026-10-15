@@ -639,9 +639,10 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
               <section><small>Time</small><strong>${esc(timeLabel(event.start_time) || '—')}</strong></section>
               <section><small>Assigned Agent</small><strong>${esc(agent?.full_name || '—')}</strong></section>
               <section><small>Client</small><strong>${esc(clientName)}</strong></section>
-              <section><small>Phone</small><strong>${esc(client?.phone || String(event.notes || '').match(/(?:^|\n)Phone:\s*([^\n]+)/i)?.[1]?.trim() || '—')}</strong></section>
+              <section><small>Phone</small><strong>${esc(client?.phone || event.person_phone || String(event.notes || '').match(/(?:^|\n)Phone:\s*([^\n]+)/i)?.[1]?.trim() || '—')}</strong></section>
               <section><small>Email</small><strong>${esc(client?.email || '—')}</strong></section>
             </div>
+            <section class="appointment-notes-box"><small>Appointment / Activity</small><p class="preserve-lines">${esc(event.activity_title || "—")}</p></section>
             <section class="appointment-notes-box">
               <small>Notes</small>
               <p class="preserve-lines">${esc(event.notes || 'No notes')}</p>
@@ -786,14 +787,13 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         : String(form.querySelector('[data-person-search]')?.value || '').trim();
       if (person) value.title = person;
       const originalNotes = String(form.elements.namedItem('notes')?.value || '').trim();
-      const activity = purpose && purpose !== person ? purpose : '';
-      value.notes = [activity, originalNotes].filter(Boolean).join('\n');
+      value.activity_title = purpose && purpose !== person ? purpose : '';
+      value.notes = originalNotes;
       // The calendar bridge has no phone column. Persist non-client phone
       // inside appointment notes and show it in the phone detail field.
       if (value.person_type === 'new') {
         const phone = String(form.elements.namedItem('person_phone')?.value || '').trim();
-        const noteLines = String(value.notes || '').split('\n').filter(line => !/^Phone:\s*/i.test(line));
-        value.notes = [phone ? 'Phone: ' + phone : '', ...noteLines].filter(Boolean).join('\n');
+        value.person_phone = phone;
       }
       if (editing) value.event_id = existing.id;
       const saved = await repository.saveEvent(value);
@@ -859,14 +859,13 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     if (existing) {
       form.elements.assigned_agent_id.value = existing.assigned_agent_id || '';
       form.elements.event_type.value = existing.event_type || 'Appointment';
-      form.elements.title.value = existing.title || '';
+      form.elements.title.value = existing.activity_title || '';
       form.elements.start_time.value = String(existing.start_time || '').slice(0, 5);
-      form.elements.notes.value = String(existing.notes || '').split('\n').filter(line => !/^Phone:\s*/i.test(line)).join('\n');
+      form.elements.notes.value = existing.notes || '';
       if (!existing.client_id) {
         const phone = String(existing.notes || '').match(/(?:^|\n)Phone:\s*([^\n]+)/i)?.[1]?.trim() || '';
         form.elements.person_name.value = String(existing.title || '').replace(/^Appointment:\s*/i, '');
-        form.elements.person_phone.value = phone;
-        form.elements.title.value = '';
+        form.elements.person_phone.value = existing.person_phone || phone;
         form.querySelector('[data-mode="new"]')?.click();
       }
       if (existing.client_id) {
