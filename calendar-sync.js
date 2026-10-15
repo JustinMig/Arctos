@@ -74,6 +74,21 @@ export function installMayerJustinCalendar() {
         seen.add(event.id);
         events.push({ ...event, calendar_source: 'arctos_campaign' });
       }
+      // Activity and non-client phone are separate appointment fields, not notes.
+      if (events.length) {
+        const ids = events.map(event => event.id).filter(Boolean);
+        const { data: details, error: detailError } = await supabase.from('calendar_event_details')
+          .select('event_id,activity_title,person_phone').in('event_id',ids);
+        if (detailError) throw detailError;
+        const byId = new Map((details || []).map(row => [row.event_id,row]));
+        for (const event of events) {
+          const detail = byId.get(event.id);
+          if (detail) {
+            event.activity_title = detail.activity_title || '';
+            event.person_phone = detail.person_phone || '';
+          }
+        }
+      }
       events.sort((a, b) => `${a.event_date || ''} ${a.start_time || ''}`.localeCompare(`${b.event_date || ''} ${b.start_time || ''}`));
       const record = { events, loadedAt: Date.now() };
       calendarCache.set(key, record);
@@ -140,8 +155,17 @@ export function installMayerJustinCalendar() {
     const result = eventId
       ? await calendarRequest('PATCH', { id: eventId }, payload)
       : await calendarRequest('POST', {}, payload);
-    invalidateCalendarCache();
     const saved = result.event;
+    if (saved?.id) {
+      const { error: detailsError } = await supabase.from('calendar_event_details')
+        .upsert({event_id:saved.id,activity_title:String(value.activity_title || '').trim(),
+          person_phone:String(value.person_phone || '').trim(),
+          updated_by:this.user?.id,updated_at:new Date().toISOString()},{onConflict:'event_id'});
+      if (detailsError) throw detailsError;
+      saved.activity_title = String(value.activity_title || '').trim();
+      saved.person_phone = String(value.person_phone || '').trim();
+    }
+    invalidateCalendarCache();
     if (!saved?.id) return saved;
 
     if (payload.client_id) {
