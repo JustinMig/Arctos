@@ -185,3 +185,13 @@
 .appointment-dialog select[name="start_time"] option:disabled{background:#d7dbdf;color:#555;font-weight:750}
 .appointment-dialog select[name="start_time"] option[data-booked="true"]{text-decoration:line-through}
 .appointment-slot-status{font-size:12px;min-height:18px;line-height:1.4}
+
+/* Final high-contrast override for all client-record upload actions. */
+.client-dialog .document-upload-card .btn,
+.client-dialog .document-upload-card .document-camera,
+.client-dialog .document-file-picker,
+.client-dialog .document-file-picker span,
+.client-dialog [data-panel] button[class*="upload"],
+.client-dialog [data-panel] label[class*="camera"],
+.client-dialog [data-panel] button[class*="camera"],
+.client-dialog [data-panel] input[type="file"]::file-selector-button { color: #000 !important; }
