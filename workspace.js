@@ -398,44 +398,43 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       hydrate(form, record);
       wireTabs(d.node);
       d.attachForm(form);
-      // Client-at-a-glance history and quick notes remain independent of the main client form.
-      if (loaded.id) {
-        const history = form.querySelector('[data-client-completed-appointments]');
-        const list = form.querySelector('[data-client-glance-notes]');
-        const box = form.querySelector('[data-client-quick-note]');
-        const button = form.querySelector('[data-client-quick-save]');
-        const status = form.querySelector('[data-client-quick-status]');
+      // One editable overview note, backed by the existing clients.notes field.
+      // Sync with Notes & Files so either view edits the same note and Save Client persists it.
+      const glanceNote = form.querySelector('[data-client-glance-note]');
+      const clientNote = form.elements.namedItem('notes');
+      if (glanceNote && clientNote) {
+        glanceNote.value = clientNote.value || '';
+        glanceNote.addEventListener('input', () => {
+          if (clientNote.value === glanceNote.value) return;
+          clientNote.value = glanceNote.value;
+          clientNote.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        clientNote.addEventListener('input', () => {
+          if (glanceNote.value !== clientNote.value) glanceNote.value = clientNote.value;
+        });
+      }
+      // Keep the completed appointment history visible alongside the editable note.
+      const history = form.querySelector('[data-client-completed-appointments]');
+      if (loaded.id && history) {
         const formatDateTime = (day, time) => {
           const date = new Date(day + 'T' + String(time || '00:00').slice(0,5) + ':00');
           return Number.isNaN(date.getTime()) ? day : date.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
         };
-        const loadGlance = async () => {
-          const [appointments, notes] = await Promise.all([
-            supabase.from('client_completed_appointments').select('event_date,start_time,activity_title').eq('client_id',loaded.id).order('event_date',{ascending:false}).limit(12),
-            supabase.from('client_notes').select('id,body,created_at').eq('client_id',loaded.id).order('created_at',{ascending:false}).limit(20)
-          ]);
+        void (async () => {
+          const { data, error } = await supabase.from('client_completed_appointments')
+            .select('event_date,start_time,activity_title')
+            .eq('client_id', loaded.id).order('event_date', {ascending: false}).limit(12);
           if (!form.isConnected) return;
-          history.innerHTML = appointments.error ? '<p>Unable to load completed appointments.</p>' :
-            appointments.data?.length ? appointments.data.map(row =>
-              '<p>✓ '+esc(formatDateTime(row.event_date,row.start_time))+(row.activity_title?' — '+esc(row.activity_title):'')+'</p>').join('') :
+          history.innerHTML = error ? '<p>Unable to load completed appointments.</p>' :
+            data?.length ? data.map(row =>
+              '<p>✓ ' + esc(formatDateTime(row.event_date, row.start_time)) +
+              (row.activity_title ? ' — ' + esc(row.activity_title) : '') + '</p>').join('') :
             '<p>No completed appointments recorded yet.</p>';
-          list.innerHTML = notes.error ? '<p>Unable to load client notes.</p>' :
-            notes.data?.length ? notes.data.map(row=>'<p><small>'+esc(new Date(row.created_at).toLocaleDateString())+'</small> '+esc(row.body)+'</p>').join('') :
-            '<p>No quick notes saved yet.</p>';
-        };
-        button?.addEventListener('click',async()=>{
-          const body=box.value.trim();
-          if(!body){status.textContent='Enter a note first.';return;}
-          button.disabled=true;status.textContent='Saving note…';
-          try {
-            const saved=await repository.saveNote({client_id:loaded.id,title:'Quick Note',body});
-            if(!saved?.id)throw Error('Note save not confirmed.');
-            box.value='';status.textContent='Note saved.';
-            await loadGlance();
-          }catch(error){status.textContent=error?.message||'Unable to save note.';}
-          finally{button.disabled=false;}
+        })().catch(() => {
+          if (form.isConnected) history.textContent = 'Unable to load completed appointments.';
         });
-        void loadGlance();
+      } else if (history) {
+        history.textContent = 'No completed appointments recorded yet.';
       }
       // A one-click Medicare review from an existing client. Preserve the
       // unsaved-change confirmation before leaving, then hand off only the
