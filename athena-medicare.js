@@ -68,6 +68,7 @@ function repeatRow(kind,index,data={}) {
     cols.map(([key,label]) => '<label class="at-field"><span>' + esc(label) + '</span><input name="' + key +
       '" value="' + esc(data[key] || '') + '" autocomplete="off"></label>').join('') + '</div></div>';
 }
+function atSubsection(title,kind,fields){return '<fieldset class="at-subsection at-subsection-'+kind+' at-span"><legend>'+esc(title)+'</legend><div class="at-grid">'+fields+'</div></fieldset>';}
 function sectionBody(index) {
   switch(index) {
     case 1: return control('first_name','First name') + control('last_name','Last name') + control('dob','Date of birth','date') +
@@ -75,21 +76,20 @@ function sectionBody(index) {
       control('address','Street address') + control('city','City') + control('state','State','text','MS') +
       control('zip','ZIP code','text','38801') + control('county','County') +
       choice('gender','Sex',[['male','Male'],['female','Female'],['other','Other / prefer not to say']]);
-    case 2: return '<div class="at-note at-span">Medicare and Medicaid ID numbers are stored only in the CRM encrypted vault—not in review notes or saved form JSON.</div>' +
-      '<div class="at-secret"><label class="at-field"><span>Medicare number (secure)</span><input name="medicare_number" type="password" autocomplete="off" spellcheck="false" maxlength="25"></label><button type="button" class="at-text-btn" data-at-reveal="medicare_number">Show</button></div>' +
+    case 2: return '<div class="at-note at-span">Medicare and Medicaid numbers are stored securely in the CRM vault.</div>' +
+      atSubsection('Medicare','medicare', '<div class="at-secret"><label class="at-field"><span>Medicare number (secure)</span><input name="medicare_number" type="password" autocomplete="off" spellcheck="false" maxlength="25"></label><button type="button" class="at-text-btn" data-at-reveal="medicare_number">Show</button></div>' +
       control('part_a','Part A effective date','date') + control('part_b','Part B effective date','date') +
-      choice('medicare_status','Medicare status',[['active','Active'],['pending','Pending'],['unknown','Not confirmed']]) +
-      yesNo('medicaid_status','Has Medicaid?') +
+      choice('medicare_status','Medicare status',[['active','Active'],['pending','Pending'],['unknown','Not confirmed']]) ) +
+      atSubsection('Medicaid','medicaid', yesNo('medicaid_status','Has Medicaid?') +
       '<div class="at-secret"><label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="password" autocomplete="off" spellcheck="false" maxlength="35"></label><button type="button" class="at-text-btn" data-at-reveal="medicaid_number">Show</button></div>' +
       choice('medicaid_level','Medicaid level',[['QMB','QMB'],['QMB+','QMB+'],['SLMB','SLMB'],['SLMB+','SLMB+'],['FBDE','Full Benefit Dual Eligible'],['QI','QI'],['QDWI','QDWI'],['other','Other']]) +
-      area('eligibility_notes','Eligibility / assistance notes') +
-      '<div class="at-note at-span"><strong>Medicare.gov Login Credentials</strong><br>Information is loaded from the linked client record’s encrypted credential storage.</div>' +
-      '<label class="at-field"><span>Username</span><input name="medicare_gov_username" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' +
+      area('eligibility_notes','Eligibility / assistance notes') ) +
+      atSubsection('Medicare.gov','medicare-gov', '<label class="at-field"><span>Username</span><input name="medicare_gov_username" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' +
       '<label class="at-field"><span>Password</span><input name="medicare_gov_password_temporary" type="text" autocomplete="off" spellcheck="false"></label>' +
       '<label class="at-field"><span>Verification Type</span><select name="medicare_gov_verification_type_temporary"><option value="">Select…</option><option value="text">Text</option><option value="email">Email</option></select></label>' +
       '<label class="at-field" data-at-medicare-gov-verification="text"><span>Verification Phone Number</span><input name="medicare_gov_verification_phone_temporary" type="tel"></label>' +
       '<label class="at-field" data-at-medicare-gov-verification="email"><span>Verification Email</span><input name="medicare_gov_verification_email_temporary" type="email"></label>' +
-      '<label class="at-field at-span"><span>Security Answer</span><input name="medicare_gov_security_answer_temporary" type="text" autocomplete="off" spellcheck="false"></label>';
+      '<label class="at-field at-span"><span>Security Answer</span><input name="medicare_gov_security_answer_temporary" type="text" autocomplete="off" spellcheck="false"></label>');
     case 3: return control('current_carrier','Current carrier') + control('current_plan','Current plan name') +
       control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
       control('current_member_id','Member ID') +
