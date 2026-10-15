@@ -206,5 +206,5 @@
 .client-glance-activity [data-client-completed-appointments] p,
 .client-glance-activity [data-client-glance-notes] p{margin:0;padding:8px 0;border-bottom:1px solid #e5ebee;white-space:pre-wrap}
 .client-glance-activity [data-client-quick-status]{font-size:12px}
-.client-glance-activity [data-client-quick-note]{width:100%;box-sizing:border-box;color:#172f3a}
+.client-glance-activity [data-client-glance-note]{width:100%;min-height:145px;box-sizing:border-box;color:#172f3a;resize:vertical;line-height:1.5}
 @media(max-width:680px){.client-glance-activity{grid-template-columns:1fr}}
