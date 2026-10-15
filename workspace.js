@@ -639,7 +639,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
               <section><small>Time</small><strong>${esc(timeLabel(event.start_time) || '—')}</strong></section>
               <section><small>Assigned Agent</small><strong>${esc(agent?.full_name || '—')}</strong></section>
               <section><small>Client</small><strong>${esc(clientName)}</strong></section>
-              <section><small>Phone</small><strong>${esc(client?.phone || '—')}</strong></section>
+              <section><small>Phone</small><strong>${esc(client?.phone || String(event.notes || '').match(/(?:^|\n)Phone:\s*([^\n]+)/i)?.[1]?.trim() || '—')}</strong></section>
               <section><small>Email</small><strong>${esc(client?.email || '—')}</strong></section>
             </div>
             <section class="appointment-notes-box">
@@ -790,6 +790,13 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
           value.notes = ['Appointment / Activity: ' + purpose, value.notes || ''].filter(Boolean).join('\n');
         }
       }
+      // The calendar bridge has no phone column. Persist non-client phone
+      // inside appointment notes and show it in the phone detail field.
+      if (value.person_type === 'new') {
+        const phone = String(value.person_phone || '').trim();
+        const noteLines = String(value.notes || '').split('\n').filter(line => !/^Phone:\s*/i.test(line));
+        value.notes = [phone ? 'Phone: ' + phone : '', ...noteLines].filter(Boolean).join('\n');
+      }
       if (editing) value.event_id = existing.id;
       const saved = await repository.saveEvent(value);
       if (!saved?.id) throw new Error('The calendar did not confirm this appointment. Nothing is marked saved.');
@@ -857,6 +864,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       form.elements.title.value = existing.title || '';
       form.elements.start_time.value = String(existing.start_time || '').slice(0, 5);
       form.elements.notes.value = existing.notes || '';
+      if (!existing.client_id) {
+        const phone = String(existing.notes || '').match(/(?:^|\n)Phone:\s*([^\n]+)/i)?.[1]?.trim() || '';
+        form.elements.person_name.value = String(existing.title || '').replace(/^Appointment:\s*/i, '');
+        form.elements.person_phone.value = phone;
+        form.querySelector('[data-mode="new"]')?.click();
+      }
       if (existing.client_id) {
         form.elements.client_id.value = existing.client_id;
         repository.getClient(existing.client_id).then(client => {
