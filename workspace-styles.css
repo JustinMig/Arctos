@@ -195,3 +195,16 @@
 .client-dialog [data-panel] label[class*="camera"],
 .client-dialog [data-panel] button[class*="camera"],
 .client-dialog [data-panel] input[type="file"]::file-selector-button { color: #000 !important; }
+
+
+/* Client overview: completed appointment history and inline quick notes. */
+.client-glance-activity{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.client-glance-activity>section{background:#fff;border:1px solid #d7e1e6;border-radius:12px;padding:14px;display:grid;align-content:start;gap:9px;min-width:0}
+.client-glance-activity>section>strong{color:#183848;font-size:14px}
+.client-glance-activity [data-client-completed-appointments],
+.client-glance-activity [data-client-glance-notes]{max-height:225px;overflow:auto;overflow-wrap:anywhere;font-size:13px;color:#263b48}
+.client-glance-activity [data-client-completed-appointments] p,
+.client-glance-activity [data-client-glance-notes] p{margin:0;padding:8px 0;border-bottom:1px solid #e5ebee;white-space:pre-wrap}
+.client-glance-activity [data-client-quick-status]{font-size:12px}
+.client-glance-activity [data-client-quick-note]{width:100%;box-sizing:border-box;color:#172f3a}
+@media(max-width:680px){.client-glance-activity{grid-template-columns:1fr}}
