@@ -56,9 +56,9 @@ function area(name,label,hint='') {
 const yesNo = (name,label) => choice(name,label,[['yes','Yes'],['no','No'],['unknown','Not sure']]);
 const options = (s) => s.map(x => [x,x]);
 function repeatArea(kind,title,columns) {
-  return '<div class="at-repeat-wrap at-span"><div class="at-repeat-title"><strong>' + esc(title) + '</strong>' +
-    '<button type="button" class="at-btn at-btn-soft" data-at-add="' + kind + '">+ Add ' + esc(title.slice(0,-1)) + '</button></div>' +
-    '<div data-at-repeat="' + kind + '" class="at-repeat"></div></div>';
+  return '<div class="at-repeat-wrap at-span"><div class="at-repeat-title"><strong>' + esc(title) + '</strong></div>' +
+    '<div data-at-repeat="' + kind + '" class="at-repeat"></div>' +
+    '<button type="button" class="at-btn at-btn-soft" data-at-add="' + kind + '">+ Add ' + esc(title.slice(0,-1)) + '</button></div>';
 }
 function repeatRow(kind,index,data={}) {
   const cols = kind === 'doctors' ? DOCTOR_COLS : kind === 'pharmacies' ? PHARMACY_COLS : MED_COLS;
