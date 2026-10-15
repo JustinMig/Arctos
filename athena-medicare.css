@@ -211,3 +211,24 @@
 #athena-medicare-host .at-steps>.at-step:nth-child(9) .at-step-no{background:#d6e0ea;color:#5a748c}
 #athena-medicare-host .at-steps>.at-step:nth-child(9)[open] .at-step-no{background:#5a748c;color:#fff}
 #athena-medicare-host .at-steps>.at-step:nth-child(9) .at-step-inner{border-top:1px solid #d6e0ea}
+
+
+/* Crisp black outlines around each Athena section and its title only. */
+#athena-medicare-host .at-steps>.at-step{
+  border:2px solid #1f2933;
+  border-radius:13px;
+}
+#athena-medicare-host .at-steps>.at-step .at-step-title strong{
+  display:inline-block;
+  align-self:flex-start;
+  max-width:100%;
+  border:1.5px solid #1f2933;
+  border-radius:6px;
+  padding:6px 10px;
+  color:#111827;
+  line-height:1.35;
+  background:#ffffffb8;
+}
+#athena-medicare-host .at-steps>.at-step>summary{
+  gap:12px;
+}
