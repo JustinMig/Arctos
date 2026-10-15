@@ -76,6 +76,8 @@ export function installSimpleDashboardNote(root) {
     let baselineTitle = '';
     let baselineBody = '';
     let currentTab = 'new';
+    let editingId = null;
+    let savedNotes = [];
     let loadingSaved = false;
 
     const isDirty = () => title.value !== baselineTitle || area.value !== baselineBody;
@@ -90,6 +92,8 @@ export function installSimpleDashboardNote(root) {
       area.value = '';
       baselineTitle = '';
       baselineBody = '';
+      editingId = null;
+      save.textContent = 'Save Note';
       status.textContent = 'Ready for a new note.';
       syncDirty();
     };
@@ -109,13 +113,14 @@ export function installSimpleDashboardNote(root) {
           .order('updated_at', { ascending: false });
         if (error) throw error;
         const notes = data || [];
+        savedNotes = notes;
         savedStatus.textContent = notes.length ? `${notes.length} saved note${notes.length === 1 ? '' : 's'}` : '';
         const names = new Map((mhRepository.agents || []).map(agent => [agent.id, agent.full_name || 'Team member']));
         savedList.innerHTML = notes.length ? notes.map(note => {
           const when = note.updated_at || note.created_at;
           const date = when ? new Date(when).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
           const author = note.author_id === userId ? 'You' : (names.get(note.author_id) || 'Team member');
-          return `<details class="saved-note-card" data-saved-note-id="${esc(note.id)}"><summary><strong>${esc(note.title || 'Untitled Note')}</strong><small>${esc(date)}</small></summary><div class="saved-note-body">${esc(note.body || '')}</div><div class="saved-note-meta"><span>Created by ${esc(author)}</span><button type="button" class="btn danger" data-delete-saved-note>Delete</button></div></details>`;
+          return `<details class="saved-note-card" data-saved-note-id="${esc(note.id)}"><summary><strong>${esc(note.title || 'Untitled Note')}</strong><small>${esc(date)}</small></summary><div class="saved-note-body">${esc(note.body || '')}</div><div class="saved-note-meta"><span>Created by ${esc(author)}</span><div><button type="button" class="btn secondary" data-edit-saved-note>Edit</button> <button type="button" class="btn danger" data-delete-saved-note>Delete</button></div></div></details>`;
         }).join('') : '<div class="saved-note-empty">No saved notes yet.</div>';
       } catch (error) {
         savedStatus.textContent = error?.message || 'Saved notes could not load.';
@@ -139,6 +144,29 @@ export function installSimpleDashboardNote(root) {
     title.addEventListener('input', syncDirty);
     area.addEventListener('input', syncDirty);
     savedList.addEventListener('click', async event => {
+      const editButton = event.target.closest?.('[data-edit-saved-note]');
+      if (editButton) {
+        const card = editButton.closest('[data-saved-note-id]');
+        const existingNote = savedNotes.find(note => note.id === card?.dataset.savedNoteId);
+        if (!existingNote) return;
+        editingId = existingNote.id;
+        title.value = existingNote.title || '';
+        area.value = existingNote.body || '';
+        baselineTitle = title.value;
+        baselineBody = area.value;
+        chooseTab('new');
+        // chooseTab resets the editor; restore the saved note after switching.
+        editingId = existingNote.id;
+        title.value = existingNote.title || '';
+        area.value = existingNote.body || '';
+        baselineTitle = title.value;
+        baselineBody = area.value;
+        save.textContent = 'Save Changes';
+        status.textContent = 'Editing saved note. Changes will update this note.';
+        syncDirty();
+        title.focus();
+        return;
+      }
       const button = event.target.closest?.('[data-delete-saved-note]');
       if (!button) return;
       event.preventDefault();
@@ -174,7 +202,7 @@ export function installSimpleDashboardNote(root) {
       save.disabled = true;
       status.textContent = 'Saving…';
       try {
-        const saved = await mhRepository.saveNote({ client_id: null, title: noteTitle, body: noteBody, pinned: false });
+        const saved = await mhRepository.saveNote({ id: editingId || undefined, client_id: null, title: noteTitle, body: noteBody, pinned: false });
         if (!saved?.id) throw new Error('The note save was not confirmed.');
         baselineTitle = title.value;
         baselineBody = area.value;
