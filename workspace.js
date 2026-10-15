@@ -2,6 +2,7 @@ import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, date
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js';
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
+import { supabase } from './supabase-repository.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=arctos-work-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
@@ -397,6 +398,45 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       hydrate(form, record);
       wireTabs(d.node);
       d.attachForm(form);
+      // Client-at-a-glance history and quick notes remain independent of the main client form.
+      if (loaded.id) {
+        const history = form.querySelector('[data-client-completed-appointments]');
+        const list = form.querySelector('[data-client-glance-notes]');
+        const box = form.querySelector('[data-client-quick-note]');
+        const button = form.querySelector('[data-client-quick-save]');
+        const status = form.querySelector('[data-client-quick-status]');
+        const formatDateTime = (day, time) => {
+          const date = new Date(day + 'T' + String(time || '00:00').slice(0,5) + ':00');
+          return Number.isNaN(date.getTime()) ? day : date.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+        };
+        const loadGlance = async () => {
+          const [appointments, notes] = await Promise.all([
+            supabase.from('client_completed_appointments').select('event_date,start_time,activity_title').eq('client_id',loaded.id).order('event_date',{ascending:false}).limit(12),
+            supabase.from('client_notes').select('id,body,created_at').eq('client_id',loaded.id).order('created_at',{ascending:false}).limit(20)
+          ]);
+          if (!form.isConnected) return;
+          history.innerHTML = appointments.error ? '<p>Unable to load completed appointments.</p>' :
+            appointments.data?.length ? appointments.data.map(row =>
+              '<p>✓ '+esc(formatDateTime(row.event_date,row.start_time))+(row.activity_title?' — '+esc(row.activity_title):'')+'</p>').join('') :
+            '<p>No completed appointments recorded yet.</p>';
+          list.innerHTML = notes.error ? '<p>Unable to load client notes.</p>' :
+            notes.data?.length ? notes.data.map(row=>'<p><small>'+esc(new Date(row.created_at).toLocaleDateString())+'</small> '+esc(row.body)+'</p>').join('') :
+            '<p>No quick notes saved yet.</p>';
+        };
+        button?.addEventListener('click',async()=>{
+          const body=box.value.trim();
+          if(!body){status.textContent='Enter a note first.';return;}
+          button.disabled=true;status.textContent='Saving note…';
+          try {
+            const saved=await repository.saveNote({client_id:loaded.id,title:'Quick Note',body});
+            if(!saved?.id)throw Error('Note save not confirmed.');
+            box.value='';status.textContent='Note saved.';
+            await loadGlance();
+          }catch(error){status.textContent=error?.message||'Unable to save note.';}
+          finally{button.disabled=false;}
+        });
+        void loadGlance();
+      }
       // A one-click Medicare review from an existing client. Preserve the
       // unsaved-change confirmation before leaving, then hand off only the
       // client UUID (never personal data) to Athena for authorized lookup.
@@ -583,7 +623,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     const title = mode === 'today' ? 'Today’s Appointments' : mode === 'reschedule' ? 'Follow Up / Reassign' : longDate(key);
     const matchesMode = event => mode === 'reschedule'
       ? event.status === 'needs_reschedule'
-      : event.event_date === key && event.status !== 'needs_reschedule' && (mode !== 'today' || event.status !== 'completed');
+      : event.event_date === key && event.status !== 'needs_reschedule' && event.status !== 'completed';
 
     const d = dialogs.open({
       title,
@@ -717,6 +757,15 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         try {
           setStatus('Marking appointment completed…');
           const saved = await repository.completeEvent(appointment.id);
+          if (appointment.client_id) {
+            const { error: historyError } = await supabase.from('client_completed_appointments').upsert({
+              event_id:String(appointment.id),client_id:appointment.client_id,
+              event_date:appointment.event_date,start_time:appointment.start_time || null,
+              activity_title:appointment.activity_title || '',
+              completed_by:repository.user?.id || null
+            },{onConflict:'event_id'});
+            if(historyError)console.warn('Completed appointment history not recorded:',historyError);
+          }
           const index = state.events.findIndex(item => item.id === appointment.id);
           if (index >= 0) state.events[index] = saved || { ...appointment, status: 'completed' };
           persistVisibleCalendar();
