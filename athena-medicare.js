@@ -12,7 +12,7 @@ const FILE_LIMIT = 25 * 1024 * 1024;
 const ALLOWED_FILES = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf']);
 const FIELD_GROUPS = {
   1: ['first_name','last_name','dob','phone','email','address','city','state','zip','county','gender','veteran'],
-  2: ['part_a','part_b','medicaid_status','medicaid_level','medicare_status','eligibility_notes'],
+  2: ['part_a','part_b','medicaid_status','medicaid_level','medicare_status','eligibility_notes','medicare_gov_username','medicare_gov_email','medicare_gov_notes'],
   3: ['current_carrier','current_plan','current_plan_id','current_year','current_member_id','current_plan_type','current_premium','current_like','current_dislike'],
   4: [],
   5: [],
@@ -82,7 +82,10 @@ function sectionBody(index) {
       yesNo('medicaid_status','Has Medicaid?') +
       '<div class="at-secret"><label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="password" autocomplete="off" spellcheck="false" maxlength="35"></label><button type="button" class="at-text-btn" data-at-reveal="medicaid_number">Show</button></div>' +
       choice('medicaid_level','Medicaid level',[['QMB','QMB'],['QMB+','QMB+'],['SLMB','SLMB'],['SLMB+','SLMB+'],['FBDE','Full Benefit Dual Eligible'],['QI','QI'],['QDWI','QDWI'],['other','Other']]) +
-      area('eligibility_notes','Eligibility / assistance notes');
+      area('eligibility_notes','Eligibility / assistance notes') +
+      '<div class="at-note at-span"><strong>Medicare.gov account information</strong><br>Record the account username or email and access notes. For security, do not enter passwords, one-time codes, or recovery answers here.</div>' +
+      control('medicare_gov_username','Medicare.gov username') + control('medicare_gov_email','Medicare.gov account email','email') +
+      area('medicare_gov_notes','Medicare.gov account / access notes','Account setup, access status, or other non-sensitive details');
     case 3: return control('current_carrier','Current carrier') + control('current_plan','Current plan name') +
       control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
       control('current_member_id','Member ID') +
