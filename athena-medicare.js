@@ -572,6 +572,7 @@ export function createAthenaMedicareFeature() {
       dirty=false;
       editedFields.clear();editedLists.clear();editedRows.clear();
       renderEditor(record.form_data||{});
+      if(record.client_id)void loadMedicareGovFromCRM(record.client_id);
       // Restore encrypted numbers to the editor after its form is rebuilt.
       for(const k of ['medicare_number','medicaid_number']){
         const el=host.querySelector('[name="'+k+'"]');
@@ -667,6 +668,7 @@ export function createAthenaMedicareFeature() {
       record=data;linkedClient=client;
       renderEditor(data.form_data||{});
       void loadCRMForClient(client.id,true);
+      void loadMedicareGovFromCRM(client.id);
       void readVault(client.id);
       void loadFileList();
     }catch(error){if(task===epoch && active()){
