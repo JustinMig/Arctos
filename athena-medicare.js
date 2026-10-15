@@ -83,15 +83,13 @@ function sectionBody(index) {
       '<div class="at-secret"><label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="password" autocomplete="off" spellcheck="false" maxlength="35"></label><button type="button" class="at-text-btn" data-at-reveal="medicaid_number">Show</button></div>' +
       choice('medicaid_level','Medicaid level',[['QMB','QMB'],['QMB+','QMB+'],['SLMB','SLMB'],['SLMB+','SLMB+'],['FBDE','Full Benefit Dual Eligible'],['QI','QI'],['QDWI','QDWI'],['other','Other']]) +
       area('eligibility_notes','Eligibility / assistance notes') +
-      '<div class="at-note at-span"><strong>Medicare.gov account information</strong><br>Record the account username or email and access notes. For security, do not enter passwords, one-time codes, or recovery answers here.</div>' +
-      control('medicare_gov_username','Medicare.gov username') + control('medicare_gov_email','Medicare.gov account email','email') +
-      area('medicare_gov_notes','Medicare.gov account / access notes','Account setup, access status, or other non-sensitive details') +
-      '<div class="at-note at-span">Password and one-time security code are temporary only. They are never saved to the review or CRM. Use a password manager to retain passwords.</div>' +
-      '<label class="at-field"><span>Medicare.gov password (temporary)</span><input name="medicare_gov_password_temporary" type="password" autocomplete="off" spellcheck="false"></label>' +
-      '<label class="at-field"><span>Medicare.gov security code (temporary)</span><input name="medicare_gov_code_temporary" type="password" autocomplete="off" inputmode="numeric" spellcheck="false"></label>' +
-      '<label class="at-field"><span>Verification method (from CRM)</span><input name="medicare_gov_verification_type_temporary" readonly></label>' +
-      '<label class="at-field"><span>Verification phone / email (from CRM)</span><input name="medicare_gov_verification_destination_temporary" readonly></label>' +
-      '<label class="at-field"><span>Security answer (secure CRM only)</span><input name="medicare_gov_security_answer_temporary" type="password" readonly autocomplete="off"></label>';
+      '<div class="at-note at-span"><strong>Medicare.gov Login Credentials</strong><br>Information is loaded from the linked client record’s encrypted credential storage.</div>' +
+      '<label class="at-field"><span>Username</span><input name="medicare_gov_username" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' +
+      '<label class="at-field"><span>Password</span><input name="medicare_gov_password_temporary" type="text" autocomplete="off" spellcheck="false"></label>' +
+      '<label class="at-field"><span>Verification Type</span><select name="medicare_gov_verification_type_temporary"><option value="">Select…</option><option value="text">Text</option><option value="email">Email</option></select></label>' +
+      '<label class="at-field" data-at-medicare-gov-verification="text"><span>Verification Phone Number</span><input name="medicare_gov_verification_phone_temporary" type="tel"></label>' +
+      '<label class="at-field" data-at-medicare-gov-verification="email"><span>Verification Email</span><input name="medicare_gov_verification_email_temporary" type="email"></label>' +
+      '<label class="at-field at-span"><span>Security Answer</span><input name="medicare_gov_security_answer_temporary" type="text" autocomplete="off" spellcheck="false"></label>';
     case 3: return control('current_carrier','Current carrier') + control('current_plan','Current plan name') +
       control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
       control('current_member_id','Member ID') +
@@ -243,6 +241,8 @@ export function createAthenaMedicareFeature() {
       '<p>Use “Already in CRM” where the information is already recorded. Your review will remember what you skipped.</p></div>' +
       '<div class="at-side-card at-side-note"><strong>Need a second opinion?</strong><p>Verify benefits with current official plan documents. This form records your discussion, not a guarantee of enrollment or coverage.</p></div></aside></div></div>';
     const form=host.querySelector('.at-form');
+    form.elements.namedItem('medicare_gov_verification_type_temporary')?.addEventListener('change',()=>updateMedicareGovVisibility(form));
+    updateMedicareGovVisibility(form);
     for(const keys of Object.values(FIELD_GROUPS)) for(const key of keys){
       const el=form.elements.namedItem(key);
       if (!el) continue;
@@ -400,6 +400,11 @@ export function createAthenaMedicareFeature() {
     say('Linked to existing CRM client '+displayName(client)+'.');
   }
 
+  function updateMedicareGovVisibility(form) {
+    const type=String(form?.elements.namedItem('medicare_gov_verification_type_temporary')?.value||'');
+    for(const node of form?.querySelectorAll('[data-at-medicare-gov-verification]')||[])
+      node.hidden=node.dataset.atMedicareGovVerification!==type;
+  }
   // Load the separate encrypted Medicare.gov record directly from the CRM.
   // Secrets remain transient DOM values and never enter Athena form_data.
   async function loadMedicareGovFromCRM(clientId) {
@@ -421,7 +426,9 @@ export function createAthenaMedicareFeature() {
       if(credentials.verification_type==='email')assign('medicare_gov_email',credentials.verification_destination);
       assign('medicare_gov_password_temporary',credentials.password,true);
       assign('medicare_gov_verification_type_temporary',credentials.verification_type,true);
-      assign('medicare_gov_verification_destination_temporary',credentials.verification_destination,true);
+      assign('medicare_gov_verification_phone_temporary',credentials.verification_type==='text'?credentials.verification_destination:'',true);
+      assign('medicare_gov_verification_email_temporary',credentials.verification_type==='email'?credentials.verification_destination:'',true);
+      updateMedicareGovVisibility(form);
       assign('medicare_gov_security_answer_temporary',credentials.security_answer,true);
     }catch(error){
       if(token===medicareGovLoadToken)console.warn('Medicare.gov CRM credentials unavailable:',error);
