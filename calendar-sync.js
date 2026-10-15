@@ -210,6 +210,17 @@ export function installMayerJustinCalendar() {
   };
 
   mhRepository.completeEvent = async function(eventId) {
+    // Campaign appointments are saved locally in Arctos, not in Justin's bridge.
+    const { data: local, error: lookupError } = await supabase.from('appointments')
+      .select('*').eq('id',eventId).maybeSingle();
+    if (lookupError) throw lookupError;
+    if (local) {
+      const { data, error } = await supabase.from('appointments')
+        .update({status:'completed'}).eq('id',eventId).select('*').single();
+      if (error) throw error;
+      invalidateCalendarCache();
+      return { ...data, calendar_source:'arctos_campaign' };
+    }
     const result = await calendarRequest('PATCH', { id: eventId }, { action: 'complete' });
     invalidateCalendarCache();
     return result.event;
