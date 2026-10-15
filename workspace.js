@@ -780,20 +780,18 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         throw new Error('That appointment time is unavailable. Choose an open time.');
       // Keep the calendar headline as the person's name. The appointment/
       // activity title describes the purpose and belongs in the details.
-      const purpose = String(value.title || '').trim();
+      const purpose = String(form.elements.namedItem('title')?.value || '').trim();
       const person = value.person_type === 'new'
         ? String(value.person_name || '').trim()
         : String(form.querySelector('[data-person-search]')?.value || '').trim();
-      if (person) {
-        value.title = person;
-        if (purpose && purpose !== person && purpose !== existing?.title) {
-          value.notes = ['Appointment / Activity: ' + purpose, value.notes || ''].filter(Boolean).join('\n');
-        }
-      }
+      if (person) value.title = person;
+      const originalNotes = String(form.elements.namedItem('notes')?.value || '').trim();
+      const activity = purpose && purpose !== person ? purpose : '';
+      value.notes = [activity, originalNotes].filter(Boolean).join('\n');
       // The calendar bridge has no phone column. Persist non-client phone
       // inside appointment notes and show it in the phone detail field.
       if (value.person_type === 'new') {
-        const phone = String(value.person_phone || '').trim();
+        const phone = String(form.elements.namedItem('person_phone')?.value || '').trim();
         const noteLines = String(value.notes || '').split('\n').filter(line => !/^Phone:\s*/i.test(line));
         value.notes = [phone ? 'Phone: ' + phone : '', ...noteLines].filter(Boolean).join('\n');
       }
@@ -863,11 +861,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       form.elements.event_type.value = existing.event_type || 'Appointment';
       form.elements.title.value = existing.title || '';
       form.elements.start_time.value = String(existing.start_time || '').slice(0, 5);
-      form.elements.notes.value = existing.notes || '';
+      form.elements.notes.value = String(existing.notes || '').split('\n').filter(line => !/^Phone:\s*/i.test(line)).join('\n');
       if (!existing.client_id) {
         const phone = String(existing.notes || '').match(/(?:^|\n)Phone:\s*([^\n]+)/i)?.[1]?.trim() || '';
         form.elements.person_name.value = String(existing.title || '').replace(/^Appointment:\s*/i, '');
         form.elements.person_phone.value = phone;
+        form.elements.title.value = '';
         form.querySelector('[data-mode="new"]')?.click();
       }
       if (existing.client_id) {
