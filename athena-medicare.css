@@ -164,3 +164,50 @@
  #athena-medicare-host .at-client-option{align-items:flex-start;flex-direction:column}
 }
 @media print{body .sidebar,body .top,body .at-toolbar,body .at-sidebar,body .at-step-actions,body .at-save-footer,body .at-skip,body .at-file-button{display:none!important}#athena-medicare-host .at-step{break-inside:avoid}#athena-medicare-host .at-step-inner{display:block!important}}
+
+/* Athena Medicare: distinct, subtle colors for each of the nine review sections. */
+#athena-medicare-host .at-steps>.at-step:nth-child(1){background:#edf5fa;border-color:#d5e7f2}
+#athena-medicare-host .at-steps>.at-step:nth-child(1)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(1)[open]>summary{background:#edf5fa;border-color:#d5e7f2}
+#athena-medicare-host .at-steps>.at-step:nth-child(1) .at-step-no{background:#d5e7f2;color:#3f718f}
+#athena-medicare-host .at-steps>.at-step:nth-child(1)[open] .at-step-no{background:#3f718f;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(1) .at-step-inner{border-top:1px solid #d5e7f2}
+#athena-medicare-host .at-steps>.at-step:nth-child(2){background:#eaf5f0;border-color:#cfe8dc}
+#athena-medicare-host .at-steps>.at-step:nth-child(2)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(2)[open]>summary{background:#eaf5f0;border-color:#cfe8dc}
+#athena-medicare-host .at-steps>.at-step:nth-child(2) .at-step-no{background:#cfe8dc;color:#367c63}
+#athena-medicare-host .at-steps>.at-step:nth-child(2)[open] .at-step-no{background:#367c63;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(2) .at-step-inner{border-top:1px solid #cfe8dc}
+#athena-medicare-host .at-steps>.at-step:nth-child(3){background:#f8f2e8;border-color:#eddfc8}
+#athena-medicare-host .at-steps>.at-step:nth-child(3)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(3)[open]>summary{background:#f8f2e8;border-color:#eddfc8}
+#athena-medicare-host .at-steps>.at-step:nth-child(3) .at-step-no{background:#eddfc8;color:#8d7040}
+#athena-medicare-host .at-steps>.at-step:nth-child(3)[open] .at-step-no{background:#8d7040;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(3) .at-step-inner{border-top:1px solid #eddfc8}
+#athena-medicare-host .at-steps>.at-step:nth-child(4){background:#f0f1fa;border-color:#dcdff0}
+#athena-medicare-host .at-steps>.at-step:nth-child(4)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(4)[open]>summary{background:#f0f1fa;border-color:#dcdff0}
+#athena-medicare-host .at-steps>.at-step:nth-child(4) .at-step-no{background:#dcdff0;color:#62669a}
+#athena-medicare-host .at-steps>.at-step:nth-child(4)[open] .at-step-no{background:#62669a;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(4) .at-step-inner{border-top:1px solid #dcdff0}
+#athena-medicare-host .at-steps>.at-step:nth-child(5){background:#f8eef4;border-color:#ecd6e3}
+#athena-medicare-host .at-steps>.at-step:nth-child(5)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(5)[open]>summary{background:#f8eef4;border-color:#ecd6e3}
+#athena-medicare-host .at-steps>.at-step:nth-child(5) .at-step-no{background:#ecd6e3;color:#975f7f}
+#athena-medicare-host .at-steps>.at-step:nth-child(5)[open] .at-step-no{background:#975f7f;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(5) .at-step-inner{border-top:1px solid #ecd6e3}
+#athena-medicare-host .at-steps>.at-step:nth-child(6){background:#edf6f5;border-color:#d4e8e4}
+#athena-medicare-host .at-steps>.at-step:nth-child(6)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(6)[open]>summary{background:#edf6f5;border-color:#d4e8e4}
+#athena-medicare-host .at-steps>.at-step:nth-child(6) .at-step-no{background:#d4e8e4;color:#3c8079}
+#athena-medicare-host .at-steps>.at-step:nth-child(6)[open] .at-step-no{background:#3c8079;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(6) .at-step-inner{border-top:1px solid #d4e8e4}
+#athena-medicare-host .at-steps>.at-step:nth-child(7){background:#f3f3e9;border-color:#e3e6ce}
+#athena-medicare-host .at-steps>.at-step:nth-child(7)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(7)[open]>summary{background:#f3f3e9;border-color:#e3e6ce}
+#athena-medicare-host .at-steps>.at-step:nth-child(7) .at-step-no{background:#e3e6ce;color:#777e45}
+#athena-medicare-host .at-steps>.at-step:nth-child(7)[open] .at-step-no{background:#777e45;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(7) .at-step-inner{border-top:1px solid #e3e6ce}
+#athena-medicare-host .at-steps>.at-step:nth-child(8){background:#f9f0eb;border-color:#efdccf}
+#athena-medicare-host .at-steps>.at-step:nth-child(8)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(8)[open]>summary{background:#f9f0eb;border-color:#efdccf}
+#athena-medicare-host .at-steps>.at-step:nth-child(8) .at-step-no{background:#efdccf;color:#98694f}
+#athena-medicare-host .at-steps>.at-step:nth-child(8)[open] .at-step-no{background:#98694f;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(8) .at-step-inner{border-top:1px solid #efdccf}
+#athena-medicare-host .at-steps>.at-step:nth-child(9){background:#eef2f7;border-color:#d6e0ea}
+#athena-medicare-host .at-steps>.at-step:nth-child(9)>summary,#athena-medicare-host .at-steps>.at-step:nth-child(9)[open]>summary{background:#eef2f7;border-color:#d6e0ea}
+#athena-medicare-host .at-steps>.at-step:nth-child(9) .at-step-no{background:#d6e0ea;color:#5a748c}
+#athena-medicare-host .at-steps>.at-step:nth-child(9)[open] .at-step-no{background:#5a748c;color:#fff}
+#athena-medicare-host .at-steps>.at-step:nth-child(9) .at-step-inner{border-top:1px solid #d6e0ea}
