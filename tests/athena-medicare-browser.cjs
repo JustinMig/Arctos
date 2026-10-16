@@ -41,6 +41,11 @@ let browser;
   await page.locator('[name="last_name"]').fill('Intake');
   await page.locator('[name="dob"]').fill('02/14/1962');
   await page.locator('[data-at-step="2"] > summary').click();
+  assert.equal(await page.locator('[name="medicare_number"]').getAttribute('type'),'text');
+  assert.equal(await page.locator('[name="medicaid_number"]').getAttribute('type'),'text');
+  assert.equal(await page.locator('[data-at-reveal]').count(),0);
+  assert.equal(await page.locator('[name="medicare_gov_password_temporary"]').getAttribute('type'),'text');
+  assert.equal(await page.locator('[name="medicare_gov_security_answer_temporary"]').getAttribute('type'),'text');
   await page.locator('[name="medicare_number"]').fill('TEMP-MEDICARE-TEST');
   await page.waitForFunction(()=>document.querySelector('[data-at-status]')?.textContent.includes('Recovery draft saved automatically'));
   const encrypted=await page.evaluate(async()=>{
