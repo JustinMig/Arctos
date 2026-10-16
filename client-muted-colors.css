@@ -144,3 +144,18 @@
 #client-panel-medicare>details.field-group:nth-of-type(5)[open]>summary{background:#e7d2da!important}
 #client-panel-medicare>details.field-group{border:1px solid #5e6e7b;border-radius:10px;overflow:hidden;margin-bottom:10px}
 #client-panel-medicare>details.field-group>summary{color:#1e2d39;font-weight:750}
+
+/* Client Records > Coverage > Medicare: separate color on each named accordion. */
+#client-panel-medicare>details.field-group:nth-of-type(1),#client-panel-medicare>details.field-group:nth-of-type(1)>summary{background:#d4e7f4!important}
+#client-panel-medicare>details.field-group:nth-of-type(1)[open]>summary{background:#c0d9eb!important}
+#client-panel-medicare>details.field-group:nth-of-type(2),#client-panel-medicare>details.field-group:nth-of-type(2)>summary{background:#e0ebda!important}
+#client-panel-medicare>details.field-group:nth-of-type(2)[open]>summary{background:#cedfc4!important}
+#client-panel-medicare>details.field-group:nth-of-type(3),#client-panel-medicare>details.field-group:nth-of-type(3)>summary{background:#eee2f2!important}
+#client-panel-medicare>details.field-group:nth-of-type(3)[open]>summary{background:#dfcde9!important}
+#client-panel-medicare>details.field-group:nth-of-type(4),#client-panel-medicare>details.field-group:nth-of-type(4)>summary{background:#f6e8d7!important}
+#client-panel-medicare>details.field-group:nth-of-type(4)[open]>summary{background:#edd8bd!important}
+#client-panel-medicare>details.field-group:nth-of-type(5),#client-panel-medicare>details.field-group:nth-of-type(5)>summary{background:#e1edeb!important}
+#client-panel-medicare>details.field-group:nth-of-type(5)[open]>summary{background:#d0e3df!important}
+#client-panel-medicare>details.field-group:nth-of-type(6),#client-panel-medicare>details.field-group:nth-of-type(6)>summary{background:#f3e3ea!important}
+#client-panel-medicare>details.field-group:nth-of-type(6)[open]>summary{background:#ead1dc!important}
+#client-panel-medicare>details.field-group>summary{border-bottom-color:#788892;color:#152c3d!important}
