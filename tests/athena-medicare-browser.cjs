@@ -34,6 +34,35 @@ let browser;
   assert.equal(await page.locator('[data-at-new]').count(),2);
   assert.equal(await page.locator('[data-at-compare]').getAttribute('href'),'#/ma-plans');
   assert.equal(await page.locator('.at-home-grid [data-at-saved]').count(),1);
+  // Browser reload should restore unsaved form values from encrypted IndexedDB,
+  // without persisting secure government IDs, passwords or queued file bytes.
+  await page.locator('[data-at-new="new_intake"]').click();
+  await page.locator('[name="first_name"]').fill('Recoverable');
+  await page.locator('[name="last_name"]').fill('Intake');
+  await page.locator('[name="dob"]').fill('02/14/1962');
+  await page.locator('[data-at-step="2"] > summary').click();
+  await page.locator('[name="medicare_number"]').fill('TEMP-MEDICARE-TEST');
+  await page.waitForFunction(()=>document.querySelector('[data-at-status]')?.textContent.includes('Recovery draft saved automatically'));
+  const encrypted=await page.evaluate(async()=>{
+    const {readAthenaRecoveryDraft}=await import('/athena-draft-store.js');
+    const draft=await readAthenaRecoveryDraft('00000000-0000-4000-8000-000000000001');
+    return draft && {name:draft.data.first_name,number:draft.data.medicare_number,
+      credentials:draft.data.medicare_gov_password_temporary};
+  });
+  assert.deepEqual(encrypted,{name:'Recoverable',number:undefined,credentials:undefined});
+  await page.reload();
+  await page.evaluate(async()=>{
+    const {createAthenaMedicareFeature}=await import('/athena-medicare.js');
+    window.__athenaFeature=createAthenaMedicareFeature();
+    window.__athenaFeature.mount(document.querySelector('#athena-medicare-host'));
+  });
+  await page.locator('[name="first_name"]').waitFor();
+  assert.equal(await page.locator('[name="first_name"]').inputValue(),'Recoverable');
+  assert.equal(await page.locator('[name="last_name"]').inputValue(),'Intake');
+  assert.equal(await page.locator('[name="dob"]').inputValue(),'02/14/1962');
+  assert.equal(await page.locator('[name="medicare_number"]').inputValue(),'');
+  assert.match(await page.locator('[data-at-status]').innerText(),/recovered from this device/);
+  await page.locator('[data-at-home]').click();
   // Opening Athena from a linked CRM client should start its annual review,
   // without a second client search or any production data access.
   await page.evaluate(()=>{
