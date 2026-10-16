@@ -1,0 +1,32 @@
+/* Client records coordinated soft shades. */
+.client-form.client-four-tabs .client-main-tabs button[data-client-group-tab="overview"]{background:#d6e4ec!important;color:#1c3040!important;border:1px solid #60717d!important}
+.client-form.client-four-tabs .client-main-tabs button[data-client-group-tab="coverage"]{background:#dbe6dc!important;color:#1c3040!important;border:1px solid #60717d!important}
+.client-form.client-four-tabs .client-main-tabs button[data-client-group-tab="medical"]{background:#e6dfed!important;color:#1c3040!important;border:1px solid #60717d!important}
+.client-form.client-four-tabs .client-main-tabs button[data-client-group-tab="files"]{background:#eee4d8!important;color:#1c3040!important;border:1px solid #60717d!important}
+.client-form.client-four-tabs .client-main-tabs button[aria-selected="true"]{box-shadow:inset 0 0 0 2px #ffffff88!important;border:2px solid #324957!important;color:#142b3a!important}
+.client-form.client-four-tabs [data-client-category="medicare"],.client-form.client-four-tabs [data-client-category="medicare"]>summary{background:#dae8ef!important}
+.client-form.client-four-tabs [data-client-category="medicare"]>summary strong{display:inline-block;border:1.5px solid #344753;border-radius:6px;padding:6px 10px;background:#ffffffb9;color:#172d3b!important}
+.client-form.client-four-tabs [data-client-category="life"],.client-form.client-four-tabs [data-client-category="life"]>summary{background:#dce9df!important}
+.client-form.client-four-tabs [data-client-category="life"]>summary strong{display:inline-block;border:1.5px solid #344753;border-radius:6px;padding:6px 10px;background:#ffffffb9;color:#172d3b!important}
+.client-form.client-four-tabs [data-client-category="hospital_indemnity"],.client-form.client-four-tabs [data-client-category="hospital_indemnity"]>summary{background:#e8e0ef!important}
+.client-form.client-four-tabs [data-client-category="hospital_indemnity"]>summary strong{display:inline-block;border:1.5px solid #344753;border-radius:6px;padding:6px 10px;background:#ffffffb9;color:#172d3b!important}
+.client-form.client-four-tabs [data-client-category="retirement"],.client-form.client-four-tabs [data-client-category="retirement"]>summary{background:#f0e5d8!important}
+.client-form.client-four-tabs [data-client-category="retirement"]>summary strong{display:inline-block;border:1.5px solid #344753;border-radius:6px;padding:6px 10px;background:#ffffffb9;color:#172d3b!important}
+.client-form.client-four-tabs [data-client-category="doctors"],.client-form.client-four-tabs [data-client-category="doctors"]>summary{background:#dcebee!important}
+.client-form.client-four-tabs [data-client-category="doctors"]>summary strong{display:inline-block;border:1.5px solid #344753;border-radius:6px;padding:6px 10px;background:#ffffffb9;color:#172d3b!important}
+.client-form.client-four-tabs [data-client-category="medications"],.client-form.client-four-tabs [data-client-category="medications"]>summary{background:#eddee5!important}
+.client-form.client-four-tabs [data-client-category="medications"]>summary strong{display:inline-block;border:1.5px solid #344753;border-radius:6px;padding:6px 10px;background:#ffffffb9;color:#172d3b!important}
+.client-form.client-four-tabs [data-panel="information"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="information"]>details.field-group:nth-of-type(1)>summary{background:#dae6ed!important}
+.client-form.client-four-tabs [data-panel="information"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="information"]>details.field-group:nth-of-type(2)>summary{background:#e9e0d5!important}
+.client-form.client-four-tabs [data-panel="life"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="life"]>details.field-group:nth-of-type(1)>summary{background:#dbe8df!important}
+.client-form.client-four-tabs [data-panel="life"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="life"]>details.field-group:nth-of-type(2)>summary{background:#e5ddeb!important}
+.client-form.client-four-tabs [data-panel="hospital_indemnity"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="hospital_indemnity"]>details.field-group:nth-of-type(1)>summary{background:#e6dfed!important}
+.client-form.client-four-tabs [data-panel="hospital_indemnity"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="hospital_indemnity"]>details.field-group:nth-of-type(2)>summary{background:#dae9ec!important}
+.client-form.client-four-tabs [data-panel="retirement"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="retirement"]>details.field-group:nth-of-type(1)>summary{background:#eee3d5!important}
+.client-form.client-four-tabs [data-panel="retirement"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="retirement"]>details.field-group:nth-of-type(2)>summary{background:#dce9df!important}
+.client-form.client-four-tabs [data-panel="doctors"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="doctors"]>details.field-group:nth-of-type(1)>summary{background:#dce8e9!important}
+.client-form.client-four-tabs [data-panel="doctors"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="doctors"]>details.field-group:nth-of-type(2)>summary{background:#e8ddeb!important}
+.client-form.client-four-tabs [data-panel="medications"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="medications"]>details.field-group:nth-of-type(1)>summary{background:#eadde5!important}
+.client-form.client-four-tabs [data-panel="medications"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="medications"]>details.field-group:nth-of-type(2)>summary{background:#dce9eb!important}
+.client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(1)>summary{background:#eee3d9!important}
+.client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(2)>summary{background:#dfe6ed!important}
