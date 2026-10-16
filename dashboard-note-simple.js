@@ -114,7 +114,7 @@ export function installSimpleDashboardNote(root) {
     let savedNotes = [];
     let loadingSaved = false;
 
-    const isDirty = () => title.value !== baselineTitle || area.value !== baselineBody;
+    const isDirty = () => title.value !== baselineTitle || area.value !== baselineBody || selectedClientId !== baselineClientId;
     const syncDirty = () => {
       const changed = isDirty();
       save.disabled = currentTab !== 'new' || !changed || !title.value.trim() || !area.value.trim();
@@ -127,6 +127,12 @@ export function installSimpleDashboardNote(root) {
       baselineTitle = '';
       baselineBody = '';
       editingId = null;
+      selectedClientId = null;
+      selectedClientName = '';
+      baselineClientId = null;
+      clientSearch.value = '';
+      clientResults.innerHTML = '';
+      showClient();
       save.textContent = 'Save Note';
       status.textContent = 'Ready for a new note.';
       syncDirty();
@@ -142,8 +148,7 @@ export function installSimpleDashboardNote(root) {
         if (!userId) throw new Error('Your session expired. Please sign in again.');
         const { data, error } = await supabase
           .from('client_notes')
-          .select('id,title,body,author_id,created_at,updated_at')
-          .is('client_id', null)
+          .select('id,title,body,author_id,client_id,created_at,updated_at')
           .order('updated_at', { ascending: false });
         if (error) throw error;
         const notes = data || [];
@@ -154,7 +159,8 @@ export function installSimpleDashboardNote(root) {
           const when = note.updated_at || note.created_at;
           const date = when ? new Date(when).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
           const author = note.author_id === userId ? 'You' : (names.get(note.author_id) || 'Team member');
-          return `<details class="saved-note-card" data-saved-note-id="${esc(note.id)}"><summary><strong>${esc(note.title || 'Untitled Note')}</strong><small>${esc(date)}</small></summary><div class="saved-note-body">${esc(note.body || '')}</div><div class="saved-note-meta"><span>Created by ${esc(author)}</span><div><button type="button" class="btn secondary" data-edit-saved-note>Edit</button> <button type="button" class="btn danger" data-delete-saved-note>Delete</button></div></div></details>`;
+          const linked = note.client_id ? ' · Linked client' : ' · General note';
+          return `<details class="saved-note-card" data-saved-note-id="${esc(note.id)}"><summary><strong>${esc(note.title || 'Untitled Note')}</strong><small>${esc(date)}</small></summary><div class="saved-note-body">${esc(note.body || '')}</div><div class="saved-note-meta"><span>Created by ${esc(author + linked)}</span><div><button type="button" class="btn secondary" data-edit-saved-note>Edit</button> <button type="button" class="btn danger" data-delete-saved-note>Delete</button></div></div></details>`;
         }).join('') : '<div class="saved-note-empty">No saved notes yet.</div>';
       } catch (error) {
         savedStatus.textContent = error?.message || 'Saved notes could not load.';
@@ -184,6 +190,10 @@ export function installSimpleDashboardNote(root) {
         const existingNote = savedNotes.find(note => note.id === card?.dataset.savedNoteId);
         if (!existingNote) return;
         editingId = existingNote.id;
+        selectedClientId = existingNote.client_id || null;
+        selectedClientName = selectedClientId ? 'Linked client' : '';
+        baselineClientId = selectedClientId;
+        showClient();
         title.value = existingNote.title || '';
         area.value = existingNote.body || '';
         baselineTitle = title.value;
@@ -191,6 +201,10 @@ export function installSimpleDashboardNote(root) {
         chooseTab('new');
         // chooseTab resets the editor; restore the saved note after switching.
         editingId = existingNote.id;
+        selectedClientId = existingNote.client_id || null;
+        selectedClientName = selectedClientId ? 'Linked client' : '';
+        baselineClientId = selectedClientId;
+        showClient();
         title.value = existingNote.title || '';
         area.value = existingNote.body || '';
         baselineTitle = title.value;
@@ -211,7 +225,7 @@ export function installSimpleDashboardNote(root) {
       button.disabled = true;
       savedStatus.textContent = 'Deleting note…';
       try {
-        const { error } = await supabase.from('client_notes').delete().eq('id', noteId).is('client_id', null);
+        const { error } = await supabase.from('client_notes').delete().eq('id', noteId);
         if (error) throw error;
         loadingSaved = false;
         await loadSavedNotes();
@@ -236,10 +250,11 @@ export function installSimpleDashboardNote(root) {
       save.disabled = true;
       status.textContent = 'Saving…';
       try {
-        const saved = await mhRepository.saveNote({ id: editingId || undefined, client_id: null, title: noteTitle, body: noteBody, pinned: false });
+        const saved = await mhRepository.saveNote({ id: editingId || undefined, client_id: selectedClientId, title: noteTitle, body: noteBody, pinned: false });
         if (!saved?.id) throw new Error('The note save was not confirmed.');
         baselineTitle = title.value;
         baselineBody = area.value;
+        baselineClientId = selectedClientId;
         dirty.textContent = 'No changes';
         status.textContent = 'Saved.';
         await loadSavedNotes();
