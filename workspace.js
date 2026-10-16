@@ -300,14 +300,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     function show(group,{section=null,focus=false}={}) {
       const selected=buttons.find(button=>button.dataset.clientGroupTab===group);
       if(!selected)return;
-      // Reset expanded cards and nested subsections when leaving a page.
-      // Returning to Coverage or Medical should start with everything collapsed.
-      const current=buttons.find(button=>button.getAttribute('aria-selected')==='true')?.dataset.clientGroupTab;
-      if(current && current!==group){
-        form.querySelectorAll('[data-client-group-panel] details[open]').forEach(details=>{
-          details.open=false;
-        });
-      }
+      // Reset every accordion whenever a main page is selected, including
+      // category cards and nested field groups. Do this before showing the
+      // destination page so previously expanded cards never carry over.
+      form.querySelectorAll('details[open]').forEach(details=>{
+        details.removeAttribute('open');
+      });
       buttons.forEach(button=>{
         const active=button===selected;
         button.setAttribute('aria-selected',String(active));
