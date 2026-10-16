@@ -130,3 +130,17 @@
 @media(max-width:700px){
   .client-form .section-tabs button{padding:9px 12px}
 }
+
+/* Distinct soft shades for every Medicare & Current Coverage accordion tab. */
+#client-panel-medicare>details.field-group:nth-of-type(1),#client-panel-medicare>details.field-group:nth-of-type(1)>summary{background:#dceaf5!important}
+#client-panel-medicare>details.field-group:nth-of-type(1)[open]>summary{background:#c8dded!important}
+#client-panel-medicare>details.field-group:nth-of-type(2),#client-panel-medicare>details.field-group:nth-of-type(2)>summary{background:#e2efe7!important}
+#client-panel-medicare>details.field-group:nth-of-type(2)[open]>summary{background:#cee2d5!important}
+#client-panel-medicare>details.field-group:nth-of-type(3),#client-panel-medicare>details.field-group:nth-of-type(3)>summary{background:#f2eadc!important}
+#client-panel-medicare>details.field-group:nth-of-type(3)[open]>summary{background:#e8dcc5!important}
+#client-panel-medicare>details.field-group:nth-of-type(4),#client-panel-medicare>details.field-group:nth-of-type(4)>summary{background:#eae3f3!important}
+#client-panel-medicare>details.field-group:nth-of-type(4)[open]>summary{background:#d9cfea!important}
+#client-panel-medicare>details.field-group:nth-of-type(5),#client-panel-medicare>details.field-group:nth-of-type(5)>summary{background:#f3e4e8!important}
+#client-panel-medicare>details.field-group:nth-of-type(5)[open]>summary{background:#e7d2da!important}
+#client-panel-medicare>details.field-group{border:1px solid #5e6e7b;border-radius:10px;overflow:hidden;margin-bottom:10px}
+#client-panel-medicare>details.field-group>summary{color:#1e2d39;font-weight:750}
