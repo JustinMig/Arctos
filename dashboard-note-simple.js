@@ -50,6 +50,9 @@ export function installSimpleDashboardNote(root) {
           <section data-note-panel="new">
             <div class="simple-note-editor">
               <label class="field"><span>Note Name</span><input type="text" data-dashboard-note-title maxlength="160" placeholder="Name this note"></label>
+              <label class="field"><span>Attach to client (optional)</span><input type="search" data-note-client-search placeholder="Search by first or last name" autocomplete="off"></label>
+              <div data-note-client-results class="saved-note-list" style="max-height:150px;overflow:auto"></div>
+              <div data-note-client-selected class="subtle">No client attached — general note.</div>
               <label class="field"><span>Note</span><textarea data-dashboard-note rows="12" placeholder="Write your note here…"></textarea></label>
               <p class="subtle" data-note-status>Ready for a new note.</p>
             </div>
@@ -68,6 +71,37 @@ export function installSimpleDashboardNote(root) {
 
     const title = dialog.querySelector('[data-dashboard-note-title]');
     const area = dialog.querySelector('[data-dashboard-note]');
+    const clientSearch = dialog.querySelector('[data-note-client-search]');
+    const clientResults = dialog.querySelector('[data-note-client-results]');
+    const clientSelected = dialog.querySelector('[data-note-client-selected]');
+    let selectedClientId = null;
+    let selectedClientName = '';
+    let baselineClientId = null;
+    let clientSearchToken = 0;
+    const showClient = () => {
+      clientSelected.textContent = selectedClientId ? 'Attached to: ' + selectedClientName : 'No client attached — general note.';
+    };
+    clientSearch.addEventListener('input', async () => {
+      const query = clientSearch.value.trim();
+      const token = ++clientSearchToken;
+      clientResults.innerHTML = '';
+      if (query.length < 2) return;
+      try {
+        const {rows} = await mhRepository.searchClients({query,limit:12});
+        if (token !== clientSearchToken || !dialog.isConnected) return;
+        clientResults.innerHTML = rows.length ? rows.map(c => '<button type="button" class="btn secondary" data-select-note-client="' + esc(c.id) + '" style="text-align:left;justify-content:flex-start">' + esc([c.first_name,c.last_name].filter(Boolean).join(' ')) + '</button>').join('') : '<span class="subtle">No matching clients.</span>';
+      } catch (error) { if (token === clientSearchToken) clientResults.textContent = error?.message || 'Client search unavailable.'; }
+    });
+    clientResults.addEventListener('click', e => {
+      const button = e.target.closest('[data-select-note-client]');
+      if (!button) return;
+      selectedClientId = button.dataset.selectNoteClient;
+      selectedClientName = button.textContent.trim();
+      clientSearch.value = '';
+      clientResults.innerHTML = '';
+      showClient();
+      syncDirty();
+    });
     const save = dialog.querySelector('[data-note-save]');
     const dirty = dialog.querySelector('[data-note-dirty]');
     const status = dialog.querySelector('[data-note-status]');
