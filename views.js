@@ -30,7 +30,7 @@ export function input(name, label, { type = 'text', placeholder = '', required =
 export const dateInput = (name, label, required = false) => input(name, label, { placeholder: 'MM/DD/YYYY', required, extra: 'data-date inputmode="numeric" maxlength="10"' });
 export const select = (name, label, items, disabled = false) => `<label class="field"><span>${esc(label)}</span><select name="${esc(name)}" ${disabled ? 'disabled' : ''}>${options(items)}</select></label>`;
 export const textArea = (name, label, placeholder = '') => `<label class="field span-all"><span>${esc(label)}</span><textarea name="${esc(name)}" rows="5" placeholder="${esc(placeholder)}"></textarea></label>`;
-const group = (title, body, open = false) => `<details class="field-group"${open ? ' open' : ''}><summary>${esc(title)}</summary><div class="form-grid">${body}</div></details>`;
+const group = (title, body, open = false) => `<details class="field-group"><summary>${esc(title)}</summary><div class="form-grid">${body}</div></details>`;
 export function clientForm(connected, agents = []) {
   const sensitive = !connected;
   const general = input('first_name', 'First Name', { required: true }) + input('last_name', 'Last Name', { required: true }) +
@@ -53,7 +53,7 @@ export function clientForm(connected, agents = []) {
   const retirement = input('retirement_carrier', 'Carrier / Institution') + input('retirement_product', 'Product') + input('retirement_contract', 'Contract Number') + dateInput('retirement_effective_date', 'Effective Date') + input('retirement_contribution', 'Contribution', { type: 'number', extra: 'min="0" step="0.01"' }) + input('retirement_value', 'Account Value', { type: 'number', extra: 'min="0" step="0.01"' }) + textArea('retirement_notes', 'Retirement Notes');
   const panels = {
     information: group('Personal & Contact Information', general, true) + group('Identification', identity),
-    medicare: group('Medicare Information', medicare, true) + group('Medicaid Information', medicaid) + group('Sunfire', sunfire) + group('Health Plan Information', health) + group('Medicare Notes', medicareNotes) + note('Medicare cards and Scope of Appointment files belong in Documents.'),
+    medicare: group('Medicare Information', medicare) + group('Medicaid Information', medicaid) + group('Sunfire', sunfire) + group('Health Plan Information', health) + group('Medicare Notes', medicareNotes) + note('Medicare cards and Scope of Appointment files belong in Documents.'),
     life: group('Life Policy Information', life, true), retirement: group('Retirement Information', retirement, true),
     documents: `<div class="panel-card"><h3>Client Documents &amp; SOA</h3><p class="subtle">Files, card photos, policy documents, and signed Scopes of Appointment belong to this client.</p><div class="document-actions"><label class="btn secondary disabled">Upload File<input type="file" disabled hidden></label><button type="button" class="btn secondary" disabled>Camera / Scan</button><button type="button" class="btn secondary" disabled>Send SOA</button></div>${empty('Secure storage not connected', 'Uploads and signatures will be enabled after the new storage and signing services are configured.')}</div>`,
     notes: group('Client Notes', textArea('notes', 'Notes', 'Client-specific notes'), true)
@@ -69,7 +69,7 @@ export function clientForm(connected, agents = []) {
     ['doctors','Doctors','Providers, specialties and office locations',true],
     ['medications','Medications & Pharmacies','Prescriptions, pharmacies and medication files',true]
   ];
-  const category = (key,title,description,open) => '<details class="client-category" data-client-category="'+key+'"'+(open?' open':'')+'>' +
+  const category = (key,title,description,open) => '<details class="client-category" data-client-category="'+key+'">' +
     '<summary><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span><span class="client-category-chevron" aria-hidden="true">⌄</span></summary>' +
     '<section class="client-category-body" id="client-panel-'+key+'" data-panel="'+key+'">'+(panels[key]||'')+'</section></details>';
   const categoryMarkup = keys => categories.filter(([key])=>keys.includes(key)).map(([key,title,description,open])=>category(key,title,description,open)).join('');
