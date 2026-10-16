@@ -635,7 +635,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       hint: mode === 'today' ? longDate(key) : 'Calendar appointments and activities',
       icon: icon('appointments', true),
       kind: 'day-dialog',
-      body: `${info}<div class="day-add"><button type="button" class="btn primary" data-day-add>+ ADD APPOINTMENT / ACTIVITY</button></div><div data-day-events></div>`
+      body: `${info}<div class="day-add"><button type="button" class="btn primary" data-day-add>+ ADD APPOINTMENT / ACTIVITY</button></div><div data-day-events></div>${mode === 'reschedule' ? '' : '<details class="day-completed-box" data-day-completed><summary>Completed Appointments <span data-completed-count>0</span></summary><div data-completed-events></div></details>'}`
     });
     d.node.querySelector('[data-day-add]').onclick = () => openAppointment(key, null, saved => {
       if (saved?.id) {
@@ -711,11 +711,20 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       host.innerHTML = entries.length
         ? entries.map(cardMarkup).join('')
         : empty(connected ? 'Nothing scheduled' : 'No appointments loaded', connected ? 'Use Add Appointment / Activity to schedule this day.' : 'Scheduling and reschedule queues require the standalone backend.');
+      const completedBox = d.node.querySelector('[data-day-completed]');
+      if (completedBox) {
+        const completed = sortAppointmentsByStartTime(state.events.filter(event => event.event_date === key && event.status === 'completed'));
+        completedBox.querySelector('[data-completed-count]').textContent = String(completed.length);
+        completedBox.querySelector('[data-completed-events]').innerHTML = completed.length
+          ? completed.map(cardMarkup).join('')
+          : '<p class="day-completed-empty">No completed appointments for this day.</p>';
+      }
     };
 
     const loadClients = async () => {
       const entries = sortAppointmentsByStartTime(state.events.filter(matchesMode));
-      const ids = [...new Set(entries.map(event => event.client_id).filter(Boolean))];
+      const completed = mode === 'reschedule' ? [] : state.events.filter(event => event.event_date === key && event.status === 'completed');
+      const ids = [...new Set([...entries,...completed].map(event => event.client_id).filter(Boolean))];
       const rows = await Promise.all(ids.map(async id => {
         try { return [id, await repository.getClient(id)]; }
         catch { return [id, null]; }
@@ -728,7 +737,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     renderCards();
     void loadClients();
 
-    host.addEventListener('click', async event => {
+    d.node.addEventListener('click', async event => {
       const card = event.target.closest?.('[data-event-id]');
       if (!card) return;
       const appointment = state.events.find(item => item.id === card.dataset.eventId);
