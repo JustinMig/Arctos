@@ -78,11 +78,11 @@ function sectionBody(index) {
       control('zip','ZIP code','text','38801') + control('county','County') +
       choice('gender','Sex',[['male','Male'],['female','Female'],['other','Other / prefer not to say']]);
     case 2: return '<div class="at-note at-span">Medicare and Medicaid numbers are stored securely in the CRM vault.</div>' +
-      atSubsection('Medicare','medicare', '<div class="at-secret"><label class="at-field"><span>Medicare number (secure)</span><input name="medicare_number" type="password" autocomplete="off" spellcheck="false" maxlength="25"></label><button type="button" class="at-text-btn" data-at-reveal="medicare_number">Show</button></div>' +
+      atSubsection('Medicare','medicare', '<label class="at-field"><span>Medicare number (secure)</span><input name="medicare_number" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="25"></label>' +
       control('part_a','Part A effective date','date') + control('part_b','Part B effective date','date') +
       choice('medicare_status','Medicare status',[['active','Active'],['pending','Pending'],['unknown','Not confirmed']]) ) +
       atSubsection('Medicaid','medicaid', yesNo('medicaid_status','Has Medicaid?') +
-      '<div class="at-secret"><label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="password" autocomplete="off" spellcheck="false" maxlength="35"></label><button type="button" class="at-text-btn" data-at-reveal="medicaid_number">Show</button></div>' +
+      '<label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="text" autocomplete="off" spellcheck="false" maxlength="35"></label>' +
       choice('medicaid_level','Medicaid level',[['QMB','QMB'],['QMB+','QMB+'],['SLMB','SLMB'],['SLMB+','SLMB+'],['FBDE','Full Benefit Dual Eligible'],['QI','QI'],['QDWI','QDWI'],['other','Other']]) +
       area('eligibility_notes','Eligibility / assistance notes') ) +
       atSubsection('Medicare.gov','medicare-gov', '<label class="at-field"><span>Username</span><input name="medicare_gov_username" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' +
@@ -878,12 +878,7 @@ export function createAthenaMedicareFeature() {
       queued.splice(Number(target.dataset.atUnqueue),1);fillFiles();dirty=true;scheduleRecovery();return;
     }
     if(target.hasAttribute('data-at-view')){void viewAttachment(target.dataset.atView);return;}
-    if(target.hasAttribute('data-at-reveal')){
-      const control=host.querySelector('[name="'+target.dataset.atReveal+'"]');
-      if(!control)return;
-      control.type=control.type==='password'?'text':'password';
-      target.textContent=control.type==='password'?'Show':'Hide';
-    }
+
   }
   function onInput(event){
     const control=event.target;
