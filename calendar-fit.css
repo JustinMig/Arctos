@@ -227,3 +227,11 @@
     font-size: 12px;
   }
 }
+
+/* Completed appointments remain accessible in the selected day's popup. */
+.day-dialog .day-completed-box{margin-top:16px;border:1.5px solid #657c75;border-radius:12px;background:#edf5f0;overflow:hidden}
+.day-dialog .day-completed-box>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;font-size:14px;font-weight:800;color:#244c40;list-style:none}
+.day-dialog .day-completed-box>summary::-webkit-details-marker{display:none}
+.day-dialog .day-completed-box [data-completed-count]{background:#d0e7da;border-radius:99px;padding:4px 10px;font-size:12px}
+.day-dialog [data-completed-events]{padding:0 12px 12px;display:grid;gap:8px}
+.day-dialog .day-completed-empty{padding:12px;color:#5a726b;font-size:13px}
