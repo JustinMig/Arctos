@@ -47,3 +47,32 @@
 .client-four-tabs .client-main-tabs button{color:#53677a!important;border-color:#d7e0e8!important;background:#f4f7fa!important;box-shadow:none!important;transform:none!important;border-width:1px!important}
 .client-four-tabs .client-main-tabs button[aria-selected="true"]{color:#fff!important;background:#19374d!important;border-color:#19374d!important;box-shadow:0 2px 7px rgba(25,55,77,.13)!important;transform:none!important}
 .client-four-tabs .client-main-tabs button:hover:not([aria-selected="true"]){background:#e9f0f5!important;color:#234358!important}
+
+
+/* Coverage cards: dark outlines and distinct soft shades, matching Athena. */
+.client-four-tabs [data-client-group-panel="coverage"] .client-category{
+  border:2px solid #25313b;
+  border-radius:13px;
+}
+.client-four-tabs [data-client-group-panel="coverage"] .client-category>summary strong{
+  display:inline-block;
+  justify-self:start;
+  border:1.5px solid #25313b;
+  border-radius:6px;
+  padding:6px 11px;
+  background:rgba(255,255,255,.78);
+  color:#172330;
+  line-height:1.35;
+}
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="medicare"],
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="medicare"]>summary,
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="medicare"]>summary:hover{background:#eaf3fa}
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="life"],
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="life"]>summary,
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="life"]>summary:hover{background:#edf6ef}
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="hospital_indemnity"],
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="hospital_indemnity"]>summary,
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="hospital_indemnity"]>summary:hover{background:#f5eff9}
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="retirement"],
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="retirement"]>summary,
+.client-four-tabs [data-client-group-panel="coverage"] .client-category[data-client-category="retirement"]>summary:hover{background:#f9f3e8}
