@@ -42,7 +42,8 @@ export function clientForm(connected, agents = []) {
   const identity = (!connected ? '<p class="subtle span-all">Sensitive identifiers stay disabled until authentication and secure storage are connected.</p>' : '') +
     input('ssn', 'Social Security Number', { type: 'password', disabled: sensitive, extra: 'autocomplete="new-password"' }) +
     input('license_number', 'Driver’s License Number', { disabled: sensitive }) + dateInput('license_expiration', 'License Expiration') + input('license_state', 'License State');
-  const medicare = input('medicare_number', 'Medicare Number', { disabled: sensitive }) + dateInput('part_a_date', 'Part A Date') + dateInput('part_b_date', 'Part B Date') + input('medicaid_number', 'Medicaid Number', { disabled: sensitive }) +
+  const medicare = input('medicare_number', 'Medicare Number', { disabled: sensitive }) + dateInput('part_a_date', 'Part A Date') + dateInput('part_b_date', 'Part B Date');
+  const medicaid = input('medicaid_number', 'Medicaid Number', { disabled: sensitive }) +
     select('medicaid_level', 'Medicaid Level', [['', 'Select…'], 'None', 'QMB', 'QMB+', 'SLMB', 'SLMB+', 'QI', 'QDWI', 'FBDE']);
   const sunfire = input('sunfire_code', 'Sunfire Code', { placeholder: 'Enter Sunfire Code' });
   const health = input('health_carrier', 'Carrier / Original Medicare') + input('health_plan_id', 'Plan ID') + input('health_member_id', 'Member ID') + dateInput('health_effective_date', 'Effective Date') + input('health_premium', 'Monthly Premium', { type: 'number', extra: 'min="0" step="0.01"' });
@@ -52,7 +53,7 @@ export function clientForm(connected, agents = []) {
   const retirement = input('retirement_carrier', 'Carrier / Institution') + input('retirement_product', 'Product') + input('retirement_contract', 'Contract Number') + dateInput('retirement_effective_date', 'Effective Date') + input('retirement_contribution', 'Contribution', { type: 'number', extra: 'min="0" step="0.01"' }) + input('retirement_value', 'Account Value', { type: 'number', extra: 'min="0" step="0.01"' }) + textArea('retirement_notes', 'Retirement Notes');
   const panels = {
     information: group('Personal & Contact Information', general, true) + group('Identification', identity),
-    medicare: group('Medicare Information', medicare, true) + group('Sunfire', sunfire) + group('Health Plan Information', health) + group('Medicare Notes', medicareNotes) + note('Medicare cards and Scope of Appointment files belong in Documents.'),
+    medicare: group('Medicare Information', medicare, true) + group('Medicaid Information', medicaid) + group('Sunfire', sunfire) + group('Health Plan Information', health) + group('Medicare Notes', medicareNotes) + note('Medicare cards and Scope of Appointment files belong in Documents.'),
     life: group('Life Policy Information', life, true), retirement: group('Retirement Information', retirement, true),
     documents: `<div class="panel-card"><h3>Client Documents &amp; SOA</h3><p class="subtle">Files, card photos, policy documents, and signed Scopes of Appointment belong to this client.</p><div class="document-actions"><label class="btn secondary disabled">Upload File<input type="file" disabled hidden></label><button type="button" class="btn secondary" disabled>Camera / Scan</button><button type="button" class="btn secondary" disabled>Send SOA</button></div>${empty('Secure storage not connected', 'Uploads and signatures will be enabled after the new storage and signing services are configured.')}</div>`,
     notes: group('Client Notes', textArea('notes', 'Notes', 'Client-specific notes'), true)
