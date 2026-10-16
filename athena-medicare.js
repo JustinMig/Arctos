@@ -2,6 +2,7 @@
 import { supabase } from './supabase-client.js';
 import { esc, dateISO, dateText } from './core.js';
 import { loadAthenaClientSections, syncAthenaClient } from './athena-crm-sync.js';
+import { saveAthenaRecoveryDraft, readAthenaRecoveryDraft, clearAthenaRecoveryDraft } from './athena-draft-store.js';
 
 // A standalone, secure workflow alongside (not replacing) Medicare Reviews.
 // Private identity numbers live in the CRM's encrypted client-sensitive vault.
@@ -175,16 +176,131 @@ function shortFileName(name) { return String(name).replace(/[^a-zA-Z0-9._-]/g,'-
 export function createAthenaMedicareFeature() {
   let host=null, mode='home', record=null, linkedClient=null, files=[],queued=[],busy=false,dirty=false;
   let epoch=0, searchToken=0, searchTimer=0, medicareGovLoadToken=0, vaultOriginal={}, vaultLoaded=false;
-  let crmLoadToken=0;
+  let crmLoadToken=0, recoveryTimer=0, recoveryWrites=Promise.resolve(), recoveryUserPromise=null;
   const editedFields=new Set(), editedLists=new Set(), editedRows=new Set();
   const active = () => host?.isConnected;
-  const canLeave = () => !busy && (!dirty || window.confirm('Athena\'s Medicare has unsaved changes. Discard them?'));
+  const canLeave = () => !busy && (!dirty || window.confirm('Athena\'s Medicare has unsaved changes. Leave this screen? A secure recovery draft will stay on this device.'));
   const say = (msg,error=false) => {
     if (!host) return;
     host.querySelectorAll('[data-at-status]').forEach(node => {
       node.textContent=msg; node.classList.toggle('at-error',error);
     });
   };
+  function recoveryUser() {
+    if(!recoveryUserPromise)recoveryUserPromise=supabase.auth.getUser()
+      .then(({data,error})=>{if(error)throw error;return data?.user?.id||null;})
+      .catch(()=>{recoveryUserPromise=null;return null;});
+    return recoveryUserPromise;
+  }
+  // Capture even incomplete dates and form sections: a recovery draft must not
+  // fail validation just because an agent was interrupted mid-keystroke.
+  // Never capture Medicare/Medicaid IDs, passwords, verification secrets or files.
+  function captureRecovery() {
+    if(mode!=='edit'||!dirty||!host?.querySelector('.at-form'))return null;
+    const form=host.querySelector('.at-form'),data={};
+    for(const field of Object.values(FIELD_GROUPS).flat()){
+      if(field.startsWith('medicare_gov_'))continue;
+      data[field]=String(form.elements.namedItem(field)?.value||'');
+    }
+    for(const kind of ['doctors','pharmacies','medications'])data[kind]=collectRows(kind);
+    data.skipped_sections=skipped();
+    const open=host.querySelector('[data-at-step][open]');
+    return {
+      version:1,review_kind:record?.review_kind||form.elements.namedItem('review_kind')?.value||'new_intake',
+      record_id:record?.id||'',record_updated_at:record?.updated_at||'',client_id:linkedClient?.id||'',
+      data,edited_fields:[...editedFields],edited_lists:[...editedLists],edited_rows:[...editedRows],
+      active_step:Number(open?.dataset.atStep)||1,queued_file_count:queued.length,
+      saved_at:new Date().toISOString()
+    };
+  }
+  function persistRecovery() {
+    clearTimeout(recoveryTimer);
+    const snapshot=captureRecovery();
+    if(!snapshot)return recoveryWrites;
+    const task=recoveryWrites.catch(()=>{}).then(async()=>{
+      const uid=await recoveryUser();
+      if(!uid)throw Error('Sign in to enable draft recovery.');
+      await saveAthenaRecoveryDraft(uid,snapshot);
+    });
+    recoveryWrites=task;
+    task.then(()=>{
+      if(mode==='edit'&&dirty&&host?.querySelector('.at-form'))
+        say('Recovery draft saved automatically on this device.');
+    }).catch(error=>{
+      if(mode==='edit'&&dirty&&host?.querySelector('.at-form'))
+        say('Automatic draft recovery is unavailable: '+(error.message||'Save your review manually.'),true);
+    });
+    return task;
+  }
+  function scheduleRecovery() {
+    if(mode!=='edit'||!dirty)return;
+    clearTimeout(recoveryTimer);
+    recoveryTimer=setTimeout(()=>{void persistRecovery();},350);
+  }
+  function clearRecovery() {
+    clearTimeout(recoveryTimer);
+    const task=recoveryWrites.catch(()=>{}).then(async()=>{
+      const uid=await recoveryUser();
+      if(uid)await clearAthenaRecoveryDraft(uid);
+    });
+    recoveryWrites=task;
+    return task;
+  }
+  async function recoverOnOpen() {
+    const request=epoch;
+    try{
+      const uid=await recoveryUser();
+      if(!uid)return;
+      const saved=await readAthenaRecoveryDraft(uid);
+      if(!saved||request!==epoch||!active()||mode!=='home')return;
+      let existing={review_kind:saved.review_kind},client=null,stale=false;
+      if(saved.record_id){
+        const {data,error}=await supabase.from(TABLE).select('*').eq('id',saved.record_id).single();
+        if(error)throw error;
+        existing=data;
+        stale=!!saved.record_updated_at && data.updated_at!==saved.record_updated_at;
+        if(stale)existing={...data,updated_at:saved.record_updated_at};
+      }
+      if(saved.client_id){
+        const {data,error}=await supabase.from('clients')
+          .select('id,first_name,last_name,phone,date_of_birth,email,address1,city,state,zip_code,county,gender,veteran')
+          .eq('id',saved.client_id).single();
+        if(error)throw error;
+        client=data;
+      }
+      if(request!==epoch||!active()||mode!=='home')return;
+      reset();record=existing;linkedClient=client;
+      renderEditor(saved.data||{});
+      editedFields.clear();(saved.edited_fields||[]).forEach(x=>editedFields.add(x));
+      editedLists.clear();(saved.edited_lists||[]).forEach(x=>editedLists.add(x));
+      editedRows.clear();(saved.edited_rows||[]).forEach(x=>editedRows.add(x));
+      const step=host.querySelector('[data-at-step="'+(saved.active_step||1)+'"]');
+      if(step){host.querySelectorAll('[data-at-step]').forEach(x=>x.open=false);step.open=true;}
+      dirty=true;updateSections();
+      const warning=saved.queued_file_count?' Any attachments not uploaded yet must be selected again.':'';
+      say('Your '+(saved.review_kind==='annual_review'?'Medicare review':'Medicare intake')+
+        ' was recovered from this device. Medicare/Medicaid numbers and login credentials were not stored in the recovery draft.'+
+        (stale?' The saved record changed elsewhere; reopen it before saving to avoid overwriting newer work.':'')+warning);
+      if(client){
+        void loadCRMForClient(client.id,!existing?.id);
+        void loadMedicareGovFromCRM(client.id);
+        void readVault(client.id);
+        if(existing?.id)void loadFileList();
+      }
+    }catch(error){
+      if(request===epoch&&mode==='home'&&active()){
+        const top=host.querySelector('.at-home-grid');
+        if(top){
+          const notice=document.createElement('p');
+          notice.className='at-error';
+          notice.textContent='An Athena recovery draft exists but could not be restored: '+(error.message||'Please retry.');
+          top.insertAdjacentElement('beforebegin',notice);
+        }
+      }
+    }
+  }
+  const onAppHidden=()=>{if(document.visibilityState==='hidden')void persistRecovery();};
+  const onPageHide=()=>{void persistRecovery();};
   function reset() {
     record=null;linkedClient=null;files=[];queued=[];dirty=false;busy=false;vaultOriginal={};vaultLoaded=false;
     editedFields.clear();editedLists.clear();editedRows.clear();++crmLoadToken;
@@ -396,7 +512,7 @@ export function createAthenaMedicareFeature() {
     void readVault(client.id);
     void loadMedicareGovFromCRM(client.id);
     void loadCRMForClient(client.id, !record?.id);
-    dirty=true;updateSections();
+    dirty=true;updateSections();scheduleRecovery();
     say('Linked to existing CRM client '+displayName(client)+'.');
   }
 
@@ -577,6 +693,7 @@ export function createAthenaMedicareFeature() {
       }
       if(queued.length)await uploadQueuedFiles();
       dirty=false;
+      await clearRecovery().catch(error=>console.warn('Could not clear a completed recovery draft:',error));
       editedFields.clear();editedLists.clear();editedRows.clear();
       renderEditor(record.form_data||{});
       if(record.client_id)void loadMedicareGovFromCRM(record.client_id);
@@ -685,6 +802,7 @@ export function createAthenaMedicareFeature() {
   }
   function newReview(kind){
     if(!canLeave())return;
+    ++epoch;void clearRecovery();
     reset();record={review_kind:kind};renderEditor({review_date:dateText(new Date().toISOString().slice(0,10))});
   }
   async function removeReview(id,name,updatedAt){
@@ -737,7 +855,7 @@ export function createAthenaMedicareFeature() {
       }
       const picker=host.querySelector('.at-client-picker');
       if(picker)picker.outerHTML=clientPicker();
-      ++crmLoadToken;dirty=true;say('Client link removed. Select another existing client.');return;
+      ++crmLoadToken;dirty=true;scheduleRecovery();say('Client link removed. Select another existing client.');return;
     }
     if(target.hasAttribute('data-at-next')){
       const index=Number(target.dataset.atNext);
@@ -750,14 +868,14 @@ export function createAthenaMedicareFeature() {
       const kind=target.dataset.atAdd,box=host.querySelector('[data-at-repeat="'+kind+'"]');
       if(!box)return;
       box.insertAdjacentHTML('beforeend',repeatRow(kind,box.querySelectorAll('[data-at-row]').length));
-      editedLists.add(kind);dirty=true;updateSections();return;
+      editedLists.add(kind);dirty=true;updateSections();scheduleRecovery();return;
     }
     if(target.hasAttribute('data-at-remove')){
       const el=target.closest('[data-at-row]');if(el)el.remove();
-      editedLists.add(target.dataset.atRemove);dirty=true;updateSections();return;
+      editedLists.add(target.dataset.atRemove);dirty=true;updateSections();scheduleRecovery();return;
     }
     if(target.hasAttribute('data-at-unqueue')){
-      queued.splice(Number(target.dataset.atUnqueue),1);fillFiles();dirty=true;return;
+      queued.splice(Number(target.dataset.atUnqueue),1);fillFiles();dirty=true;scheduleRecovery();return;
     }
     if(target.hasAttribute('data-at-view')){void viewAttachment(target.dataset.atView);return;}
     if(target.hasAttribute('data-at-reveal')){
@@ -783,12 +901,12 @@ export function createAthenaMedicareFeature() {
     }else if(control.name)editedFields.add(control.name);
     dirty=true;
     if(HIP_TOTALS.includes(control.name))calcHip();
-    updateSections();say('Unsaved changes.');
+    updateSections();say('Unsaved changes.');scheduleRecovery();
   }
   function onChange(event){
     const input=event.target;
     if(input.hasAttribute('data-at-skip')){
-      dirty=true;updateSections();say('Skip selection changed. Save to keep it.');return;
+      dirty=true;updateSections();say('Skip selection changed. Save to keep it.');scheduleRecovery();return;
     }
     if(input.closest('.at-form') && input.name){
       const row=input.closest('[data-at-row]');
@@ -796,7 +914,7 @@ export function createAthenaMedicareFeature() {
         if(!row.dataset.atCrmId)row.dataset.atCrmId=crypto.randomUUID();
         editedLists.add(row.dataset.atRow);editedRows.add(row.dataset.atCrmId);
       }else editedFields.add(input.name);
-      dirty=true;updateSections();return;
+      dirty=true;updateSections();scheduleRecovery();return;
     }
     if(!input.hasAttribute('data-at-files'))return;
     for(const file of Array.from(input.files||[])){
@@ -807,7 +925,7 @@ export function createAthenaMedicareFeature() {
       queued.push(file);dirty=true;
     }
     input.value='';fillFiles();
-    say('Attachment queued. Save the review to upload it securely.');
+    say('Attachment queued. Save the review to upload it securely.');scheduleRecovery();
   }
   async function openHandoffClient(node,id){
     try{
@@ -830,6 +948,8 @@ export function createAthenaMedicareFeature() {
   }
   function mount(node){
     host=node;home();
+    document.addEventListener('visibilitychange',onAppHidden);
+    window.addEventListener('pagehide',onPageHide);
     host.addEventListener('click',onClick);
     host.addEventListener('input',onInput);
     host.addEventListener('change',onChange);
@@ -841,13 +961,17 @@ export function createAthenaMedicareFeature() {
     } catch {}
     if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handoff))
       void openHandoffClient(node,handoff);
+    else void recoverOnOpen();
   }
   function onToggle(event){
     if(!event.target.matches('[data-at-step]') || !event.target.open)return;
     host?.querySelectorAll('[data-at-step]').forEach(step=>{if(step!==event.target)step.open=false;});
   }
   function unmount(){
-    ++epoch;clearTimeout(searchTimer);++searchToken;
+    if(dirty)void persistRecovery();
+    document.removeEventListener('visibilitychange',onAppHidden);
+    window.removeEventListener('pagehide',onPageHide);
+    ++epoch;clearTimeout(searchTimer);clearTimeout(recoveryTimer);++searchToken;
     if(host){host.removeEventListener('click',onClick);host.removeEventListener('input',onInput);
       host.removeEventListener('change',onChange);host.removeEventListener('toggle',onToggle,true);}
     host=null;reset();
