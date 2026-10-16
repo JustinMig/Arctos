@@ -220,7 +220,7 @@ export function navigationMarkup(route) {
     group('medicare','Medicare','athena-medicare','medicare',medicareActive,
       navLink('athena-medicare','Medicare Workspace',route)+navLink('ma-plans','Compare MA Plans',route))+
     group('work','Work','work','work',workActive,
-      navLink('work','Work Queue',route)+navAction('leads','Leads')+navLink('campaigns','Campaigns',route)+
+      navLink('work','Work Queue',route)+navAction('notes','Notes')+navAction('leads','Leads')+navLink('campaigns','Campaigns',route)+
       '<a class="nav-child" href="#/dashboard">Today & Follow-ups</a>')+
     direct('communications','Messages','messages')+
     more;
