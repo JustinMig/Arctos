@@ -58,7 +58,7 @@ export function createWorkQueueFeature({openCampaign,openLead,openClient,openApp
   if(!isActive())return;
   host.innerHTML='<section class="work-queue" aria-label="Arctos Work Queue"><header class="wq-header">'+
     '<div><span class="eyebrow">ARCTOS / DAILY WORK</span><h2>Work Queue</h2><p>Leads, campaign contacts and follow-ups in one place. Actions still save to their original records.</p></div>'+
-    '<div class="wq-actions"><button type="button" class="btn primary" data-work-new-lead>+ Lead</button><button type="button" class="btn secondary" data-work-campaigns>Campaigns</button>'+
+    '<div class="wq-actions"><button type="button" class="btn secondary" data-tool="notes">Notes</button><button type="button" class="btn primary" data-work-new-lead>+ Lead</button><button type="button" class="btn secondary" data-work-campaigns>Campaigns</button>'+
     '<button type="button" class="btn secondary" data-work-refresh '+(loading?'disabled':'')+'>Refresh</button></div></header>'+
     '<nav class="wq-tabs" role="tablist" aria-label="Work status">'+WORK_VIEWS.map(([key,label])=>'<button type="button" role="tab" data-work-tab="'+key+'" aria-selected="'+(key===view)+'" class="'+(key===view?'active':'')+'">'+esc(label)+
     '<span class="wq-number">'+(loading?'—':items[key].length)+'</span></button>').join('')+'</nav>'+
