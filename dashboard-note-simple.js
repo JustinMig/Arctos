@@ -52,7 +52,7 @@ export function installSimpleDashboardNote(root) {
               <label class="field"><span>Note Name</span><input type="text" data-dashboard-note-title maxlength="160" placeholder="Name this note"></label>
               <label class="field"><span>Attach to client (optional)</span><input type="search" data-note-client-search placeholder="Search by first or last name" autocomplete="off"></label>
               <div data-note-client-results class="saved-note-list" style="max-height:150px;overflow:auto"></div>
-              <div data-note-client-selected class="subtle">No client attached — general note.</div>
+              <div class="saved-note-meta"><span data-note-client-selected class="subtle">No client attached — general note.</span><button type="button" class="btn secondary" data-note-client-clear>Remove client</button></div>
               <label class="field"><span>Note</span><textarea data-dashboard-note rows="12" placeholder="Write your note here…"></textarea></label>
               <p class="subtle" data-note-status>Ready for a new note.</p>
             </div>
@@ -92,6 +92,7 @@ export function installSimpleDashboardNote(root) {
         clientResults.innerHTML = rows.length ? rows.map(c => '<button type="button" class="btn secondary" data-select-note-client="' + esc(c.id) + '" style="text-align:left;justify-content:flex-start">' + esc([c.first_name,c.last_name].filter(Boolean).join(' ')) + '</button>').join('') : '<span class="subtle">No matching clients.</span>';
       } catch (error) { if (token === clientSearchToken) clientResults.textContent = error?.message || 'Client search unavailable.'; }
     });
+    dialog.querySelector('[data-note-client-clear]').addEventListener('click', () => { selectedClientId = null; selectedClientName = ''; showClient(); syncDirty(); });
     clientResults.addEventListener('click', e => {
       const button = e.target.closest('[data-select-note-client]');
       if (!button) return;
