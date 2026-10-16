@@ -90,7 +90,7 @@ function sectionBody(index) {
       '<label class="at-field" data-at-medicare-gov-verification="text"><span>Verification Phone Number</span><input name="medicare_gov_verification_phone_temporary" type="tel"></label>' +
       '<label class="at-field" data-at-medicare-gov-verification="email"><span>Verification Email</span><input name="medicare_gov_verification_email_temporary" type="email"></label>' +
       '<label class="at-field at-span"><span>Security Answer</span><input name="medicare_gov_security_answer_temporary" type="text" autocomplete="off" spellcheck="false"></label>');
-    case 3: return control('current_carrier','Current carrier') + control('current_plan','Current plan name') +
+    case 3: return control('current_carrier','Current carrier') + '<input type="hidden" name="current_plan">' +
       control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
       control('current_member_id','Member ID') +
       choice('current_plan_type','Plan type',[['HMO','HMO'],['PPO','PPO'],['HMO-POS','HMO-POS'],['D-SNP','D-SNP'],['C-SNP','C-SNP'],['Medigap','Supplement'],['Original Medicare','Original Medicare'],['Other','Other']]) +
