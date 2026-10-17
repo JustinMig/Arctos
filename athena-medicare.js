@@ -317,13 +317,46 @@ export function createAthenaMedicareFeature() {
   }
   function home() {
     mode='home';reset();
+    ++epoch;
     host.innerHTML = '<div class="at-app">' + hero('A dedicated workspace for thoughtful Medicare conversations, from first enrollment to annual review.') +
       '<div class="at-home-grid">' +
       '<button class="at-start-card" type="button" data-at-new="new_intake"><span class="at-card-num">01 / NEW</span><strong>New Medicare intake</strong><small>Build a client profile, confirm eligibility and record plan recommendations.</small><span class="at-card-link">Start intake →</span></button>' +
       '<button class="at-start-card" type="button" data-at-new="annual_review"><span class="at-card-num">02 / EXISTING</span><strong>Annual Medicare review</strong><small>Link an existing CRM client, identify changes and document next steps.</small><span class="at-card-link">Start review →</span></button>' +
       '<a class="at-start-card at-start-card-wide at-compare-card" href="#/ma-plans" data-at-compare><span class="at-card-num">03 / COMPARE</span><strong>Compare Medicare plans</strong><small>Review available Mississippi Medicare Advantage plans and compare 2027 coverage and benefits.</small><span class="at-card-link">Compare plans →</span></a>' +
-      '<button class="at-start-card at-start-card-wide" type="button" data-at-saved><span class="at-card-num">YOUR WORK</span><strong>Saved reviews & drafts</strong><small>Resume, update, complete or delete previously saved Athena records.</small><span class="at-card-link">Open saved work →</span></button></div>' +
+      '<button class="at-start-card at-start-card-wide" type="button" data-at-saved><span class="at-card-num">YOUR WORK</span><strong>All saved reviews</strong><small>Browse previously saved Athena records.</small><span class="at-card-link">Open saved work →</span></button></div>' +
+      '<section class="at-unfinished-home" aria-label="Unfinished client reviews"><div class="at-unfinished-head"><strong>Unfinished Client Reviews</strong><small>Pick up an unfinished review only when you choose to.</small></div><div data-at-unfinished-list><p class="at-helper">Checking unfinished reviews…</p></div></section>' +
       '<div class="at-security-line"><strong>Private by design.</strong> Your records stay in this CRM under your existing access permissions. Never enter card CVVs, payment-card numbers or Social Security numbers in notes.</div></div>';
+    void loadUnfinishedHome();
+  }
+  async function loadUnfinishedHome(){
+    const container=host?.querySelector('[data-at-unfinished-list]');
+    if(!container)return;
+    const request=epoch;
+    try{
+      const uid=await recoveryUser();
+      const [local,remote]=await Promise.all([
+        uid?readAthenaRecoveryDraft(uid).catch(()=>null):Promise.resolve(null),
+        supabase.from(TABLE).select('id,full_name,review_kind,workflow_status,updated_at')
+          .neq('workflow_status','completed').order('updated_at',{ascending:false}).limit(100)
+      ]);
+      if(request!==epoch||mode!=='home'||!container.isConnected)return;
+      if(remote.error)throw remote.error;
+      const seen=new Set();
+      const rows=[];
+      if(local){
+        const name=[local.data?.first_name,local.data?.last_name].filter(Boolean).join(' ')||'Unfinished client review';
+        rows.push('<div class="at-unfinished-item"><div><strong>'+esc(name)+'</strong><small>Unsaved changes on this device · '+esc(local.saved_at?new Date(local.saved_at).toLocaleString('en-US'):'Recent')+'</small></div><button type="button" class="at-btn at-btn-primary" data-at-resume-local>Resume</button></div>');
+        if(local.record_id)seen.add(local.record_id);
+      }
+      for(const row of remote.data||[]){
+        if(seen.has(row.id))continue;
+        rows.push('<div class="at-unfinished-item"><div><strong>'+esc(row.full_name||'Unnamed client')+'</strong><small>'+esc(row.review_kind==='annual_review'?'Annual Medicare review':'New Medicare intake')+' · '+esc(new Date(row.updated_at).toLocaleDateString('en-US'))+'</small></div><button type="button" class="at-btn at-btn-soft" data-at-open="'+esc(row.id)+'">Continue</button></div>');
+      }
+      container.innerHTML=rows.length?rows.join(''):'<p class="at-helper">No unfinished client reviews. Start a new intake or annual review above.</p>';
+    }catch(error){
+      if(request===epoch&&mode==='home'&&container.isConnected)
+        container.textContent='Could not load unfinished reviews: '+(error.message||'Please retry.');
+    }
   }
   function clientPicker() {
     const label = linkedClient ? '<div class="at-linked"><div><small>LINKED CRM CLIENT</small><strong>' + esc(displayName(linkedClient)) +
@@ -907,6 +940,7 @@ export function createAthenaMedicareFeature() {
     if(target.hasAttribute('data-at-home')){if(canLeave())home();return;}
     if(target.hasAttribute('data-at-new')){newReview(target.dataset.atNew);return;}
     if(target.hasAttribute('data-at-saved')){void savedList();return;}
+    if(target.hasAttribute('data-at-resume-local')){void recoverOnOpen();return;}
     if(target.hasAttribute('data-at-save')){void confirmSoaAndSave();return;}
     if(target.hasAttribute('data-at-schedule-appointment')){
       // The main CRM appointment editor is hosted on the dashboard.
@@ -1062,7 +1096,7 @@ export function createAthenaMedicareFeature() {
     } catch {}
     if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handoff))
       void openHandoffClient(node,handoff);
-    else void recoverOnOpen();
+    // Stay on the Athena home screen; unfinished reviews are listed for explicit selection.
   }
   function onToggle(event){
     if(!event.target.matches('[data-at-step]') || !event.target.open)return;
