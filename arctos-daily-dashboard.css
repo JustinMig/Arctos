@@ -72,3 +72,30 @@
  .daily-calendar #calendar-host{padding:6px}
  .daily-work-footer{align-items:flex-start}
 }
+
+/* Dashboard surface separation: gentle color, clear borders, and readable contrast. */
+.daily-dashboard{gap:17px}
+.daily-stat{box-shadow:0 3px 12px rgba(28,64,82,.055);border-width:1.5px}
+.daily-stat:nth-child(3n+1){background:#eff6fa;border-color:#c0d7e5}
+.daily-stat:nth-child(3n+2){background:#f0f7f3;border-color:#c6ddcf}
+.daily-stat:nth-child(3n){background:#f7f3ec;border-color:#e4d4bc}
+.daily-work-section{border:1.5px solid #c5d8e1;box-shadow:0 3px 13px rgba(29,63,78,.055)}
+.daily-work-section:nth-child(2n){border-color:#c8dccf}
+.daily-work-section>header{background:#eaf3f8;border-bottom:1px solid #cddfe9}
+.daily-work-section:nth-child(2n)>header{background:#edf5ee;border-bottom-color:#cfe0d3}
+.daily-calendar{border:1.5px solid #91b8c8;box-shadow:0 3px 14px rgba(29,63,78,.075)}
+.daily-calendar>summary{background:linear-gradient(110deg,#d8eaf3,#e5f0ee);border-left:5px solid #4a849a;color:#193e50}
+.daily-calendar>summary:hover{background:linear-gradient(110deg,#cce3ef,#dcebe7)}
+.daily-calendar-label{color:#1d4a5c}
+.daily-calendar-label small{color:#436677}
+.daily-calendar-toggle-label{color:#24596c;font-weight:800}
+.daily-calendar[open]>summary{border-bottom:1px solid #b6d1de}
+.daily-calendar #calendar-host{background:#f8fbfd}
+.needs-attention{border:1.5px solid #bacfdc;background:#f0f6fa;box-shadow:0 3px 14px rgba(29,63,78,.06)}
+.needs-section{border-color:#ccdce5}
+.dashboard-todo{border-color:#a9c2d0;box-shadow:0 3px 14px rgba(29,63,78,.065)}
+.dashboard-todo .dashboard-todo-head{background:linear-gradient(105deg,#dbeaf1,#e9f1ec);border-bottom-color:#b5cfd9}
+.dashboard-todo .dashboard-todo-column{border-color:#c6d8e0;background:#f3f8fa}
+.dashboard-todo .dashboard-todo-column.done{border-color:#c5dacf;background:#f3f8f4}
+.dashboard-todo .dashboard-todo-column h3{background:#dfeef5}
+.dashboard-todo .dashboard-todo-column.done h3{background:#e0f0e5}
