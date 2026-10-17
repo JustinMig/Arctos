@@ -516,6 +516,7 @@ export function createAthenaMedicareFeature() {
     void loadMedicareGovFromCRM(client.id);
     void loadCRMForClient(client.id, !record?.id);
     dirty=true;updateSections();scheduleRecovery();
+    host.querySelector('[data-at-doc-refresh]')?.click();
     say('Linked to existing CRM client '+displayName(client)+'.');
   }
 
