@@ -201,7 +201,8 @@ export function createAthenaMedicareFeature() {
     const form=host.querySelector('.at-form'),data={};
     for(const field of Object.values(FIELD_GROUPS).flat()){
       if(field.startsWith('medicare_gov_'))continue;
-      data[field]=String(form.elements.namedItem(field)?.value||'');
+      const input=form.elements.namedItem(field);
+      data[field]=input?.type==='checkbox'?(input.checked?'yes':'no'):String(input?.value||'');
     }
     data.overview_notes=String(form.elements.namedItem('overview_notes')?.value||'');
     for(const kind of ['doctors','pharmacies','medications'])data[kind]=collectRows(kind);
@@ -367,7 +368,11 @@ export function createAthenaMedicareFeature() {
     for(const keys of Object.values(FIELD_GROUPS)) for(const key of keys){
       const el=form.elements.namedItem(key);
       if (!el) continue;
-      el.value=DATE_FIELDS.has(key) ? dateInput(data[key]) : String(data[key] ?? '');
+      if(el.type==='checkbox')el.checked=data[key]==='yes'||data[key]===true;
+      else if(el.tagName==='SELECT' && data[key] && !Array.from(el.options).some(option=>option.value===String(data[key]))) {
+        el.add(new Option(String(data[key])+' (Existing)',String(data[key])));
+        el.value=String(data[key]);
+      }else el.value=DATE_FIELDS.has(key) ? dateInput(data[key]) : String(data[key] ?? '');
     }
     const overviewNote=form.elements.namedItem('overview_notes');
     if(overviewNote)overviewNote.value=String(data.overview_notes??'');
@@ -397,7 +402,7 @@ export function createAthenaMedicareFeature() {
       const message=section.querySelector('[data-at-skipped]');
       if(fieldBox)fieldBox.hidden=!!skipped;
       if(message)message.hidden=!skipped;
-      const filled=FIELD_GROUPS[number].some(key=>String(form.elements.namedItem(key)?.value||'').trim()) ||
+      const filled=FIELD_GROUPS[number].some(key=>{const el=form.elements.namedItem(key);return el?.type==='checkbox'?el.checked:String(el?.value||'').trim();}) ||
         (number===4 && (collectRows('doctors').length || collectRows('pharmacies').length)) ||
         (number===5 && collectRows('medications').length);
       if(skipped || filled)done++;
@@ -429,7 +434,8 @@ export function createAthenaMedicareFeature() {
     const previous=record?.form_data||{};
     for(const [number,keys] of Object.entries(FIELD_GROUPS)){
       for(const key of keys){
-        let val=String(form.elements.namedItem(key)?.value||'').trim();
+        const element=form.elements.namedItem(key);
+        let val=element?.type==='checkbox'?(element.checked?'yes':'no'):String(element?.value||'').trim();
         if(skip.has(Number(number)))val=String(previous[key]||'');
         if(DATE_FIELDS.has(key) && val){
           if(!skip.has(Number(number)))val=cleanDate(val,key.replaceAll('_',' '));
@@ -660,6 +666,23 @@ export function createAthenaMedicareFeature() {
       if(status)status.textContent='SOA opened. Signed documents are stored in the linked client record.';
     }catch(error){if(status)status.textContent=error?.message||'Could not open SOA.';}
   }
+  function confirmSoaAndSave(statusOverride=''){
+    if(busy)return;
+    const modal=document.createElement('dialog');
+    modal.className='at-soa-confirm-dialog';
+    modal.innerHTML='<div class="at-soa-confirm-inner"><h2>Did you complete the SOA?</h2><p>Confirm that the Scope of Appointment has been completed before saving or finishing this review.</p><div class="at-soa-confirm-actions"><button type="button" class="at-btn at-btn-soft" data-soa-confirm-no>No — Go Back</button><button type="button" class="at-btn at-btn-primary" data-soa-confirm-yes>Yes — Continue</button></div></div>';
+    document.body.append(modal);
+    const close=()=>{modal.close();modal.remove();};
+    modal.querySelector('[data-soa-confirm-no]').addEventListener('click',close);
+    modal.querySelector('[data-soa-confirm-yes]').addEventListener('click',()=>{
+      close();
+      const field=host?.querySelector('[name="soa_status"]');
+      if(field && field.value!=='signed'){field.value='signed';editedFields.add('soa_status');dirty=true;}
+      void saveReview(statusOverride);
+    });
+    modal.addEventListener('cancel',event=>{event.preventDefault();close();});
+    modal.showModal();
+  }
   async function saveReview(statusOverride='') {
     if(busy||!host?.querySelector('.at-form'))return;
     busy=true;
@@ -884,11 +907,17 @@ export function createAthenaMedicareFeature() {
     if(target.hasAttribute('data-at-home')){if(canLeave())home();return;}
     if(target.hasAttribute('data-at-new')){newReview(target.dataset.atNew);return;}
     if(target.hasAttribute('data-at-saved')){void savedList();return;}
-    if(target.hasAttribute('data-at-save')){void saveReview();return;}
+    if(target.hasAttribute('data-at-save')){void confirmSoaAndSave();return;}
+    if(target.hasAttribute('data-at-schedule-appointment')){
+      const button=document.querySelector('[data-new-appointment]');
+      if(button)button.click();
+      else say('Open the Appointments calendar to create a follow-up appointment.',true);
+      return;
+    }
     if(target.hasAttribute('data-at-soa-text')){void doAthenaSoa('text');return;}
     if(target.hasAttribute('data-at-soa-sign')){void doAthenaSoa('sign');return;}
     if(target.hasAttribute('data-at-soa-view')){void doAthenaSoa('view');return;}
-    if(target.hasAttribute('data-at-complete')){void saveReview('completed');return;}
+    if(target.hasAttribute('data-at-complete')){void confirmSoaAndSave('completed');return;}
     if(target.hasAttribute('data-at-open')){void openSaved(target.dataset.atOpen);return;}
     if(target.hasAttribute('data-at-delete')){
       const id=target.dataset.atDelete||record?.id;
@@ -913,7 +942,7 @@ export function createAthenaMedicareFeature() {
     }
     if(target.hasAttribute('data-at-next')){
       const index=Number(target.dataset.atNext);
-      if(index===SECTIONS.length){void saveReview();return;}
+      if(index===SECTIONS.length){void confirmSoaAndSave('completed');return;}
       const next=host.querySelector('[data-at-step="'+(index+1)+'"]');
       host.querySelectorAll('[data-at-step]').forEach(e=>e.open=false);
       if(next){next.open=true;next.scrollIntoView({behavior:'smooth',block:'nearest'});}return;
