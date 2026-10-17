@@ -3,6 +3,8 @@ import { supabase } from './supabase-client.js';
 import { esc, dateISO, dateText } from './core.js';
 import { loadAthenaClientSections, syncAthenaClient } from './athena-crm-sync.js';
 import { saveAthenaRecoveryDraft, readAthenaRecoveryDraft, clearAthenaRecoveryDraft } from './athena-draft-store.js';
+import { openSoaForClient, viewLatestSoaForClient } from './client-soa-compliance.js';
+import { athenaDocumentsMarkup, bindAthenaDocuments } from './athena-client-documents.js';
 
 // A standalone, secure workflow alongside (not replacing) Medicare Reviews.
 // Private identity numbers live in the CRM's encrypted client-sensitive vault.
@@ -123,7 +125,7 @@ function sectionBody(index) {
       control('hip_snf','Skilled nursing total','number') +
       '<div class="at-hip-total at-span">Total planned HIP amount <strong data-at-hip-total>$0.00</strong></div>' +
       area('hip_notes','Hospital indemnity comparison / notes');
-    case 9: return control('review_date','Conversation date','date') +
+    case 9: return '<div class="at-span" style="border:1.5px solid #8baaa2;border-radius:11px;padding:14px;background:#eaf3ef"><strong>Scope of Appointment — Complete SOA</strong><p class="at-helper">Use the same secure SOA process as Client Records. Signed SOAs are saved in the client\'s Documents folder.</p><div style="display:flex;flex-wrap:wrap;gap:9px;margin:10px 0"><button type="button" class="at-btn at-btn-primary" data-at-soa-text>Text SOA</button><button type="button" class="at-btn at-btn-soft" data-at-soa-sign>Sign Now</button><button type="button" class="at-btn at-btn-soft" data-at-soa-view>View Signed SOA</button></div><p class="at-helper" data-at-soa-message role="status">For a new client, the client record will be created before signing or texting.</p></div>' + control('review_date','Conversation date','date') +
       choice('soa_status','Scope of Appointment (SOA)',[['signed','Signed'],['not_signed','Not signed'],['not_required','Not required / confirmed'],['pending','Pending']]) +
       area('soa_reason','SOA details / reason if not signed') +
       yesNo('permission_to_contact','Permission to follow up?') +
@@ -374,6 +376,7 @@ export function createAthenaMedicareFeature() {
       if(box)box.innerHTML=rows.map((x,i)=>repeatRow(kind,i,x)).join('');
     }
     fillFiles();
+    bindAthenaDocuments(host,()=>linkedClient?.id,ensureAthenaClient);
     updateSections(); calcHip();
     dirty=false;
     say(record?.id ? 'Saved review loaded. Changes you make will also update the linked CRM client.' : 'New review — nothing saved yet.');
@@ -613,6 +616,33 @@ export function createAthenaMedicareFeature() {
     if(error)throw error;
     return client;
   }
+  async function ensureAthenaClient() {
+    if(linkedClient?.id)return linkedClient.id;
+    const data=collectData();
+    if(!data.first_name||!data.last_name)throw Error('Enter the client first and last name in Section 1 before using SOA or documents.');
+    const {data:auth,error}=await supabase.auth.getUser();
+    if(error||!auth?.user?.id)throw Error('Sign in to create the client.');
+    const duplicate=await findPotentialDuplicate(data);
+    if(duplicate){
+      if(!window.confirm('A matching client exists: '+displayName(duplicate)+'. Link this client and use their documents?'))throw Error('Choose the existing client in Section 1 before continuing.');
+      selectClient(duplicate);
+    }else{
+      const client=await createClient(data,auth.user.id);
+      selectClient(client);
+      say('Client created in CRM. You can now sign the SOA and upload documents; remember to save the Athena review.');
+    }
+    return linkedClient.id;
+  }
+  async function doAthenaSoa(method){
+    const status=host?.querySelector('[data-at-soa-message]');
+    try{
+      if(status)status.textContent='Opening SOA…';
+      const id=await ensureAthenaClient();
+      if(method==='view')await viewLatestSoaForClient(id);
+      else await openSoaForClient(id,method);
+      if(status)status.textContent='SOA opened. Signed documents are stored in the linked client record.';
+    }catch(error){if(status)status.textContent=error?.message||'Could not open SOA.';}
+  }
   async function saveReview(statusOverride='') {
     if(busy||!host?.querySelector('.at-form'))return;
     busy=true;
@@ -834,6 +864,9 @@ export function createAthenaMedicareFeature() {
     if(target.hasAttribute('data-at-new')){newReview(target.dataset.atNew);return;}
     if(target.hasAttribute('data-at-saved')){void savedList();return;}
     if(target.hasAttribute('data-at-save')){void saveReview();return;}
+    if(target.hasAttribute('data-at-soa-text')){void doAthenaSoa('text');return;}
+    if(target.hasAttribute('data-at-soa-sign')){void doAthenaSoa('sign');return;}
+    if(target.hasAttribute('data-at-soa-view')){void doAthenaSoa('view');return;}
     if(target.hasAttribute('data-at-complete')){void saveReview('completed');return;}
     if(target.hasAttribute('data-at-open')){void openSaved(target.dataset.atOpen);return;}
     if(target.hasAttribute('data-at-delete')){
