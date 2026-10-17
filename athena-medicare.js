@@ -352,7 +352,7 @@ export function createAthenaMedicareFeature() {
         if(seen.has(row.id))continue;
         rows.push('<div class="at-unfinished-item"><div><strong>'+esc(row.full_name||'Unnamed client')+'</strong><small>'+esc(row.review_kind==='annual_review'?'Annual Medicare review':'New Medicare intake')+' · '+esc(new Date(row.updated_at).toLocaleDateString('en-US'))+'</small></div><button type="button" class="at-btn at-btn-soft" data-at-open="'+esc(row.id)+'">Continue</button><button type="button" class="at-btn at-btn-delete" data-at-delete="'+esc(row.id)+'" data-at-name="'+esc(row.full_name||'this client')+'" data-at-updated="'+esc(row.updated_at)+'">Delete</button></div>');
       }
-      container.innerHTML=rows.length?rows.join(''):'<p class="at-helper">No unfinished client reviews. Start a new intake or annual review above.</p>';
+      container.innerHTML=rows.length?'<div class="at-unfinished-grid">'+rows.join('')+'</div>':'<p class="at-helper">No unfinished client reviews. Start a new intake or annual review above.</p>';
     }catch(error){
       if(request===epoch&&mode==='home'&&container.isConnected)
         container.textContent='Could not load unfinished reviews: '+(error.message||'Please retry.');
