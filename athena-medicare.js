@@ -21,8 +21,8 @@ const FIELD_GROUPS = {
   5: [],
   6: ['care_priorities','dental_need','vision_need','hearing_need','transport_need','otc_need','giveback_need','food_need','preferred_hospitals','network_concerns'],
   7: ['recommended_carrier','recommended_plan','recommended_plan_id','new_effective','new_premium','new_moop','dental_benefit','vision_benefit','hearing_benefit','otc_benefit','food_benefit','transport_benefit','giveback_benefit','pcp_copay','specialist_copay','hospital_copay','recommendation_reason','doctor_network_verified','drug_coverage_verified'],
-  8: ['hip_hospital_day','hip_days','hip_hospital_total','hip_ambulance','hip_outpatient','hip_cancer','hip_snf','hip_notes'],
-  9: ['review_date','soa_status','soa_reason','permission_to_contact','application_status','workflow_status','followup_date','followup_action','next_steps','client_questions','private_notes']
+  8: ['hip_hospital_day','hip_days','hip_hospital_total','hip_ambulance_cost','hip_ambulance','hip_outpatient_cost','hip_outpatient','hip_cancer_face','hip_cancer','hip_snf_cost','hip_snf','hip_notes'],
+  9: ['review_date','soa_status','soa_reason','workflow_status','private_notes']
 };
 const DATE_FIELDS = new Set(['dob','part_a','part_b','new_effective','review_date','followup_date']);
 const HIP_TOTALS = ['hip_hospital_total','hip_ambulance','hip_outpatient','hip_cancer','hip_snf'];
@@ -38,8 +38,11 @@ const SECTIONS = [
   ['Review, SOA & follow-up','Document the conversation, next steps and outcome.']
 ];
 const DOCTOR_COLS = [['name','Doctor name'],['specialty','Specialty'],['city','City'],['state','State'],['network','Network notes']];
+const CARRIER_OPTIONS = ['Aetna','Humana','Cigna/Healthspring','Devoted','United Health Care'];
+const NEED_KEYS = ['dental_need','vision_need','hearing_need','transport_need','otc_need','food_need','giveback_need'];
+const needCheckbox = (key,label) => '<label class="at-field at-need-check"><input type="checkbox" name="'+key+'" value="yes"><span>'+esc(label)+'</span></label>';
 const PHARMACY_COLS = [['name','Pharmacy'],['city','City'],['state','State'],['preferred','Preferred / notes']];
-const MED_COLS = [['name','Medication'],['strength','Strength / dosage'],['frequency','Frequency'],['quantity','Quantity / refill'],['notes','Notes']];
+const MED_COLS = [['name','Medication'],['strength','Strength / dosage'],['notes','Notes']];
 
 function control(name,label,kind='text',hint='') {
   const type = kind === 'date' ? 'text' : kind;
@@ -65,11 +68,12 @@ function repeatArea(kind,title,columns) {
 }
 function repeatRow(kind,index,data={}) {
   const cols = kind === 'doctors' ? DOCTOR_COLS : kind === 'pharmacies' ? PHARMACY_COLS : MED_COLS;
+  const title=esc((kind === 'doctors' ? 'Doctor' : kind === 'pharmacies' ? 'Pharmacy' : 'Medication') + ' ' + (index+1));
+  const fields=cols.map(([key,label]) => '<label class="at-field"><span>' + esc(label) + '</span><input name="' + key +
+      '" value="' + esc(data[key] || '') + '" autocomplete="off"></label>').join('');
+  if(kind==='doctors')return '<details class="at-repeat-row at-doctor-collapse" data-at-row="doctors" data-at-crm-id="'+esc(data.crm_id||'')+'"' +(index===0?' open':'')+'><summary><strong>'+title+(data.name?' — '+esc(data.name):'')+'</strong><span>Expand / Collapse</span></summary><div class="at-grid">'+fields+'</div><button class="at-text-btn" type="button" data-at-remove="doctors">Remove Doctor</button></details>';
   return '<div class="at-repeat-row" data-at-row="' + kind + '" data-at-crm-id="' + esc(data.crm_id || '') + '"><div class="at-row-head"><strong>' +
-    esc((kind === 'doctors' ? 'Doctor' : kind === 'pharmacies' ? 'Pharmacy' : 'Medication') + ' ' + (index+1)) +
-    '</strong><button class="at-text-btn" type="button" data-at-remove="' + kind + '">Remove</button></div><div class="at-grid">' +
-    cols.map(([key,label]) => '<label class="at-field"><span>' + esc(label) + '</span><input name="' + key +
-      '" value="' + esc(data[key] || '') + '" autocomplete="off"></label>').join('') + '</div></div>';
+    title + '</strong><button class="at-text-btn" type="button" data-at-remove="' + kind + '">Remove</button></div><div class="at-grid">' + fields + '</div></div>';
 }
 function atSubsection(title,kind,fields){return '<fieldset class="at-subsection at-subsection-'+kind+' at-span"><legend>'+esc(title)+'</legend><div class="at-grid">'+fields+'</div></fieldset>';}
 function sectionBody(index) {
@@ -81,9 +85,8 @@ function sectionBody(index) {
       choice('gender','Sex',[['male','Male'],['female','Female'],['other','Other / prefer not to say']]);
     case 2: return '<div class="at-note at-span">Medicare and Medicaid numbers are stored securely in the CRM vault.</div>' +
       atSubsection('Medicare','medicare', '<label class="at-field"><span>Medicare number (secure)</span><input name="medicare_number" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="25"></label>' +
-      control('part_a','Part A effective date','date') + control('part_b','Part B effective date','date') +
-      choice('medicare_status','Medicare status',[['active','Active'],['pending','Pending'],['unknown','Not confirmed']]) ) +
-      atSubsection('Medicaid','medicaid', yesNo('medicaid_status','Has Medicaid?') +
+      control('part_a','Part A effective date','date') + control('part_b','Part B effective date','date') ) +
+      atSubsection('Medicaid','medicaid',
       '<label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="text" autocomplete="off" spellcheck="false" maxlength="35"></label>' +
       choice('medicaid_level','Medicaid level',[['QMB','QMB'],['QMB+','QMB+'],['SLMB','SLMB'],['SLMB+','SLMB+'],['FBDE','Full Benefit Dual Eligible'],['QI','QI'],['QDWI','QDWI'],['other','Other']]) +
       area('eligibility_notes','Eligibility / assistance notes') ) +
@@ -93,7 +96,7 @@ function sectionBody(index) {
       '<label class="at-field" data-at-medicare-gov-verification="text"><span>Verification Phone Number</span><input name="medicare_gov_verification_phone_temporary" type="tel"></label>' +
       '<label class="at-field" data-at-medicare-gov-verification="email"><span>Verification Email</span><input name="medicare_gov_verification_email_temporary" type="email"></label>' +
       '<label class="at-field at-span"><span>Security Answer</span><input name="medicare_gov_security_answer_temporary" type="text" autocomplete="off" spellcheck="false"></label>');
-    case 3: return control('current_carrier','Current carrier') + '<input type="hidden" name="current_plan">' +
+    case 3: return choice('current_carrier','Current carrier',CARRIER_OPTIONS.map(x=>[x,x])) + '<input type="hidden" name="current_plan">' +
       control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
       control('current_member_id','Member ID') +
       choice('current_plan_type','Plan type',[['HMO','HMO'],['PPO','PPO'],['HMO-POS','HMO-POS'],['D-SNP','D-SNP'],['C-SNP','C-SNP'],['Medigap','Supplement'],['Original Medicare','Original Medicare'],['Other','Other']]) +
@@ -104,13 +107,13 @@ function sectionBody(index) {
     case 5: return repeatArea('medications','Medications',MED_COLS) +
       '<p class="at-helper at-span">Confirm medication strengths, quantity, preferred pharmacy, formulary and any prior authorization requirements.</p>';
     case 6: return area('care_priorities','Top priorities','What matters most: cost, doctors, dental, prescriptions, etc.') +
-      yesNo('dental_need','Dental / dentures important?') + yesNo('vision_need','Vision important?') +
-      yesNo('hearing_need','Hearing important?') + yesNo('transport_need','Transportation needed?') +
-      yesNo('otc_need','OTC allowance important?') + yesNo('food_need','Food / utility help needed?') +
-      yesNo('giveback_need','Part B giveback important?') +
-      area('preferred_hospitals','Preferred hospitals and specialists') + area('network_concerns','Out-of-network or prior authorization concerns');
+      needCheckbox('dental_need','Dental / dentures') + needCheckbox('vision_need','Vision') +
+      needCheckbox('hearing_need','Hearing') + needCheckbox('transport_need','Transportation') +
+      needCheckbox('otc_need','OTC allowance') + needCheckbox('food_need','Food / utilities') +
+      needCheckbox('giveback_need','Part B giveback') +
+      area('preferred_hospitals','Preferred hospitals and specialists');
     case 7: return control('recommended_carrier','Recommended carrier') + control('recommended_plan','Recommended plan') +
-      control('recommended_plan_id','Plan ID (contract–PBP)') + control('new_effective','Planned start date','date') +
+      control('new_effective','Planned start date','date') +
       control('new_premium','Monthly premium','number') + control('new_moop','In-network medical MOOP','number') +
       control('dental_benefit','Dental') + control('vision_benefit','Vision') + control('hearing_benefit','Hearing') +
       control('otc_benefit','OTC amount / frequency') + control('food_benefit','Food / utility benefits') +
@@ -120,22 +123,18 @@ function sectionBody(index) {
       yesNo('doctor_network_verified','Doctor network verified?') + yesNo('drug_coverage_verified','Drugs / pharmacy verified?') +
       area('recommendation_reason','Why this plan was recommended');
     case 8: return control('hip_hospital_day','Hospital cost per day','number') + control('hip_days','Hospital days','number') +
-      control('hip_hospital_total','Hospital total price','number') + control('hip_ambulance','Ambulance total','number') +
-      control('hip_outpatient','Outpatient total','number') + control('hip_cancer','Cancer total','number') +
-      control('hip_snf','Skilled nursing total','number') +
+      control('hip_hospital_total','Hospital total price','number') + '<div class="at-span"></div>' +
+      control('hip_ambulance_cost','Ambulance cost','number') + control('hip_ambulance','Ambulance total','number') +
+      control('hip_outpatient_cost','Outpatient cost','number') + control('hip_outpatient','Outpatient total','number') +
+      control('hip_cancer_face','Cancer face amount','number') + control('hip_cancer','Cancer total','number') +
+      control('hip_snf_cost','Skilled nursing cost','number') + control('hip_snf','Skilled nursing total','number') +
       '<div class="at-hip-total at-span">Total planned HIP amount <strong data-at-hip-total>$0.00</strong></div>' +
       area('hip_notes','Hospital indemnity comparison / notes');
     case 9: return '<div class="at-span" style="border:1.5px solid #8baaa2;border-radius:11px;padding:14px;background:#eaf3ef"><strong>Scope of Appointment — Complete SOA</strong><p class="at-helper">Use the same secure SOA process as Client Records. Signed SOAs are saved in the client\'s Documents folder.</p><div style="display:flex;flex-wrap:wrap;gap:9px;margin:10px 0"><button type="button" class="at-btn at-btn-primary" data-at-soa-text>Text SOA</button><button type="button" class="at-btn at-btn-soft" data-at-soa-sign>Sign Now</button><button type="button" class="at-btn at-btn-soft" data-at-soa-view>View Signed SOA</button></div><p class="at-helper" data-at-soa-message role="status">For a new client, the client record will be created before signing or texting.</p></div>' + control('review_date','Conversation date','date') +
       choice('soa_status','Scope of Appointment (SOA)',[['signed','Signed'],['not_signed','Not signed'],['not_required','Not required / confirmed'],['pending','Pending']]) +
       area('soa_reason','SOA details / reason if not signed') +
-      yesNo('permission_to_contact','Permission to follow up?') +
-      choice('application_status','Application / review outcome',[['not_started','Not started'],['considering','Considering options'],['submitted','Application submitted'],['enrolled','Enrollment confirmed'],['declined','Declined / no change'],['other','Other']]) +
-      choice('workflow_status','Review status',[['draft','Draft / in progress'],['follow_up','Follow-up required'],['completed','Completed']]) +
-      control('followup_date','Follow-up date','date') +
-      control('followup_action','Follow-up action / task') +
-      area('client_questions','Questions or concerns raised') +
-      area('next_steps','Agreed next steps') +
       area('private_notes','Additional review notes') +
+      '<div class="at-span at-appointment-action"><strong>Another appointment</strong><p class="at-helper">Schedule a follow-up in the CRM appointment calendar.</p><button type="button" class="at-btn at-btn-soft" data-at-schedule-appointment>+ Set Appointment</button></div>' +
       '<p class="at-helper at-span">Recording an SOA status here does not replace the signed Scope of Appointment. Confirm plan and eligibility details in official carrier/CMS documents.</p>';
     default: return '';
   }
