@@ -242,3 +242,9 @@
 #athena-medicare-host .at-subsection-medicaid{background:#f0f8f2}
 #athena-medicare-host .at-subsection-medicare-gov{background:#f7f3fa}
 @media(max-width:650px){#athena-medicare-host .at-subsection{padding:12px 10px}#athena-medicare-host .at-subsection>.at-grid{grid-template-columns:1fr}}
+
+/* Athena review supporting-document camera and drag/drop */
+.at-attachment-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.at-drop-zone{margin-top:10px;padding:22px 14px;border:2px dashed #90aaba;border-radius:10px;text-align:center;background:#f8fbfc;color:#476777;font-size:13px;min-height:70px}
+.at-drop-zone.at-drop-active{border-color:#376c7c;background:#e4f2f2;color:#214c56}
+.at-drop-zone:focus-visible{outline:3px solid #376c7c;outline-offset:2px}
