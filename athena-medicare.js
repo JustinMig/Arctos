@@ -349,7 +349,8 @@ export function createAthenaMedicareFeature() {
       '<form class="at-form" autocomplete="off" novalidate><input type="hidden" name="review_kind" value="' + esc(type) + '">' +
       '<div class="at-steps">' + SECTIONS.map((_,i)=>stepMarkup(i+1)).join('') + '</div>' +
       '<div class="at-attachments"><div><strong>Supporting documents</strong><p>Securely attach plan letters, medication lists or pharmacy pictures. Files upload when you save.</p></div>' +
-      '<label class="at-btn at-btn-soft at-file-button">+ Add photos or PDFs<input type="file" data-at-files accept="image/*,application/pdf" multiple hidden></label>' +
+      '<div class="at-attachment-actions"><label class="at-btn at-btn-soft at-file-button">+ Add photos or PDFs<input type="file" data-at-files accept="image/*,application/pdf" multiple hidden></label><label class="at-btn at-btn-soft at-file-button">Take Picture<input type="file" data-at-files data-at-camera accept="image/*" capture="environment" hidden></label></div>' +
+      '<div class="at-drop-zone" data-at-drop-zone role="region" aria-label="Drop supporting documents here" tabindex="0">Drag and drop photos or PDFs here, or use the buttons above.</div>' +
       '<div data-at-file-list class="at-file-list"></div></div>' +
       '<div class="at-save-footer"><span data-at-status role="status" aria-live="polite">Ready to complete.</span>' +
       '<button type="button" class="at-btn at-btn-primary" data-at-save>Save Athena review</button></div>' +
@@ -932,6 +933,28 @@ export function createAthenaMedicareFeature() {
     if(HIP_TOTALS.includes(control.name))calcHip();
     updateSections();say('Unsaved changes.');scheduleRecovery();
   }
+  function queueSupportingFiles(fileList){
+    let added=0;
+    for(const file of Array.from(fileList||[])){
+      const mime=mimeOf(file);
+      if(!ALLOWED_FILES.has(mime)||file.size>FILE_LIMIT){
+        say('Choose photos or PDFs no larger than 25 MB.',true);continue;
+      }
+      queued.push(file);dirty=true;added++;
+    }
+    if(added){fillFiles();say(added+' attachment'+(added===1?'':'s')+' queued. Save the review to upload securely.');scheduleRecovery();}
+  }
+  function onAttachmentDrag(event){
+    const zone=event.target.closest?.('[data-at-drop-zone]');
+    if(!zone||!host?.contains(zone))return;
+    event.preventDefault();
+    if(event.type==='drop'){
+      zone.classList.remove('at-drop-active');
+      queueSupportingFiles(event.dataTransfer?.files);
+    }else if(event.type==='dragleave'){
+      if(!zone.contains(event.relatedTarget))zone.classList.remove('at-drop-active');
+    }else zone.classList.add('at-drop-active');
+  }
   function onChange(event){
     const input=event.target;
     if(input.hasAttribute('data-at-skip')){
@@ -946,15 +969,8 @@ export function createAthenaMedicareFeature() {
       dirty=true;updateSections();scheduleRecovery();return;
     }
     if(!input.hasAttribute('data-at-files'))return;
-    for(const file of Array.from(input.files||[])){
-      const mime=mimeOf(file);
-      if(!ALLOWED_FILES.has(mime)||file.size>FILE_LIMIT){
-        say('Choose photos or PDFs no larger than 25 MB.',true);continue;
-      }
-      queued.push(file);dirty=true;
-    }
-    input.value='';fillFiles();
-    say('Attachment queued. Save the review to upload it securely.');scheduleRecovery();
+    queueSupportingFiles(input.files);
+    input.value='';
   }
   async function openHandoffClient(node,id){
     try{
@@ -982,6 +998,7 @@ export function createAthenaMedicareFeature() {
     host.addEventListener('click',onClick);
     host.addEventListener('input',onInput);
     host.addEventListener('change',onChange);
+    for(const type of ['dragenter','dragover','dragleave','drop'])host.addEventListener(type,onAttachmentDrag);
     host.addEventListener('toggle',onToggle,true);
     let handoff='';
     try {
@@ -1002,7 +1019,8 @@ export function createAthenaMedicareFeature() {
     window.removeEventListener('pagehide',onPageHide);
     ++epoch;clearTimeout(searchTimer);clearTimeout(recoveryTimer);++searchToken;
     if(host){host.removeEventListener('click',onClick);host.removeEventListener('input',onInput);
-      host.removeEventListener('change',onChange);host.removeEventListener('toggle',onToggle,true);}
+      host.removeEventListener('change',onChange);host.removeEventListener('toggle',onToggle,true);
+      for(const type of ['dragenter','dragover','dragleave','drop'])host.removeEventListener(type,onAttachmentDrag);}
     host=null;reset();
   }
   return {mount,unmount,canLeave,destroy:unmount};
