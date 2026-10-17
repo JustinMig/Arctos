@@ -204,6 +204,7 @@ export function createAthenaMedicareFeature() {
       if(field.startsWith('medicare_gov_'))continue;
       data[field]=String(form.elements.namedItem(field)?.value||'');
     }
+    data.overview_notes=String(form.elements.namedItem('overview_notes')?.value||'');
     for(const kind of ['doctors','pharmacies','medications'])data[kind]=collectRows(kind);
     data.skipped_sections=skipped();
     const open=host.querySelector('[data-at-step][open]');
@@ -284,6 +285,7 @@ export function createAthenaMedicareFeature() {
         ' was recovered from this device. Medicare/Medicaid numbers and login credentials were not stored in the recovery draft.'+
         (stale?' The saved record changed elsewhere; reopen it before saving to avoid overwriting newer work.':'')+warning);
       if(client){
+        void loadOverviewNotes(client.id);
         void loadCRMForClient(client.id,!existing?.id);
         void loadMedicareGovFromCRM(client.id);
         void readVault(client.id);
@@ -347,6 +349,7 @@ export function createAthenaMedicareFeature() {
       '<div class="at-overview"><strong>' + esc(heading) + '</strong><p>Open each section, record the conversation and save as a draft or completed review. When linked to a CRM client, edits to contact information, Medicare details, current coverage, doctors, medications and the first two pharmacies also update that client record when saved. Sections marked Already in CRM are not changed. A recommended future plan stays a recommendation until enrollment.</p></div>' +
       clientPicker() +
       '<form class="at-form" autocomplete="off" novalidate><input type="hidden" name="review_kind" value="' + esc(type) + '">' +
+      '<section class="at-overview-client-note"><strong>Notes</strong><p class="at-helper">These notes are shared with the Client Records Overview note. Saving this review updates the same note.</p><textarea name="overview_notes" rows="4" placeholder="Client overview notes…"></textarea></section>' +
       '<div class="at-steps">' + SECTIONS.map((_,i)=>stepMarkup(i+1)).join('') + '</div>' +
       '<div class="at-attachments"><div><strong>Supporting documents</strong><p>Securely attach plan letters, medication lists or pharmacy pictures. Files upload when you save.</p></div>' +
       '<div class="at-attachment-actions"><label class="at-btn at-btn-soft at-file-button">+ Add photos or PDFs<input type="file" data-at-files accept="image/*,application/pdf" multiple hidden></label><label class="at-btn at-btn-soft at-file-button">Take Picture<input type="file" data-at-files data-at-camera accept="image/*" capture="environment" hidden></label></div>' +
@@ -367,6 +370,8 @@ export function createAthenaMedicareFeature() {
       if (!el) continue;
       el.value=DATE_FIELDS.has(key) ? dateInput(data[key]) : String(data[key] ?? '');
     }
+    const overviewNote=form.elements.namedItem('overview_notes');
+    if(overviewNote)overviewNote.value=String(data.overview_notes??'');
     const skipped=new Set(Array.isArray(data.skipped_sections) ? data.skipped_sections.map(Number) : []);
     host.querySelectorAll('[data-at-skip]').forEach(x=>x.checked=skipped.has(Number(x.dataset.atSkip)));
     const statusField=form.elements.namedItem('workflow_status');
@@ -435,6 +440,7 @@ export function createAthenaMedicareFeature() {
     }
     for(const [step,kind] of [[4,'doctors'],[4,'pharmacies'],[5,'medications']])
       result[kind]=skip.has(step) ? (previous[kind]||[]) : collectRows(kind);
+    result.overview_notes=String(form.elements.namedItem('overview_notes')?.value||'');
     result.skipped_sections=[...skip];
     result.hip_total=HIP_TOTALS.reduce((sum,key)=>sum+num(result[key]),0).toFixed(2);
     result.schema_version=1;
@@ -496,6 +502,15 @@ export function createAthenaMedicareFeature() {
       if(token===searchToken && results.isConnected)results.textContent='Unable to search CRM clients: '+(error.message||'Please retry.');
     }
   }
+  async function loadOverviewNotes(clientId){
+    try{
+      const {data,error}=await supabase.from('clients').select('notes').eq('id',clientId).single();
+      if(error)throw error;
+      if(linkedClient?.id!==clientId || !host?.querySelector('.at-form'))return;
+      const field=host.querySelector('[name="overview_notes"]');
+      if(field && !editedFields.has('overview_notes'))field.value=String(data.notes||'');
+    }catch(error){console.warn('Could not load client overview notes',error);}
+  }
   function selectClient(client){
     const replacingClient=Boolean(linkedClient?.id && linkedClient.id!==client.id);
     linkedClient=client; ++searchToken; clearTimeout(searchTimer);
@@ -514,6 +529,7 @@ export function createAthenaMedicareFeature() {
       const el=form?.elements.namedItem(name);if(el)el.value='';
     }
     void readVault(client.id);
+    void loadOverviewNotes(client.id);
     void loadMedicareGovFromCRM(client.id);
     void loadCRMForClient(client.id, !record?.id);
     dirty=true;updateSections();scheduleRecovery();
@@ -710,6 +726,10 @@ export function createAthenaMedicareFeature() {
         if(updatedError)throw updatedError;
         linkedClient=updated;
       }
+      if(editedFields.has('overview_notes')){
+        const {error:noteError}=await supabase.from('clients').update({notes:data.overview_notes}).eq('id',record.client_id);
+        if(noteError)throw Error('Review saved, but Overview notes could not sync: '+noteError.message);
+      }
       // Only store changed secure values in the separate encrypted vault.
       const med=String(host.querySelector('[name="medicare_number"]')?.value||'').trim();
       const mcd=String(host.querySelector('[name="medicaid_number"]')?.value||'').trim();
@@ -728,7 +748,7 @@ export function createAthenaMedicareFeature() {
       await clearRecovery().catch(error=>console.warn('Could not clear a completed recovery draft:',error));
       editedFields.clear();editedLists.clear();editedRows.clear();
       renderEditor(record.form_data||{});
-      if(record.client_id)void loadMedicareGovFromCRM(record.client_id);
+      if(record.client_id){void loadOverviewNotes(record.client_id);void loadMedicareGovFromCRM(record.client_id);}
       // Restore encrypted numbers to the editor after its form is rebuilt.
       for(const k of ['medicare_number','medicaid_number']){
         const el=host.querySelector('[name="'+k+'"]');
