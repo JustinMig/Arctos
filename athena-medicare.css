@@ -301,3 +301,16 @@
  .at-step[data-at-step="6"] .at-need-check{padding:9px 8px!important;gap:6px!important}
  .at-step[data-at-step="6"] .at-need-check span{font-size:12px}
 }
+
+
+/* Athena home: explicit, easily scanned unfinished review queue. */
+.at-unfinished-home{margin:17px 0;padding:16px;background:#f0f6f8;border:1.5px solid #b7cfda;border-radius:14px}
+.at-unfinished-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:11px}
+.at-unfinished-head strong{font-size:16px;color:#25495b}
+.at-unfinished-head small{font-size:12px;color:#657e8a}
+.at-unfinished-item{display:flex;justify-content:space-between;align-items:center;gap:13px;padding:12px 14px;background:#fff;border:1px solid #d6e3e9;border-radius:10px;margin:8px 0}
+.at-unfinished-item>div{display:grid;gap:4px;min-width:0}
+.at-unfinished-item strong{font-size:14px;color:#243f50;overflow-wrap:anywhere}
+.at-unfinished-item small{font-size:12px;color:#68818f}
+.at-unfinished-item button{flex-shrink:0}
+@media(max-width:480px){.at-unfinished-home{padding:12px}.at-unfinished-item{padding:11px;gap:8px}.at-unfinished-item button{padding:9px}}
