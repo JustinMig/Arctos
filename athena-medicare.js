@@ -909,9 +909,16 @@ export function createAthenaMedicareFeature() {
     if(target.hasAttribute('data-at-saved')){void savedList();return;}
     if(target.hasAttribute('data-at-save')){void confirmSoaAndSave();return;}
     if(target.hasAttribute('data-at-schedule-appointment')){
-      const button=document.querySelector('[data-new-appointment]');
-      if(button)button.click();
-      else say('Open the Appointments calendar to create a follow-up appointment.',true);
+      // The main CRM appointment editor is hosted on the dashboard.
+      // Save the current Athena draft before navigating to its scheduler.
+      if(dirty)void persistRecovery();
+      location.hash='#/dashboard';
+      let tries=0;
+      const timer=setInterval(()=>{
+        const button=document.querySelector('[data-new-appointment]');
+        if(button){clearInterval(timer);button.click();}
+        else if(++tries>=25){clearInterval(timer);alert('Open the Dashboard and select + Appointment to book the follow-up.');}
+      },120);
       return;
     }
     if(target.hasAttribute('data-at-soa-text')){void doAthenaSoa('text');return;}
