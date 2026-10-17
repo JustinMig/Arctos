@@ -97,3 +97,13 @@
 .client-four-tabs [data-panel="medicare"]>details.field-group:nth-of-type(6)>summary{background:#eddae2!important;color:#16222e!important;font-weight:850!important}
 .client-four-tabs [data-panel="medicare"]>details.field-group:nth-of-type(6)[open]>summary{background:#e2c7d3!important}
 .client-four-tabs [data-panel="medicare"]>details.field-group>summary{padding:14px 16px!important;border-radius:8px!important}
+
+/* Client Overview: compact annual review completion, expansive synced notes. */
+.client-glance-reviews-layout{display:flex!important;flex-direction:column!important;gap:9px!important;grid-template-columns:minmax(0,1fr)!important}
+.client-glance-reviews-layout>section{width:100%;min-width:0}
+.client-glance-reviews-layout .client-review-checkoff{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 13px;background:#edf5f1;border:1px solid #c2d9cd;border-radius:10px;min-height:44px}
+.client-review-checkoff>strong{font-size:13px;color:#26513c;white-space:nowrap}
+.client-review-checkoff>label{display:inline-flex;gap:7px;align-items:center;font-size:12px;color:#2d4b3b}
+.client-review-checkoff input{width:17px;height:17px;accent-color:#487b60}
+.client-review-checkoff [data-client-review-status]{font-size:11px}
+.client-glance-notes-wide textarea{width:100%;min-height:170px;box-sizing:border-box}
