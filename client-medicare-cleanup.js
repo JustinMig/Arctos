@@ -97,18 +97,6 @@ async function enhanceDialog(dialog) {
   dialog.dataset.medicareCleanup = 'true';
   const clientId = dialog.dataset.clientId || '';
 
-  const medicareGroup = medicaidNumber.closest('details.field-group');
-  if (medicareGroup && !panel.querySelector('[data-medicaid-group]')) {
-    const medicaidGroup = document.createElement('details');
-    medicaidGroup.className = 'field-group';
-    medicaidGroup.dataset.medicaidGroup = 'true';
-    medicaidGroup.innerHTML = '<summary>Medicaid Information</summary><div class="form-grid"></div>';
-    medicaidGroup.open = false;
-    medicaidGroup.querySelector('.form-grid').append(medicaidNumber, medicaidLevel);
-    const medicareGovGroup = panel.querySelector('[data-medicare-gov-credentials-group]');
-    (medicareGovGroup || medicareGroup).insertAdjacentElement('afterend', medicaidGroup);
-  }
-
   const currentCarrier = healthCarrierInput.value || '';
   const carrierSelect = document.createElement('select');
   carrierSelect.name = 'health_carrier';
