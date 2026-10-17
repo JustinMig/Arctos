@@ -419,29 +419,35 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
           if (glanceNote.value !== clientNote.value) glanceNote.value = clientNote.value;
         });
       }
-      // Keep the completed appointment history visible alongside the editable note.
-      const history = form.querySelector('[data-client-completed-appointments]');
-      if (loaded.id && history) {
-        const formatDateTime = (day, time) => {
-          const date = new Date(day + 'T' + String(time || '00:00').slice(0,5) + ':00');
-          return Number.isNaN(date.getTime()) ? day : date.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
-        };
-        void (async () => {
-          const { data, error } = await supabase.from('client_completed_appointments')
-            .select('event_date,start_time,activity_title')
-            .eq('client_id', loaded.id).order('event_date', {ascending: false}).limit(12);
-          if (!form.isConnected) return;
-          history.innerHTML = error ? '<p>Unable to load completed appointments.</p>' :
-            data?.length ? data.map(row =>
-              '<p>✓ ' + esc(formatDateTime(row.event_date, row.start_time)) +
-              (row.activity_title ? ' — ' + esc(row.activity_title) : '') + '</p>').join('') :
-            '<p>No completed appointments recorded yet.</p>';
-        })().catch(() => {
-          if (form.isConnected) history.textContent = 'Unable to load completed appointments.';
+      // Show Athena-completed reviews automatically; permit a separate manual checkoff.
+      const reviewCheck=form.querySelector('[data-client-review-manual]');
+      const reviewStatus=form.querySelector('[data-client-review-status]');
+      const reviewYear=new Date().getFullYear();
+      if(loaded.id && reviewCheck && reviewStatus){
+        void (async()=>{
+          const [automatic,manual]=await Promise.all([
+            supabase.from('athena_medicare_reviews').select('review_date,updated_at').eq('client_id',loaded.id).eq('workflow_status','completed').order('updated_at',{ascending:false}).limit(20),
+            supabase.from('client_review_manual').select('completed').eq('client_id',loaded.id).eq('review_year',reviewYear).maybeSingle()
+          ]);
+          if(!form.isConnected)return;
+          reviewCheck.checked=manual.data?.completed===true;
+          const dates=(automatic.data||[]).map(x=>x.review_date||x.updated_at?.slice(0,10)).filter(Boolean);
+          const latest=dates[0];
+          reviewStatus.textContent=(latest?'✓ Athena review complete: '+latest+' · ':'')+(reviewCheck.checked?'✓ Marked complete manually':(!latest?'No completed reviews recorded':''));
+          if(automatic.error||manual.error)reviewStatus.textContent='Could not load all review records.';
+        })().catch(error=>{if(form.isConnected)reviewStatus.textContent=error.message||'Could not load review status.';});
+        reviewCheck.addEventListener('change',async()=>{
+          reviewCheck.disabled=true;reviewStatus.textContent='Saving review checkoff…';
+          const {data:{user},error:authError}=await supabase.auth.getUser();
+          const result=authError?{error:authError}:await supabase.from('client_review_manual').upsert({
+            client_id:loaded.id,review_year:reviewYear,completed:reviewCheck.checked,
+            completed_at:reviewCheck.checked?new Date().toISOString():null,updated_by:user?.id
+          },{onConflict:'client_id,review_year'});
+          reviewCheck.disabled=false;
+          if(result.error){reviewCheck.checked=!reviewCheck.checked;reviewStatus.textContent='Could not save: '+result.error.message;}
+          else reviewStatus.textContent=reviewCheck.checked?'✓ '+reviewYear+' review marked complete manually':'Manual '+reviewYear+' checkoff cleared.';
         });
-      } else if (history) {
-        history.textContent = 'No completed appointments recorded yet.';
-      }
+      }else if(reviewCheck){reviewCheck.disabled=true;if(reviewStatus)reviewStatus.textContent='Save the client before marking reviews.';}
       // A one-click Medicare review from an existing client. Preserve the
       // unsaved-change confirmation before leaving, then hand off only the
       // client UUID (never personal data) to Athena for authorized lookup.
