@@ -345,12 +345,12 @@ export function createAthenaMedicareFeature() {
       const rows=[];
       if(local){
         const name=[local.data?.first_name,local.data?.last_name].filter(Boolean).join(' ')||'Unfinished client review';
-        rows.push('<div class="at-unfinished-item"><div><strong>'+esc(name)+'</strong><small>Unsaved changes on this device · '+esc(local.saved_at?new Date(local.saved_at).toLocaleString('en-US'):'Recent')+'</small></div><button type="button" class="at-btn at-btn-primary" data-at-resume-local>Resume</button></div>');
+        rows.push('<div class="at-unfinished-item"><div><strong>'+esc(name)+'</strong><small>Unsaved changes on this device · '+esc(local.saved_at?new Date(local.saved_at).toLocaleString('en-US'):'Recent')+'</small></div><button type="button" class="at-btn at-btn-primary" data-at-resume-local>Resume</button><button type="button" class="at-btn at-btn-delete" data-at-delete-local>Delete</button></div>');
         if(local.record_id)seen.add(local.record_id);
       }
       for(const row of remote.data||[]){
         if(seen.has(row.id))continue;
-        rows.push('<div class="at-unfinished-item"><div><strong>'+esc(row.full_name||'Unnamed client')+'</strong><small>'+esc(row.review_kind==='annual_review'?'Annual Medicare review':'New Medicare intake')+' · '+esc(new Date(row.updated_at).toLocaleDateString('en-US'))+'</small></div><button type="button" class="at-btn at-btn-soft" data-at-open="'+esc(row.id)+'">Continue</button></div>');
+        rows.push('<div class="at-unfinished-item"><div><strong>'+esc(row.full_name||'Unnamed client')+'</strong><small>'+esc(row.review_kind==='annual_review'?'Annual Medicare review':'New Medicare intake')+' · '+esc(new Date(row.updated_at).toLocaleDateString('en-US'))+'</small></div><button type="button" class="at-btn at-btn-soft" data-at-open="'+esc(row.id)+'">Continue</button><button type="button" class="at-btn at-btn-delete" data-at-delete="'+esc(row.id)+'" data-at-name="'+esc(row.full_name||'this client')+'" data-at-updated="'+esc(row.updated_at)+'">Delete</button></div>');
       }
       container.innerHTML=rows.length?rows.join(''):'<p class="at-helper">No unfinished client reviews. Start a new intake or annual review above.</p>';
     }catch(error){
@@ -912,6 +912,15 @@ export function createAthenaMedicareFeature() {
     ++epoch;void clearRecovery();
     reset();record={review_kind:kind};renderEditor({review_date:dateText(new Date().toISOString().slice(0,10))});
   }
+  async function deleteLocalUnfinished(){
+    if(!window.confirm('Delete the unfinished recovery draft saved on this device? The CRM client and any saved reviews will remain.'))return;
+    try{
+      await clearRecovery();
+      await loadUnfinishedHome();
+    }catch(error){
+      alert('Could not delete the unfinished draft: '+(error.message||'Please retry.'));
+    }
+  }
   async function removeReview(id,name,updatedAt){
     if(busy||!id)return;
     if(!window.confirm('Permanently delete the Athena Medicare review for '+(name||'this client')+
@@ -923,7 +932,8 @@ export function createAthenaMedicareFeature() {
       const {data,error}=await q.select('id').maybeSingle();
       if(error)throw error;
       if(!data?.id)throw Error('The saved record has changed or is already removed. Refresh and try again.');
-      busy=false;dirty=false;await savedList();
+      busy=false;dirty=false;
+      if(mode==='home')await loadUnfinishedHome();else await savedList();
     }catch(error){say('Delete failed: '+(error.message||'Please retry.'),true);}
     finally{busy=false;}
   }
@@ -941,6 +951,7 @@ export function createAthenaMedicareFeature() {
     if(target.hasAttribute('data-at-new')){newReview(target.dataset.atNew);return;}
     if(target.hasAttribute('data-at-saved')){void savedList();return;}
     if(target.hasAttribute('data-at-resume-local')){void recoverOnOpen();return;}
+    if(target.hasAttribute('data-at-delete-local')){void deleteLocalUnfinished();return;}
     if(target.hasAttribute('data-at-save')){void confirmSoaAndSave();return;}
     if(target.hasAttribute('data-at-schedule-appointment')){
       // The main CRM appointment editor is hosted on the dashboard.
