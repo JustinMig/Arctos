@@ -248,3 +248,10 @@
 .at-drop-zone{margin-top:10px;padding:22px 14px;border:2px dashed #90aaba;border-radius:10px;text-align:center;background:#f8fbfc;color:#476777;font-size:13px;min-height:70px}
 .at-drop-zone.at-drop-active{border-color:#376c7c;background:#e4f2f2;color:#214c56}
 .at-drop-zone:focus-visible{outline:3px solid #376c7c;outline-offset:2px}
+
+/* Shared client Overview notes, deliberately above Athena section one. */
+.at-overview-client-note{border:1.5px solid #b4cbd6;border-radius:12px;padding:13px 15px;margin:0 0 13px;background:#eef5f9;display:grid;gap:8px}
+.at-overview-client-note>strong{font-size:15px;color:#244b5f}
+.at-overview-client-note .at-helper{margin:0}
+.at-overview-client-note textarea{box-sizing:border-box;width:100%;min-height:110px;padding:11px 12px;font:inherit;font-size:16px;color:#243b49;border:1px solid #b9cdd7;border-radius:9px;background:#fff;resize:vertical}
+.at-overview-client-note textarea:focus{outline:2px solid #5a93a4;outline-offset:1px}
