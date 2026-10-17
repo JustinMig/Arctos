@@ -272,3 +272,32 @@
 .at-soa-confirm-inner h2{margin:0 0 10px;font-size:20px}
 .at-soa-confirm-inner p{line-height:1.6;margin:0 0 20px}
 .at-soa-confirm-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+
+/* Section 6: compact, consistent needs checkboxes (desktop and phone). */
+.at-step[data-at-step="6"] .at-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.at-step[data-at-step="6"] .at-need-check{
+  display:flex!important;flex-direction:row!important;align-items:center!important;
+  justify-content:flex-start!important;gap:9px!important;min-width:0;width:100%;
+  margin:0!important;padding:10px 12px!important;min-height:44px!important;
+  border:1px solid #cfdee4;border-radius:9px;background:#f1f7f9;
+  box-sizing:border-box;cursor:pointer;
+}
+.at-step[data-at-step="6"] .at-need-check input[type="checkbox"]{
+  appearance:auto!important;-webkit-appearance:checkbox!important;
+  flex:0 0 17px!important;width:17px!important;height:17px!important;
+  min-width:17px!important;min-height:17px!important;max-width:17px!important;
+  margin:0!important;padding:0!important;accent-color:#397b72;
+}
+.at-step[data-at-step="6"] .at-need-check span{
+  flex:1;min-width:0;font-size:13px;line-height:1.3;font-weight:650;
+  color:#294a59;overflow-wrap:break-word;
+}
+.at-step[data-at-step="6"] .at-need-check:has(input:checked){
+  background:#e3f2eb;border-color:#9acbb4;
+}
+@media(max-width:480px){
+ .at-step[data-at-step="6"] .at-grid{gap:7px}
+ .at-step[data-at-step="6"] .at-need-check{padding:9px 8px!important;gap:6px!important}
+ .at-step[data-at-step="6"] .at-need-check span{font-size:12px}
+}
