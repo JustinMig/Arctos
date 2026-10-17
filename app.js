@@ -106,10 +106,22 @@ async function openWorkspace() {
   }
   let workspace;
   try { [, workspace] = await Promise.all([stylesReady, workspaceModule]); }
-  catch (error) { if (sheet && !sheet.sheet) sheet.remove(); throw error; }
+  catch (error) {
+    if (sheet && !sheet.sheet) sheet.remove();
+    // A deployment may replace hashed JS chunks while a previously opened
+    // login page still points to the removed chunk. Recover with one fresh load.
+    const message=String(error?.message || error || '');
+    const missingChunk=/dynamically imported module|Failed to fetch|Importing a module script failed|ChunkLoadError/i.test(message);
+    if(missingChunk && sessionStorage.getItem('arctos:chunk-reload')!=='1'){
+      sessionStorage.setItem('arctos:chunk-reload','1');
+      location.reload();
+      return new Promise(()=>{});
+    }
+    throw error;
+  }
   const { startWorkspace } = workspace;
   root.inert = true;
-  try { await startWorkspace(); workspaceStarted = true; }
+  try { await startWorkspace(); workspaceStarted = true; sessionStorage.removeItem('arctos:chunk-reload'); }
   finally { root.inert = false; }
 }
 supabase.auth.onAuthStateChange((event, session) => {
