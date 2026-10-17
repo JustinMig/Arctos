@@ -158,7 +158,7 @@ async function openStored(record) {
 }
 
 function clientIdFor(button) {
-  return button.closest('dialog.client-dialog')?.dataset.clientId || '';
+  return button.dataset?.soaClientId || button.closest('dialog.client-dialog')?.dataset.clientId || '';
 }
 
 async function refreshSoaBox(button, clientId) {
@@ -300,3 +300,16 @@ document.addEventListener('click',event=>{
   else if(text) openCompliantTextSoa(button).catch(error=>alert(error?.message||'Unable to create SOA text.'));
   else if(view) latestSoa(clientId).then(record=>record?openStored(record):null).catch(error=>alert(error?.message||'Unable to open SOA.'));
 },true);
+
+// Reuse the exact compliant SOA workflows from Athena, with the same client vault.
+export function openSoaForClient(clientId,method='sign') {
+  if (!clientId) return Promise.reject(new Error('Save or link the client before creating an SOA.'));
+  const button=document.createElement('button');button.dataset.soaClientId=clientId;
+  return method==='text' ? openCompliantTextSoa(button) : openCompliantSignOnScreen(button);
+}
+export async function viewLatestSoaForClient(clientId){
+  if(!clientId)throw Error('Save or link the client before viewing an SOA.');
+  const latest=await latestSoa(clientId);
+  if(!latest)throw Error('No signed SOA has been saved for this client yet.');
+  return openStored(latest);
+}
