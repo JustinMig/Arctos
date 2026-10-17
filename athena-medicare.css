@@ -255,3 +255,20 @@
 .at-overview-client-note .at-helper{margin:0}
 .at-overview-client-note textarea{box-sizing:border-box;width:100%;min-height:110px;padding:11px 12px;font:inherit;font-size:16px;color:#243b49;border:1px solid #b9cdd7;border-radius:9px;background:#fff;resize:vertical}
 .at-overview-client-note textarea:focus{outline:2px solid #5a93a4;outline-offset:1px}
+
+.at-doctor-collapse{border:1px solid #c4d4dd;border-radius:10px;overflow:hidden}
+.at-doctor-collapse>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:#e9f1f5;padding:12px 14px;color:#294d5d}
+.at-doctor-collapse>summary span{font-size:11px;color:#537080}
+.at-doctor-collapse>.at-grid{padding:12px}
+.at-doctor-collapse>[data-at-remove]{margin:0 12px 12px}
+.at-need-check{flex-direction:row!important;align-items:center!important;gap:10px!important;min-height:44px}
+.at-need-check input{width:19px;height:19px;accent-color:#397b72}
+.at-need-check span{font-weight:600}
+.at-appointment-action{padding:13px;background:#eef5f8;border:1px solid #c3d6e0;border-radius:10px}
+.at-appointment-action>strong{display:block;margin-bottom:5px}
+.at-soa-confirm-dialog{border:1px solid #adc6d1;border-radius:13px;padding:0;max-width:min(430px,92vw);color:#233f4f;box-shadow:0 18px 60px #132e3c36}
+.at-soa-confirm-dialog::backdrop{background:#112b3a8a}
+.at-soa-confirm-inner{padding:24px}
+.at-soa-confirm-inner h2{margin:0 0 10px;font-size:20px}
+.at-soa-confirm-inner p{line-height:1.6;margin:0 0 20px}
+.at-soa-confirm-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
