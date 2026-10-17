@@ -83,7 +83,8 @@ function mount(){
  installStyles();
  const node=document.createElement('div');node.innerHTML=markup();const widget=node.firstElementChild;
  const anchor=content.querySelector('#calendar-host')||content.querySelector('[data-needs-attention]')||content.firstElementChild;
- if(anchor)content.insertBefore(widget,anchor);else content.append(widget);
+ if (anchor?.parentNode === content) content.insertBefore(widget, anchor);
+  else content.prepend(widget);
  void init(widget);
 }
 export function installDashboardTodo(root=document.getElementById('app')){
