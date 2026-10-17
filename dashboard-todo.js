@@ -82,9 +82,8 @@ function mount(){
  const content=app.querySelector('.content');if(!content||content.querySelector('[data-dashboard-todo]'))return;
  installStyles();
  const node=document.createElement('div');node.innerHTML=markup();const widget=node.firstElementChild;
- const anchor=content.querySelector('#calendar-host')||content.querySelector('[data-needs-attention]')||content.firstElementChild;
- if (anchor?.parentNode === content) content.insertBefore(widget, anchor);
-  else content.prepend(widget);
+ // Keep the To-Do List as the last section on the Dashboard.
+ content.append(widget);
  void init(widget);
 }
 export function installDashboardTodo(root=document.getElementById('app')){
