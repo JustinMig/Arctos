@@ -194,8 +194,8 @@ function installWidget() {
   const wrap = document.createElement('div');
   wrap.innerHTML = shellMarkup();
   const widget = wrap.firstElementChild;
-  if (anchor) content.insertBefore(widget, anchor);
-  else content.append(widget);
+  if (anchor?.parentNode === content) content.insertBefore(widget, anchor);
+  else content.prepend(widget);
   bindWidget(widget);
   loadData(widget);
 }
