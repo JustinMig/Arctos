@@ -229,3 +229,25 @@ label.btn:has(> input[data-multi-camera]) {
   background: #f8fafc !important;
   border-color: #b8c9d3 !important;
 }
+
+/* Definitive contrast fix for Medicare, Medicaid, and shared client file controls.
+   Previous Medicare theme used white !important and dark backgrounds. */
+#app [data-panel="medicare"] .medicare-card-manager .medicare-card-actions label.btn.secondary,
+#app [data-panel="medicare"] .medicare-card-actions label.btn:has(input[type="file"]),
+#app [data-panel="medicare"] .multi-file-manager label.btn:has(input[type="file"]),
+#app .multi-file-manager .medicare-card-actions label.btn:has(input[type="file"]),
+#app [data-panel] .medicare-card-actions label.btn:has(input[type="file"]),
+#app .document-upload-card label.btn:has(input[type="file"]),
+#app .notes-extras-documents label.btn:has(input[type="file"]) {
+  color: #080f18 !important;
+  background: #f8fafc !important;
+  border: 1px solid #9cabb8 !important;
+  -webkit-text-fill-color: #080f18 !important;
+}
+#app [data-panel="medicare"] .medicare-card-actions label.btn:has(input[type="file"]):hover,
+#app .multi-file-manager .medicare-card-actions label.btn:has(input[type="file"]):hover,
+#app [data-panel] .medicare-card-actions label.btn:has(input[type="file"]):hover {
+  color: #080f18 !important;
+  background: #e8f0f5 !important;
+  -webkit-text-fill-color: #080f18 !important;
+}
