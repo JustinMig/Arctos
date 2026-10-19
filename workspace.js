@@ -348,7 +348,8 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const value=name=>form.elements.namedItem(name)?.value?.trim()||'';
       const name=[value('first_name'),value('last_name')].filter(Boolean).join(' ')||'New Client';
       const dob=value('date_of_birth'),location=[value('city'),value('state')].filter(Boolean).join(', ');
-      const details=[dob?'DOB: '+dob:'',value('phone'),location].filter(Boolean);
+      const zip=value('zip')||value('zip_code');
+      const details=[dob?'DOB: '+dob:'',value('phone'),location,zip?'ZIP: '+zip:''].filter(Boolean);
       const title=form.querySelector('[data-client-summary-name]');
       const meta=form.querySelector('[data-client-summary-meta]');
       if(title)title.textContent=name;
