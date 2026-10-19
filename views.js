@@ -164,8 +164,11 @@ export function calendarMarkup(month, events = [], connected = false, agents = [
   let todayCount = 0;
   let pendingCount = 0;
   for (const event of events) {
-    if (event.status === 'needs_reschedule') { pendingCount++; continue; }
-    if (event.event_date === today && event.status !== 'completed') todayCount++;
+    const status=String(event.status||'').toLowerCase();
+    if (status === 'needs_reschedule') { pendingCount++; continue; }
+    // Completed or cancelled entries stay in their history, not on the active calendar.
+    if (['completed','cancelled','canceled','deleted'].includes(status)) continue;
+    if (event.event_date === today) todayCount++;
     const date = event.event_date;
     if (!date) continue;
     let dayEvents = eventsByDate.get(date);
