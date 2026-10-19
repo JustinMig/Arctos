@@ -89,7 +89,7 @@ function indemnityMarkup(row = {}, i = 0) {
     select(`${p}status`, 'Status', [['active','Active'],['inactive','Inactive']], row.status || 'active') + area(`${p}notes`, 'Hospital Indemnity Notes', row.notes || '');
   return card(row.carrier || row.plan_name || `Hospital Indemnity Plan ${i+1}`, row.policy_number ? `Policy ${row.policy_number}` : 'Hospital indemnity plan', body, i, 'indemnity');
 }
-function panelMarkup(kind, rows) {
+function panelMarkup(kind, rows, sectionNotes = '') {
   const configs = {
     doctors: { title:'Doctors', copy:'Keep each doctor and office location as a separate record.', add:'+ Add Doctor', renderer:doctorMarkup },
     medications: { title:'Medications', copy:'Keep each current or inactive medication as its own record.', add:'+ Add Medication', renderer:medicationMarkup },
@@ -103,6 +103,7 @@ function panelMarkup(kind, rows) {
     ? 'No medications saved yet. Use the Add Medication button below.'
     : `No ${kind === 'hospital_indemnity' ? 'hospital indemnity plans' : kind} saved yet. Use the Add button above.`;
   return `<div class="health-tab-toolbar"><div><h3>${c.title}</h3><p>${c.copy}</p></div>${topButton}</div>
+    ${kind === 'doctors' ? `<label class="field health-doctors-general-notes"><span>Doctors Section Notes</span><textarea name="doctors_section_notes" rows="4" placeholder="General notes about this client's doctors, referrals, or appointments">${esc(sectionNotes)}</textarea></label>` : ''}
     <div class="health-record-list" data-health-list="${kind}">${list.map((row,i)=>c.renderer(row,i)).join('')}</div>
     <div class="health-tab-empty" data-health-empty="${kind}"${list.length?' hidden':''}>${emptyCopy}</div>
     ${bottomButton}`;
@@ -111,7 +112,7 @@ function render(form, data = {}) {
   const doctors = form.querySelector('[data-panel="doctors"]');
   const medications = form.querySelector('[data-panel="medications"]');
   const indemnity = form.querySelector('[data-panel="hospital_indemnity"]');
-  if (doctors) doctors.innerHTML = panelMarkup('doctors', data.doctors || []);
+  if (doctors) doctors.innerHTML = panelMarkup('doctors', data.doctors || [], data.doctors_section_notes || '');
   if (medications) medications.innerHTML = panelMarkup('medications', data.medications || []);
   if (indemnity) indemnity.innerHTML = panelMarkup('hospital_indemnity', data.hospital_indemnity || []);
   bind(form);
@@ -192,7 +193,7 @@ mhRepository.getClient = async function getClientWithHealthTabs(id) {
   ]);
   if (!base) return base;
   if (d.error) throw d.error; if (m.error) throw m.error; if (h.error) throw h.error;
-  const extra = { doctors:d.data||[], medications:m.data||[], hospital_indemnity:h.data||[] };
+  const extra = { doctors:d.data||[], medications:m.data||[], hospital_indemnity:h.data||[], doctors_section_notes:base.doctors_section_notes||'' };
   cache.set(id, extra);
   return { ...base, _doctors:extra.doctors, _medications:extra.medications, _hospital_indemnity:extra.hospital_indemnity };
 };
@@ -201,12 +202,15 @@ const baseSave = mhRepository.saveClient.bind(mhRepository);
 mhRepository.saveClient = async function saveClientWithHealthTabs(record, ...args) {
   const doctors = parseRows(record,'doctor',doctorKeys), medications = parseRows(record,'medication',medicationKeys), indemnity = parseRows(record,'indemnity',indemnityKeys);
   const saved = await baseSave(record,...args); if (!saved?.id) return saved;
+  const notesValue = String(record.doctors_section_notes || '');
+  const notesResult = await supabase.from('clients').update({doctors_section_notes:notesValue}).eq('id',saved.id).select('id').single();
+  if (notesResult.error) throw notesResult.error;
   const [savedDoctors,savedMedications,savedIndemnity] = await Promise.all([
     syncTable('client_doctors',saved.id,doctors,row=>({ doctor_name:String(row.doctor_name||'').trim(), specialty:clean(row.specialty), practice_name:clean(row.practice_name), phone:clean(row.phone), fax:clean(row.fax), address:clean(row.address), city:clean(row.city), state:clean(row.state), zip_code:clean(row.zip_code), notes:clean(row.notes) })),
     syncTable('client_medications',saved.id,medications,row=>({ medication_name:String(row.medication_name||'').trim(), strength:clean(row.strength), dosage:clean(row.dosage), frequency:clean(row.frequency), prescribing_doctor:clean(row.prescribing_doctor), purpose:clean(row.purpose), notes:clean(row.notes), status:row.status||'active' })),
     syncTable('hospital_indemnity_plans',saved.id,indemnity,row=>({ carrier:clean(row.carrier), plan_name:clean(row.plan_name), policy_number:clean(row.policy_number), member_id:clean(row.member_id), effective_date:clean(row.effective_date), premium:money(row.premium), admission_benefit:money(row.admission_benefit), daily_benefit:money(row.daily_benefit), benefit_days:row.benefit_days===''?null:Number(row.benefit_days), notes:clean(row.notes), status:row.status||'active' }))
   ]);
-  const extra = { doctors:savedDoctors, medications:savedMedications, hospital_indemnity:savedIndemnity };
+  const extra = { doctors:savedDoctors, medications:savedMedications, hospital_indemnity:savedIndemnity, doctors_section_notes:notesValue };
   cache.set(saved.id, extra);
   return { ...saved, _doctors:savedDoctors, _medications:savedMedications, _hospital_indemnity:savedIndemnity };
 };
