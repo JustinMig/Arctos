@@ -208,3 +208,24 @@
 .client-glance-activity [data-client-quick-status]{font-size:12px}
 .client-glance-activity [data-client-glance-note]{width:100%;min-height:145px;box-sizing:border-box;color:#172f3a;resize:vertical;line-height:1.5}
 @media(max-width:680px){.client-glance-activity{grid-template-columns:1fr}}
+
+/* Universal file-action legibility: upload and camera/scan labels.
+   These controls use pale button backgrounds, so never inherit white text. */
+.medicare-card-actions label.btn:has(input[type="file"]),
+.medicare-card-actions button[class*="upload"],
+.medicare-card-actions button[class*="camera"],
+.multi-file-manager label.btn:has(input[type="file"]),
+.document-upload-card .document-camera,
+.document-file-picker,
+.document-file-picker span,
+.notes-extras-documents label.btn:has(input[type="file"]),
+label.btn:has(> input[data-multi-files]),
+label.btn:has(> input[data-multi-camera]) {
+  color: #111827 !important;
+}
+.medicare-card-actions label.btn:has(input[type="file"]),
+.multi-file-manager label.btn:has(input[type="file"]),
+.notes-extras-documents label.btn:has(input[type="file"]) {
+  background: #f8fafc !important;
+  border-color: #b8c9d3 !important;
+}
