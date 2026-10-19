@@ -99,3 +99,24 @@
 .dashboard-todo .dashboard-todo-column.done{border-color:#c5dacf;background:#f3f8f4}
 .dashboard-todo .dashboard-todo-column h3{background:#dfeef5}
 .dashboard-todo .dashboard-todo-column.done h3{background:#e0f0e5}
+
+/* Calm dashboard palette: navy / blue / sage with restrained warm alert accents.
+   Scope to the Dashboard so records and other CRM screens are unchanged. */
+.daily-calendar>summary{
+ background:linear-gradient(110deg,#2c648d,#397ca3);
+ border-left:5px solid #204f72;
+ color:#fff;
+}
+.daily-calendar>summary:hover{background:linear-gradient(110deg,#245a82,#326f95)}
+.daily-calendar-label,.daily-calendar-label small,.daily-calendar-toggle-label{color:#fff}
+.daily-calendar-label small{color:#e2eff8}
+.daily-calendar[open]>summary{border-bottom:1px solid #285d7e}
+.daily-calendar>summary:focus-visible{outline:3px solid #8bc3ec;outline-offset:-4px}
+.dashboard-todo .dashboard-todo-head{background:linear-gradient(105deg,#e4eef5,#edf3f5);border-bottom-color:#c1d3de}
+.dashboard-todo .dashboard-todo-column:not(.done){border-color:#b8d0e2;background:#eff6fb}
+.dashboard-todo .dashboard-todo-column.done{border-color:#bfd9cb;background:#f0f7f3}
+.dashboard-todo .dashboard-todo-column:not(.done) h3{background:#dceaf5;color:#224b6b;border-bottom:1px solid #bed2e3}
+.dashboard-todo .dashboard-todo-column.done h3{background:#e1efe8;color:#285c4a;border-bottom:1px solid #bed8cb}
+.dashboard-todo .dashboard-todo-column:not(.done) .dashboard-todo-row{background:#f8fbfe}
+.dashboard-todo .dashboard-todo-column.done .dashboard-todo-row{background:#f5faf7}
+.dashboard-todo .dashboard-todo-delete{background:#fcf4f0;border-color:#e8d4ca;color:#874c38}
