@@ -17,7 +17,7 @@ import './client-medicare-assets.js?v=client-audit-1';
 import './new-client-soa-actions.js';
 import './client-soa-compliance.js';
 import './new-client-medicare-uploads.js';
-import './client-file-experience.js?v=optimization-2';
+import './client-file-experience.js?v=black-upload-text-3';
 import './life-policy-documents.js';
 import './client-audit-fixes.js?v=optimization-2';
 import './secure-license-dirty.js';
