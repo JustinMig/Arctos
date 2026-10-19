@@ -12,6 +12,7 @@ import { installClientAgeFilter } from './client-age-filter.js';
 import { installClientDelete } from './client-delete.js';
 import { installSimpleDashboardNote } from './dashboard-note-simple.js?v=shared-notes-search-1';
 import { installDashboardTodo } from './dashboard-todo.js?v=1';
+import { installDashboardCollapse } from './dashboard-collapse.js?v=1';
 import { installClientDateAndDragDrop } from './client-date-dragdrop.js';
 import { installClientDuplicateCheck } from './client-duplicate-check.js?v=duplicate-override-1';
 import { installFastNavigation } from './navigation-speed.js?v=arctos-nav-1';
@@ -80,6 +81,7 @@ export async function startWorkspace() {
   installClientDelete(root, mhRepository);
   installSimpleDashboardNote(root);
   installDashboardTodo(root);
+  installDashboardCollapse(root);
   installClientDateAndDragDrop(root);
   installAppointmentSingleAgent(root, mhRepository);
   installAdminUsers(root, mhRepository);
