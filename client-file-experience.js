@@ -123,8 +123,8 @@ function existingCardMarkup(label) {
   return `<div class="medicare-card-manager multi-file-manager">
     <div class="medicare-card-heading"><strong>${esc(label)}</strong><span data-multi-summary>No files saved</span></div>
     <div class="medicare-card-actions">
-      <label class="btn secondary">Upload Files<input type="file" data-multi-files multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif" hidden></label>
-      <label class="btn secondary">Camera / Scan<input type="file" data-multi-camera accept="image/*" capture="environment" hidden></label>
+      <label class="btn secondary" style="color:#080f18!important;-webkit-text-fill-color:#080f18!important;background:#f8fafc!important;border-color:#9cabb8!important">Upload Files<input type="file" data-multi-files multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif" hidden></label>
+      <label class="btn secondary" style="color:#080f18!important;-webkit-text-fill-color:#080f18!important;background:#f8fafc!important;border-color:#9cabb8!important">Camera / Scan<input type="file" data-multi-camera accept="image/*" capture="environment" hidden></label>
     </div>
     <div class="multi-file-list" data-multi-list></div>
     <div class="medicare-card-status" data-multi-status role="status" aria-live="polite"></div>
