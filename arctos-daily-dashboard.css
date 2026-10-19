@@ -120,3 +120,21 @@
 .dashboard-todo .dashboard-todo-column:not(.done) .dashboard-todo-row{background:#f8fbfe}
 .dashboard-todo .dashboard-todo-column.done .dashboard-todo-row{background:#f5faf7}
 .dashboard-todo .dashboard-todo-delete{background:#fcf4f0;border-color:#e8d4ca;color:#874c38}
+
+/* Today's Schedule: restrained warm yellow, coordinated with blue/sage dashboard. */
+.daily-work-grid .daily-work-section:first-child{
+  border-color:#dfcb92;
+  background:#fffdf6;
+}
+.daily-work-grid .daily-work-section:first-child>header{
+  background:#f7ebc4;
+  border-bottom-color:#e4d39f;
+}
+.daily-work-grid .daily-work-section:first-child>header h3{color:#58471d}
+.daily-work-grid .daily-work-section:first-child>header p{color:#71613b}
+.daily-work-grid .daily-work-section:first-child .daily-agenda-item{background:#fffdf7;border-bottom-color:#eee4c9}
+.daily-work-grid .daily-work-section:first-child .daily-agenda-item:hover{background:#fcf3d9}
+.daily-work-grid .daily-work-section:first-child .daily-agenda-time{color:#80621c}
+.daily-work-grid .daily-work-section:first-child .daily-empty{background:#fffdf7}
+.daily-work-grid .daily-work-section:first-child .daily-more-action{background:#f9f0d7;color:#6e561c;border-top-color:#e4d39f}
+.daily-work-grid .daily-work-section:first-child .daily-more-action:hover{background:#f2e5bb}
