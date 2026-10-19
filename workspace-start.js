@@ -54,7 +54,7 @@ export async function startWorkspace() {
   // large optional client/campaign enhancement chunk. Previously these imports
   // were awaited, delaying EVERY login and dashboard opening.
   const ensureFeature = createFeatureLoader({
-    client: () => import('./workspace-extensions.js?v=arctos-perf-1'),
+    client: () => import('./workspace-extensions.js?v=black-upload-text-3'),
     campaign: () => import('./workspace-campaign-extensions.js?v=arctos-perf-1'),
     lead: () => import('./workspace-lead-extensions.js?v=arctos-perf-1'),
     quick: () => import('./workspace-quick-extensions.js?v=arctos-perf-1')
