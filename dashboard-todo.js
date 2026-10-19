@@ -3,18 +3,25 @@ import { supabase } from './supabase-repository.js';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const styles = `
 .dashboard-todo{margin:16px 0;border:1.5px solid #b9cbd5;border-radius:14px;background:#fff;overflow:hidden;color:#223746}
-.dashboard-todo-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 17px;background:#e3edf1;border-bottom:1px solid #bdcdd5}
+.dashboard-todo-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 17px;background:#e7eef3;border-bottom:1px solid #c4d4df}
 .dashboard-todo-head strong{font-size:17px}.dashboard-todo-head small{font-size:12px;color:#526a77}
 .dashboard-todo-form{display:flex;gap:9px;padding:13px 15px;flex-wrap:wrap}
 .dashboard-todo-form input{flex:1 1 200px;min-width:0;min-height:43px;padding:10px 12px;font-size:16px;border:1px solid #a8b8c3;border-radius:8px;color:#223746;background:#fff}
-.dashboard-todo-form button{min-height:43px;padding:8px 15px;border:1px solid #30586c;border-radius:8px;background:#345e72;color:white;font-weight:700;cursor:pointer}
+.dashboard-todo-form button{min-height:43px;padding:8px 15px;border:1px solid #30586c;border-radius:8px;background:#315f7e;color:white;font-weight:700;cursor:pointer}
 .dashboard-todo-columns{display:grid;grid-template-columns:1fr 1fr;gap:13px;padding:0 15px 15px}
-.dashboard-todo-column{min-width:0;border:1px solid #d3dfe4;border-radius:10px;overflow:hidden;background:#f9fbfc}
-.dashboard-todo-column h3{margin:0;padding:11px 13px;background:#e8f0f4;font-size:14px;color:#243c4a}
-.dashboard-todo-column.done h3{background:#e2ede4}
+.dashboard-todo-column{min-width:0;border:1px solid #d3dfe4;border-radius:10px;overflow:hidden;background:#f5f9fc}
+.dashboard-todo-column h3{margin:0;padding:11px 13px;background:#dceaf5;font-size:14px;color:#224b6b;border-bottom:1px solid #bed2e3}
+.dashboard-todo-column.done h3{background:#e1efe8;color:#285c4a;border-bottom-color:#bed8cb}
 .dashboard-todo-list{display:grid;align-content:start;min-height:64px}
-.dashboard-todo-row{display:flex;align-items:center;gap:10px;padding:11px 10px;border-top:1px solid #e4eaed;background:#fff}
+.dashboard-todo-row{display:flex;align-items:center;gap:10px;padding:11px 10px;border-top:1px solid #e4eaed;background:#f8fbfe}
 .dashboard-todo-row:first-child{border-top:0}
+.dashboard-todo-column.done .dashboard-todo-row{background:#f5faf7;border-top-color:#e0eae4}
+.dashboard-todo-column:not(.done){border-color:#b8d0e2;background:#eff6fb}
+.dashboard-todo-column.done{border-color:#bfd9cb;background:#f0f7f3}
+.dashboard-todo-column:not(.done) .dashboard-todo-row input{accent-color:#316b91}
+.dashboard-todo-column.done .dashboard-todo-row input{accent-color:#44816a}
+.dashboard-todo-column h3 [data-todo-count]{display:inline-block;margin-left:5px;padding:1px 8px;border-radius:999px;background:#c2dbee;color:#174d74;font-variant-numeric:tabular-nums}
+.dashboard-todo-column.done h3 [data-todo-count]{background:#cae4d6;color:#275a46}
 .dashboard-todo-row label{display:flex;align-items:center;gap:9px;min-width:0;flex:1;font-size:13px;line-height:1.5}
 .dashboard-todo-row label span{min-width:0;overflow-wrap:anywhere}
 .dashboard-todo-row input{width:18px;height:18px;flex:0 0 18px;accent-color:#427a68;cursor:pointer}
