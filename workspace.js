@@ -620,11 +620,15 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const saved = await repository.saveClient({ ...record, ...serializable(form) }, { expectedVersion: record.updated_at || null });
       if (!saved?.id) throw new Error('The save was not confirmed by the database. Your changes remain open.');
       record = saved;
+      // Keep the footer's Text Client / Call Data actions linked to the
+      // saved client even when this dialog began as a new, unsaved record.
+      d.node.dataset.clientId = saved.id;
       patchClient(saved);
       syncOverviewClientActions?.();
       const savedName = [saved.first_name, saved.last_name].filter(Boolean).join(' ').trim();
       const titleNode = d.node.querySelector('h2');
       if (titleNode && savedName) titleNode.textContent = savedName;
+      return saved;
     } });
     const mount = loaded => {
       if (!d.node.isConnected) return;
