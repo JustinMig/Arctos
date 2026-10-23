@@ -1,6 +1,6 @@
 import { makeClientSearch } from './client-age-search.js?v=deceased-archive-1';
-import { createCampaignRepository } from './campaigns-repository.js';
-import { createWorkspace } from './workspace.js?v=overview-client-actions-2';
+import { createCampaignRepository } from './campaigns-repository.js?v=campaign-completion-notes-1';
+import { createWorkspace } from './workspace.js?v=campaign-completion-notes-1';
 import { mhRepository, supabase } from './supabase-repository.js?v=american-amicable-2026-1';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
@@ -55,7 +55,7 @@ export async function startWorkspace() {
   // were awaited, delaying EVERY login and dashboard opening.
   const ensureFeature = createFeatureLoader({
     client: () => import('./workspace-extensions.js?v=compact-deceased-1'),
-    campaign: () => import('./workspace-campaign-extensions.js?v=arctos-perf-1'),
+    campaign: () => import('./workspace-campaign-extensions.js?v=campaign-completion-notes-1'),
     lead: () => import('./workspace-lead-extensions.js?v=arctos-perf-1'),
     quick: () => import('./workspace-quick-extensions.js?v=arctos-perf-1')
   });
