@@ -364,3 +364,16 @@ label.btn:has(> input[data-multi-camera]) {
   .contacts-dialog .contact-directory-results{max-height:240px}
   .contacts-dialog .contact-directory-detail{padding:11px}
 }
+
+/* Select existing campaign / create new directly from a saved client. */
+.workspace-dialog.client-campaign-picker .cmp-form{display:grid;gap:12px}
+.workspace-dialog.client-campaign-picker .cmp-form .field{display:grid;gap:6px;min-width:0}
+.workspace-dialog.client-campaign-picker .cmp-form select,
+.workspace-dialog.client-campaign-picker .cmp-form input{
+  min-width:0;box-sizing:border-box;width:100%;min-height:42px;
+  color:#182e3d;background:#fff;border:1px solid #9eb5c5;
+  border-radius:9px;padding:9px 11px;font:inherit;
+}
+.workspace-dialog.client-campaign-picker [data-client-campaign-new][hidden],
+.workspace-dialog.client-campaign-picker [data-client-campaign-more][hidden]{display:none!important}
+.workspace-dialog.client-campaign-picker [data-client-campaign-message]{font-size:12px;line-height:1.5;color:#385971}
