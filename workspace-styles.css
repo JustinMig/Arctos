@@ -25,7 +25,7 @@
 @import "./leads.css";
 @import "./leads-collapse.css";
 @import "./campaigns.css";
-@import "./campaign-stage-layout.css";
+@import "./campaign-stage-layout.css?v=campaign-completion-notes-1";
 @import "./campaign-call-placeholder.css";
 @import "./campaign-list-compact.css";
 @import "./campaign-management-controls.css";
