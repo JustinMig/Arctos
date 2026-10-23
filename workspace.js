@@ -44,7 +44,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   async function campaigns() {
     if (!repository.campaigns) throw new Error('Campaign storage is not connected.');
     if (ensureCampaignFeatures) await ensureCampaignFeatures();
-    if (!campaignModule) campaignModule = import('./campaigns-ui.js').then(({ createCampaignFeature }) => {
+    if (!campaignModule) campaignModule = import('./campaigns-ui.js?v=client-overview-actions-1').then(({ createCampaignFeature }) => {
       campaignFeature = createCampaignFeature({ repository, dialogs, openClient, onCalendarChange: () => { state.calendarLoadedKey = ''; state.calendarLoadedAt = 0; state.events = []; drawCalendar({ force: true }); } });
       return campaignFeature;
     }).catch(error => { campaignModule = null; throw error; });
@@ -471,11 +471,13 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }
   function openClientReady(id = null) {
     let record = {};
+    let syncOverviewClientActions = null;
     const d = dialogs.open({ title: 'Client Information', hint: id ? 'Edit this client without leaving your search results' : 'New client • all sections in one window', icon: icon('client', true), kind: 'client-dialog', clientId: id || null, isNewClient: !id, body: '<p class="subtle">Loading client information…</p>', footer: saveFooter('Save Client'), onSave: async form => {
       const saved = await repository.saveClient({ ...record, ...serializable(form) }, { expectedVersion: record.updated_at || null });
       if (!saved?.id) throw new Error('The save was not confirmed by the database. Your changes remain open.');
       record = saved;
       patchClient(saved);
+      syncOverviewClientActions?.();
       const savedName = [saved.first_name, saved.last_name].filter(Boolean).join(' ').trim();
       const titleNode = d.node.querySelector('h2');
       if (titleNode && savedName) titleNode.textContent = savedName;
@@ -491,6 +493,42 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       hydrate(form, record);
       wireTabs(d.node);
       d.attachForm(form);
+      // These two shortcuts act on the exact saved client, not on a search result.
+      // A new client must be saved first. Existing record edits remain in their
+      // original dialog while the campaign/appointment dialog is opened.
+      const campaignShortcut=form.querySelector('[data-client-add-campaign]');
+      const appointmentShortcut=form.querySelector('[data-client-add-appointment]');
+      syncOverviewClientActions=()=>{
+        const available=!!record?.id && String(record.status||'').toLowerCase()!=='deceased';
+        for(const button of [campaignShortcut,appointmentShortcut]) {
+          if(!button)continue;
+          button.disabled=!available;
+          button.title=!record?.id?'Save this client before scheduling or adding to a campaign.':
+            !available?'Deceased clients cannot be added to new campaigns or appointments.':'';
+        }
+      };
+      syncOverviewClientActions();
+      campaignShortcut?.addEventListener('click',async()=>{
+        if(!record?.id) return;
+        campaignShortcut.disabled=true;
+        try {
+          const feature=await campaigns();
+          if(!form.isConnected)return;
+          feature.addClientToCampaign({
+            id:record.id,first_name:record.first_name,last_name:record.last_name,
+            phone:record.phone,city:record.city,state:record.state,county:record.county,status:record.status
+          });
+        } catch(error) {
+          if(form.isConnected)d.error(error?.message||'Could not open the campaign selector.');
+        } finally { if(form.isConnected)syncOverviewClientActions(); }
+      });
+      appointmentShortcut?.addEventListener('click',()=>{
+        if(!record?.id)return;
+        openAppointment(todayKey(),null,null,{
+          id:record.id,first_name:record.first_name,last_name:record.last_name,
+          phone:record.phone,assigned_agent_id:record.assigned_agent_id,status:record.status
+        });
+      });
       // Deceased archive records open directly to their retained documents and files.
       if (loaded.id && state.archive.open && String(loaded.status||'').toLowerCase()==='deceased') {
         form.querySelector('[data-client-group-tab="files"]')?.click();
@@ -922,7 +960,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }
 
 
-  function openAppointment(key = todayKey(), existing = null, onSaved = null) {
+  function openAppointment(key = todayKey(), existing = null, onSaved = null, selectedClient = null) {
     const editing = !!existing?.id;
     const timeOptions = [['', 'Select appointment time'], ...appointmentSlots().map(t => [t, timeLabel(t)])];
     const body = `${info}<div class="intro"><strong>${editing ? 'Edit Appointment' : 'Set Appointment'}</strong><p>${editing ? 'Update the saved appointment information.' : 'Schedule an existing client or a new/non-client on the calendar.'}</p></div><form class="appointment-form" autocomplete="off" novalidate><div class="form-grid">${select('assigned_agent_id', 'Agent', [['', connected ? 'Select agent' : 'No agents connected'], ...agents.map(a => [a.id, a.full_name])], !connected)}${select('event_type', 'Type', ['Appointment', 'Activity'])}</div><div class="mode-picker" role="group" aria-label="Appointment person type"><button type="button" class="active" data-mode="existing" aria-pressed="true">EXISTING CLIENT</button><button type="button" data-mode="new" aria-pressed="false">NEW / NON-CLIENT</button></div><input type="hidden" name="person_type" value="existing"><input type="hidden" name="client_id" value=""><div data-existing><label class="field"><span>Client</span><input data-person-search placeholder="Type client name or phone" autocomplete="off"></label><div data-person-results class="lookup-results" aria-live="polite"></div><p data-selected-person class="subtle">No client selected</p></div><div data-new-person hidden><div class="form-grid">${input('person_name', 'New / Non-client Name')}${input('person_phone', 'Phone Number', { type: 'tel' })}</div></div><div class="form-grid">${input('title', 'Appointment / Activity Title', { span: true })}${dateInput('event_date', 'Appointment Date', true)}${select('start_time', 'Appointment Time', timeOptions)}</div><p class="subtle appointment-slot-status" data-appointment-slot-status role="status" aria-live="polite">Checking available appointment times…</p>${textArea('notes', 'Notes (optional)', 'Purpose of appointment or anything to remember')}<p class="subtle">${connected ? 'Unavailable times are disabled. The calendar is checked again before saving.' : 'Availability cannot be checked until scheduling is connected.'}</p></form>`;
@@ -1038,6 +1076,17 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
           d.baseline?.();
         }).catch(() => {});
       }
+    }
+    // From Client at a Glance, automatically select the correct saved client.
+    if (!editing && selectedClient?.id) {
+      const name=[selectedClient.first_name,selectedClient.last_name].filter(Boolean).join(' ').trim();
+      form.elements.person_type.value='existing';
+      form.elements.client_id.value=selectedClient.id;
+      form.querySelector('[data-person-search]').value=name;
+      form.querySelector('[data-selected-person]').textContent='Selected: '+name+(selectedClient.phone?' • '+selectedClient.phone:'');
+      const assigned=agents.find(a=>a.id===selectedClient.assigned_agent_id && a.active!==false) ||
+        agents.find(a=>a.id===repository.user?.id && a.active!==false);
+      if(assigned)form.elements.assigned_agent_id.value=assigned.id;
     }
     let token = 0, timer;
     form.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
