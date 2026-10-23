@@ -1276,6 +1276,21 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     return d;
   }
 
+  // Call Data -> appointment uses the same scheduler as Overview and Calendar.
+  // Resolve the client using normal repository access (not untrusted UI fields).
+  async function callReviewAppointment(event) {
+    const clientId=String(event?.detail?.clientId||'');
+    if(!/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(clientId))return;
+    try{
+      const client=await repository.getClient(clientId);
+      if(!client?.id || String(client.status||'').toLowerCase()==='deceased')
+        throw new Error('This client is unavailable for an appointment.');
+      if(state.destroyed)return;
+      openAppointment(todayKey(),null,null,client);
+    }catch(error){window.alert(error?.message||'Unable to open the appointment scheduler.');}
+  }
+  window.addEventListener('mig:communications-appointment',callReviewAppointment);
+
   function openNotes() {
     const d = dialogs.open({ title: 'Notes', hint: 'Dashboard notes', icon: icon('notes', true), kind: 'notes-dialog', body: `${info}<div class="panel-heading"><div><h3>Dashboard Notes</h3><p class="subtle">Named notes, kept separate from client notes.</p></div><button type="button" class="btn primary" data-new-note>+ New Note</button></div><div class="mode-picker note-filters" role="group" aria-label="Note owner"><button type="button" class="active" data-owner="all" aria-pressed="true">All Notes</button><button type="button" data-owner="mine" aria-pressed="false">My Notes</button></div><form class="note-editor" autocomplete="off" hidden novalidate>${input('title', 'Note Name', { required: true })}${textArea('body', 'Note', 'Write a note…')}</form><div data-note-list>${empty('No notes loaded', connected ? 'Loading notes…' : 'Note storage is not connected.')}</div>`, footer: saveFooter('Save Note'), onSave: async form => {
       if (form.hidden) throw new Error('Choose New Note first.');
@@ -1611,6 +1626,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     maPlansFeature?.destroy();
     athenaFeature?.destroy();
     dialogs.destroy();
+    window.removeEventListener('mig:communications-appointment',callReviewAppointment);
     window.removeEventListener('hashchange', changeRoute);
     window.removeEventListener('keydown', escapeMenu);
     clearInterval(calendarPoll);
