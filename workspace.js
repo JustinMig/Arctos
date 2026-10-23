@@ -1144,49 +1144,93 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     };
   }
   function openBuild() {
-    const d = dialogs.open({ title: 'Height & Weight', hint: 'Height & weight underwriting lookup', icon: icon('build', true), kind: 'build-dialog', body: `<div class="panel-card"><div class="panel-heading"><div><h3>Height &amp; Weight Underwriting Lookup</h3><p class="subtle">Select an insurance company, then a height. Weights are in pounds.</p></div><button type="button" class="btn secondary" data-build-reset>Reset</button></div><div class="form-grid">${select('company', 'Company', [['', 'Loading charts…']], true)}${select('height', 'Height', [['', 'Choose company first']], true)}</div><div data-build-result aria-live="polite">${empty('Loading saved chart references…')}</div><p class="subtle">Saved M&amp;M chart references, not a live carrier feed or an approval. Confirm the current guide for the product and state before using these limits.</p></div>` });
-    const company = d.node.querySelector('[name="company"]');
-    const height = d.node.querySelector('[name="height"]');
-    const result = d.node.querySelector('[data-build-result]');
-    let catalogue = [], token = 0;
-    company.onchange = () => {
-      token++;
-      const selected = catalogue.find(chart => chart.company === company.value);
-      height.innerHTML = options([['', selected ? 'Select height' : 'Choose company first'], ...(selected?.heights || []).map(row => [String(row.value), row.label])]);
-      height.value = '';
-      height.disabled = !selected;
+    const d = dialogs.open({ title: 'Height & Weight', hint: 'Product-specific carrier underwriting lookup', icon: icon('build', true), kind: 'build-dialog',
+      body: `<div class="panel-card"><div class="panel-heading"><div><h3>Height &amp; Weight Underwriting Lookup</h3><p class="subtle">Select the carrier, then its product and applicable age group where needed. All weight values are pounds.</p></div><button type="button" class="btn secondary" data-build-reset>Reset</button></div>
+        <div class="form-grid">
+          ${select('company','Company',[['','Loading charts…']],true)}
+          ${select('plan','American Amicable Product',[['','Choose American Amicable first']],true)}
+          ${select('ageGroup','Age Group / Underwriting Chart',[['','Choose product first']],true)}
+          ${select('height','Height',[['','Choose company first']],true)}
+        </div>
+        <div data-build-result aria-live="polite">${empty('Loading underwriting chart references…')}</div>
+        <p class="subtle">Reference only. Product-specific guides may vary by state or underwriting revision. Weight limits alone never guarantee approval; confirm eligibility with the carrier.</p></div>` });
+    const company=d.node.querySelector('[name="company"]'),
+      plan=d.node.querySelector('[name="plan"]'),
+      ageGroup=d.node.querySelector('[name="ageGroup"]'),
+      height=d.node.querySelector('[name="height"]'),
+      result=d.node.querySelector('[data-build-result]');
+    let catalogue=[],token=0;
+    const planField=plan.closest('label'),groupField=ageGroup.closest('label');
+    planField.hidden=true;
+    groupField.hidden=true;
+    const setHeights=(rows,message='Select height')=>{
+      height.innerHTML=options([['',message],...(rows||[]).map(row=>[String(row.value),row.label])]);
+      height.value='';
+      height.disabled=!rows?.length;
       result.removeAttribute('aria-busy');
-      result.innerHTML = empty(selected ? 'Select a height' : 'Choose a company to begin');
+      result.innerHTML=empty(rows?.length?'Select a height':'Select the applicable chart');
     };
-    height.onchange = async () => {
-      const request = ++token;
-      if (!company.value || !height.value) { result.removeAttribute('aria-busy'); result.innerHTML = empty('Select a height'); return; }
-      const selectedCompany = company.value, selectedHeight = Number(height.value);
-      result.setAttribute('aria-busy', 'true');
-      result.innerHTML = empty('Loading chart values…');
-      try {
-        const chart = await repository.getBuildChart({ company: selectedCompany, heightInches: selectedHeight });
-        if (request !== token || !d.node.isConnected) return;
-        if (!chart) { result.innerHTML = empty('No chart row available', 'This height is not listed in the saved carrier chart. Do not estimate a weight limit.'); return; }
-        if (!Array.isArray(chart.values) || !chart.values.length || chart.company !== selectedCompany || chart.heightInches !== selectedHeight) throw new Error('The chart response did not match the selected company and height.');
-        result.innerHTML = `<h3>${esc(chart.company)} — ${esc(chart.height)}</h3><div class="contact-grid">${chart.values.map(v => `<section><h4>${esc(v.label)}</h4><strong>${esc(v.value)}</strong></section>`).join('')}</div>${(chart.warnings || []).map(message => `<p class="notice">${esc(message)}</p>`).join('')}<p class="subtle">Source reference: ${esc(chart.source)}</p>`;
-      } catch (error) {
-        if (request === token && d.node.isConnected) result.innerHTML = empty('Height & Weight unavailable', error?.message || 'Close this window and reopen it to retry.');
-      } finally {
-        if (request === token && d.node.isConnected) result.removeAttribute('aria-busy');
-      }
+    company.onchange=()=>{
+      token++;
+      const selected=catalogue.find(chart=>chart.company===company.value);
+      planField.hidden=!selected?.plans?.length;
+      groupField.hidden=true;
+      plan.disabled=!selected?.plans?.length;
+      plan.innerHTML=options([['','Select product'],...(selected?.plans||[]).map(p=>[p.key,p.name+' • ages '+p.ages])]);
+      plan.value='';
+      ageGroup.innerHTML=options([['','Select age group']]);
+      ageGroup.value='';ageGroup.disabled=true;
+      if(selected?.plans?.length) setHeights([], 'Choose product first');
+      else setHeights(selected?.heights||[], selected?'Select height':'Choose company first');
     };
-    d.node.querySelector('[data-build-reset]').onclick = () => { company.value = ''; company.onchange(); };
-    Promise.resolve().then(() => repository.listBuildCharts()).then(charts => {
-      if (!d.node.isConnected) return;
-      if (!Array.isArray(charts) || !charts.length || charts.some(chart => !chart.company || !Array.isArray(chart.heights) || !chart.heights.length)) throw new Error('No saved carrier charts are available.');
-      catalogue = charts;
-      company.innerHTML = options([['', 'Select company'], ...charts.map(chart => chart.company)]);
-      company.disabled = false;
+    plan.onchange=()=>{
+      token++;
+      const selected=catalogue.find(chart=>chart.company===company.value);
+      const product=selected?.plans?.find(item=>item.key===plan.value);
+      const groups=product?.ageGroups||[];
+      groupField.hidden=groups.length<=1;
+      ageGroup.innerHTML=options([['','Select age group / chart'],...groups.map(g=>[g.key,g.label])]);
+      ageGroup.disabled=!product||groups.length<=1;
+      ageGroup.value=groups.length===1?groups[0].key:'';
+      if(groups.length===1) setHeights(groups[0].heights);
+      else setHeights([],product?'Select age group first':'Choose product first');
+    };
+    ageGroup.onchange=()=>{
+      token++;
+      const selected=catalogue.find(chart=>chart.company===company.value);
+      const product=selected?.plans?.find(item=>item.key===plan.value);
+      const group=product?.ageGroups?.find(item=>item.key===ageGroup.value);
+      setHeights(group?.heights||[]);
+    };
+    height.onchange=async()=>{
+      const request=++token;
+      if(!company.value||!height.value){result.innerHTML=empty('Select a height');return;}
+      const selectedCompany=company.value,selectedHeight=Number(height.value);
+      const selectedPlan=plan.value||undefined,selectedAgeGroup=ageGroup.value||undefined;
+      result.setAttribute('aria-busy','true');
+      result.innerHTML=empty('Loading chart values…');
+      try{
+        const chart=await repository.getBuildChart({company:selectedCompany,plan:selectedPlan,ageGroup:selectedAgeGroup,heightInches:selectedHeight});
+        if(request!==token||!d.node.isConnected)return;
+        if(!chart){result.innerHTML=empty('No chart row available','No exact height matches the selected product and age-group table. Never estimate missing limits.');return;}
+        if(!Array.isArray(chart.values)||!chart.values.length||chart.company!==selectedCompany||chart.heightInches!==selectedHeight)throw Error('The underwriting chart response did not match your selection.');
+        const heading=[chart.company,chart.plan,chart.ageGroup,chart.height].filter(Boolean).join(' — ');
+        result.innerHTML=`<h3>${esc(heading)}</h3>
+          <div class="contact-grid">${chart.values.map(value=>`<section><h4>${esc(value.label)}</h4><strong>${esc(value.value)}</strong></section>`).join('')}</div>
+          ${(chart.warnings||[]).map(message=>`<p class="notice">${esc(message)}</p>`).join('')}
+          <p class="subtle">Source: ${esc(chart.source)}. Carrier underwriting decides eligibility; the chart is a reference.</p>`;
+      }catch(error){if(request===token&&d.node.isConnected)result.innerHTML=empty('Height & Weight unavailable',error?.message||'Close and reopen to retry.');}
+      finally{if(request===token&&d.node.isConnected)result.removeAttribute('aria-busy');}
+    };
+    d.node.querySelector('[data-build-reset]').onclick=()=>{company.value='';company.onchange();};
+    Promise.resolve().then(()=>repository.listBuildCharts()).then(charts=>{
+      if(!d.node.isConnected)return;
+      if(!Array.isArray(charts)||!charts.length||charts.some(c=>!c.company||!Array.isArray(c.heights)))throw Error('Saved carrier charts unavailable.');
+      catalogue=charts;
+      company.innerHTML=options([['','Select company'],...charts.map(c=>c.company)]);
+      company.disabled=false;
       company.onchange();
-    }).catch(error => {
-      if (d.node.isConnected) result.innerHTML = empty('Height & Weight unavailable', error?.message || 'Close this window and reopen it to retry.');
-    });
+    }).catch(error=>{if(d.node.isConnected)result.innerHTML=empty('Height & Weight unavailable',error?.message||'Close and reopen to retry.');});
   }
   function openCommissions() {
     const d = dialogs.open({ title: 'Commissions', hint: 'Life Insurance and Medicare dashboard data', icon: icon('commissions', true), kind: 'commissions-dialog', body: `${info}<div class="commission-view"><div class="commission-agent">${select('agent', 'Agent', [['', connected ? 'Select agent' : 'No agents connected'], ...agents.map(a => [a.id, a.full_name])], !connected)}</div><div class="mode-picker commission-types" role="group" aria-label="Commission type"><button type="button" class="active" data-commission="life" aria-pressed="true"><strong>Life Insurance</strong><small>Monthly &amp; yearly</small></button><button type="button" data-commission="medicare" aria-pressed="false"><strong>Medicare</strong><small>Book &amp; enrollment periods</small></button></div><div data-commission-body></div></div>` });
