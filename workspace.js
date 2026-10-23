@@ -1171,28 +1171,95 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     loadNotes();
   }
   function openContacts() {
-    const d = dialogs.open({ title: 'Contacts', hint: 'Company contact directory', icon: icon('contacts', true), kind: 'contacts-dialog', body: `${info}<div class="panel-card"><h3>Company Contact Directory</h3><p class="subtle">Search company name, phone, fax, or email.</p><label class="field"><span>Find company</span><input data-contact-query autocomplete="off" placeholder="Search company contacts…"></label><div class="lookup-results" data-contact-results aria-live="polite"></div><div data-contact-details>${empty('Search for a company', 'No directory records have been imported into this standalone CRM.')}</div></div>` });
-    let timer, request = 0;
-    d.node.querySelector('[data-contact-query]').oninput = e => {
-      clearTimeout(timer); const token = ++request, query = e.target.value.trim();
-      const host = d.node.querySelector('[data-contact-results]'), detail = d.node.querySelector('[data-contact-details]');
-      host.innerHTML = ''; detail.innerHTML = '';
-      if (!query) { detail.innerHTML = empty('Search for a company'); return; }
-      timer = setTimeout(async () => {
-        if (!d.node.isConnected) return;
-        try {
-          const matches = await repository.searchContacts({ query, limit: 12 });
-          if (token !== request || !d.node.isConnected) return;
-          host.innerHTML = matches.length ? matches.map((c, i) => `<button type="button" data-contact="${i}"><strong>${esc(c.company)}</strong><small>${esc(c.phones?.[0] || c.emails?.[0] || '')}</small></button>`).join('') : '<p>No matching company</p>';
-          host.querySelectorAll('[data-contact]').forEach(b => b.onclick = () => {
-            const contact = matches[Number(b.dataset.contact)];
-            d.node.querySelector('[data-contact-query]').value = contact.company;
-            host.innerHTML = '';
-            detail.innerHTML = `<h3>${esc(contact.company)}</h3><div class="contact-grid">${[['phones', 'Phone'], ['faxes', 'Fax'], ['emails', 'Email']].map(([key, label]) => `<section><h4>${label}</h4>${(contact[key] || []).map(v => `<p>${esc(v)}</p>`).join('') || '<p>—</p>'}</section>`).join('')}</div>${(contact.notes || []).map(text => `<p class="preserve-lines">${esc(text)}</p>`).join('')}`;
-          });
-        } catch { if (token === request && d.node.isConnected) host.textContent = connected ? 'The directory could not load. Please retry.' : 'The company directory has not been connected or imported yet.'; }
-      }, 200);
+    const d = dialogs.open({
+      title:'Contacts',
+      hint:'Original M&M company contact directory',
+      icon:icon('contacts',true),kind:'contacts-dialog',
+      body:`${info}<div class="panel-card company-contact-directory">
+        <div class="panel-heading"><div><h3>Company Contact Directory</h3>
+          <p class="subtle">Original M&M insurance company contacts. Search names, phone numbers, fax numbers, email addresses or notes.</p></div></div>
+        <label class="field"><span>Find Company or Contact Information</span>
+          <input data-contact-query type="search" autocomplete="off" placeholder="Company, phone, fax, or email…"></label>
+        <p data-contact-status class="subtle" role="status" aria-live="polite">Loading company contacts…</p>
+        <div class="lookup-results contact-directory-results" data-contact-results aria-live="polite"></div>
+        <div class="contact-directory-detail" data-contact-details>${empty('Choose a company','Select a contact above to view every phone, fax, email and note.')}</div>
+      </div>`
+    });
+    const search=d.node.querySelector('[data-contact-query]');
+    const host=d.node.querySelector('[data-contact-results]');
+    const detail=d.node.querySelector('[data-contact-details]');
+    const status=d.node.querySelector('[data-contact-status]');
+    let timer, request=0;
+    const contactPhoneLink=value=>{
+      const raw=String(value||'');
+      const digits=raw.replace(/\D/g,'');
+      return digits.length>=7 && digits.length<=15
+        ? `<a href="tel:${digits}">${esc(raw)}</a>`
+        : esc(raw);
     };
+    const contactEmailLink=value=>{
+      const mail=String(value||'').trim();
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)
+        ? `<a href="mailto:${esc(mail)}">${esc(mail)}</a>`
+        : esc(mail);
+    };
+    const showDetails=contact=>{
+      if(!contact)return;
+      search.value=contact.company;
+      host.innerHTML='';
+      status.textContent='Viewing contact details for '+contact.company+'. Search again to choose another company.';
+      const sections=[
+        ['phones','Phone Numbers',contactPhoneLink],
+        ['faxes','Fax Numbers',value=>esc(value)],
+        ['emails','Email Addresses',contactEmailLink]
+      ];
+      const extra=contact.website && /^https?:\/\//i.test(contact.website)
+        ? `<p class="contact-directory-website"><a href="${esc(contact.website)}" target="_blank" rel="noopener noreferrer">Company website ↗</a></p>`
+        : '';
+      detail.innerHTML=`<h3>${esc(contact.company)}</h3>
+        ${contact.department?`<p class="subtle">${esc(contact.department)}</p>`:''}
+        <div class="contact-grid">${sections.map(([key,label,link])=>
+          `<section><h4>${label}</h4>${contact[key]?.length
+            ? contact[key].map(value=>`<p>${link(value)}</p>`).join('')
+            : '<p>—</p>'}</section>`).join('')}</div>
+        ${contact.notes?.length?`<section class="contact-directory-notes"><h4>Company Notes</h4>${contact.notes.map(note=>`<p class="preserve-lines">${esc(note)}</p>`).join('')}</section>`:''}
+        ${extra}`;
+    };
+    const searchDirectory=async()=>{
+      const token=++request;
+      const query=search.value.trim();
+      status.textContent=query?'Searching original company contacts…':'Loading original company directory…';
+      host.innerHTML='';
+      try{
+        const matches=await repository.searchContacts({query,limit:50});
+        if(token!==request || !d.node.isConnected)return;
+        const plural=matches.length===1?'contact':'contacts';
+        status.textContent=matches.length
+          ? `Showing ${matches.length} ${plural}${matches.length===50?' (first 50; type more to narrow results)':''}.`
+          : 'No company contacts match that search.';
+        host.innerHTML=matches.length
+          ? matches.map((c,i)=>`<button type="button" data-contact="${i}">
+              <strong>${esc(c.company)}</strong>
+              <small>${esc(c.phones?.[0] || c.emails?.[0] || 'Company contact')}</small>
+            </button>`).join('')
+          : '<p class="contact-directory-no-match">No matching company or contact information.</p>';
+        host.querySelectorAll('[data-contact]').forEach(button=>button.onclick=()=>showDetails(matches[Number(button.dataset.contact)]));
+      }catch(error){
+        if(token===request&&d.node.isConnected){
+          status.textContent='Unable to load company contacts.';
+          host.innerHTML='';
+          detail.innerHTML=empty('Company contacts unavailable',error?.message||'Check your connection and try again.');
+        }
+      }
+    };
+    search.addEventListener('input',()=>{
+      clearTimeout(timer);
+      // A new search should not leave the last company's phone/details onscreen.
+      detail.innerHTML=empty('Choose a company','Select a result to view the company’s contact information.');
+      timer=setTimeout(searchDirectory,180);
+    });
+    d.node.addEventListener('close',()=>{request++;clearTimeout(timer);},{once:true});
+    void searchDirectory();
   }
   function openBuild() {
     const d = dialogs.open({ title: 'Height & Weight', hint: 'Product-specific carrier underwriting lookup', icon: icon('build', true), kind: 'build-dialog',
