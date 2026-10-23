@@ -1,4 +1,4 @@
-import { listAmericanAmicablePlans, getAmericanAmicableBuild } from './american-amicable-build-data.js?v=2026-agent-guides-1';
+import { listAmericanAmicablePlans, getAmericanAmicableBuild } from './american-amicable-build-data.js?v=2026-agent-guides-2';
 /** Saved underwriting chart references, not a live carrier feed or an approval engine.
  * Transcribed without interpolating or changing the existing M&M chart values.
  * Source: JustinMig/Mayer-insurance-crm, lib/build-charts.ts,
