@@ -16,7 +16,7 @@ const ALLOWED_FILES = new Set(['image/jpeg','image/png','image/webp','image/heic
 const FIELD_GROUPS = {
   1: ['first_name','last_name','dob','phone','email','address','city','state','zip','county','gender','veteran'],
   2: ['part_a','part_b','medicaid_status','medicaid_level','medicare_status','eligibility_notes','medicare_gov_username','medicare_gov_email','medicare_gov_notes'],
-  3: ['current_carrier','current_plan','current_plan_id','current_year','current_member_id','current_plan_type','current_premium','current_like','current_dislike'],
+  3: ['current_carrier','current_plan','current_plan_id','current_year','current_member_id','current_plan_type','current_premium','current_like','current_dislike','old_plan_carrier','old_plan_id','old_plan_member_id','old_plan_year'],
   4: [],
   5: [],
   6: ['care_priorities','dental_need','vision_need','hearing_need','transport_need','otc_need','giveback_need','food_need','preferred_hospitals','network_concerns'],
@@ -96,7 +96,10 @@ function sectionBody(index) {
       '<label class="at-field" data-at-medicare-gov-verification="text"><span>Verification Phone Number</span><input name="medicare_gov_verification_phone_temporary" type="tel"></label>' +
       '<label class="at-field" data-at-medicare-gov-verification="email"><span>Verification Email</span><input name="medicare_gov_verification_email_temporary" type="email"></label>' +
       '<label class="at-field at-span"><span>Security Answer</span><input name="medicare_gov_security_answer_temporary" type="text" autocomplete="off" spellcheck="false"></label>');
-    case 3: return choice('current_carrier','Current carrier',CARRIER_OPTIONS.map(x=>[x,x])) + '<input type="hidden" name="current_plan">' +
+    case 3: return '<div class="at-old-plan-details at-span"><h3>Old Plan Details</h3><div class="at-old-plan-grid">' +
+      choice('old_plan_carrier','Insurance Company',[...CARRIER_OPTIONS,'Blue Cross Blue Shield','Wellcare','Original Medicare','Other'].map(x=>[x,x])) +
+      control('old_plan_id','Plan ID') + control('old_plan_member_id','Member ID') + control('old_plan_year','Year','text','2026') +
+      '</div></div>' + choice('current_carrier','Current carrier',CARRIER_OPTIONS.map(x=>[x,x])) + '<input type="hidden" name="current_plan">' +
       control('current_plan_id','Plan ID') + control('current_year','Plan year','text','2027') +
       control('current_member_id','Member ID') +
       choice('current_plan_type','Plan type',[['HMO','HMO'],['PPO','PPO'],['HMO-POS','HMO-POS'],['D-SNP','D-SNP'],['C-SNP','C-SNP'],['Medigap','Supplement'],['Original Medicare','Original Medicare'],['Other','Other']]) +
