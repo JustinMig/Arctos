@@ -2,7 +2,7 @@
 /* Applies only explicitly edited Athena fields to the corresponding CRM record.
    No replacement of entire client, doctor, medication, pharmacy or policy collections. */
 const CLIENT={first_name:'first_name',last_name:'last_name',dob:'date_of_birth',phone:'phone',email:'email',address:'address1',city:'city',state:'state',zip:'zip_code',county:'county',gender:'gender',veteran:'veteran'};
-const MEDICARE={part_a:'part_a_date',part_b:'part_b_date',medicaid_level:'medicaid_level'};
+const MEDICARE={part_a:'part_a_date',part_b:'part_b_date',medicaid_level:'medicaid_level',sunfire_code:'sunfire_code'};
 const OLD_PLAN={old_plan_carrier:'old_plan_carrier',old_plan_id:'old_plan_id',old_plan_member_id:'old_plan_member_id',old_plan_year:'old_plan_year'};
 const PLAN={current_carrier:'carrier',current_plan:'plan_name',current_plan_id:'plan_id',current_member_id:'member_id',current_plan_type:'plan_type',current_premium:'premium'};
 const trim = value=>String(value??'').trim();
@@ -20,14 +20,14 @@ async function many(query,label){
 export async function loadAthenaClientSections(db,id){
   const [client,med,plan,doctors,medications,pharmacy]=await Promise.all([
     one(db.from('clients').select('old_plan_carrier,old_plan_id,old_plan_member_id,old_plan_year').eq('id',id),'Old plan'),
-    one(db.from('medicare_details').select('part_a_date,part_b_date,medicaid_level').eq('client_id',id),'Medicare'),
+    one(db.from('medicare_details').select('part_a_date,part_b_date,medicaid_level,sunfire_code').eq('client_id',id),'Medicare'),
     one(db.from('health_plans').select('id,carrier,plan_name,plan_id,member_id,plan_type,premium').eq('client_id',id).order('created_at',{ascending:false}).limit(1),'Current plan'),
     many(db.from('client_doctors').select('id,doctor_name,specialty,city,state,notes').eq('client_id',id).order('created_at',{ascending:true}),'Doctors'),
     many(db.from('client_medications').select('id,medication_name,strength,frequency,notes,status').eq('client_id',id).order('created_at',{ascending:true}),'Medications'),
     one(db.from('client_pharmacies').select('pharmacy_name,pharmacy_location,pharmacy_name_2,pharmacy_location_2').eq('client_id',id),'Pharmacies')
   ]);
   const fields={
-    part_a:med?.part_a_date||'',part_b:med?.part_b_date||'',medicaid_level:med?.medicaid_level||'',
+    part_a:med?.part_a_date||'',part_b:med?.part_b_date||'',medicaid_level:med?.medicaid_level||'',sunfire_code:med?.sunfire_code||'',
     current_carrier:plan?.carrier||'',current_plan:plan?.plan_name||'',current_plan_id:plan?.plan_id||'',
     current_member_id:plan?.member_id||'',current_plan_type:plan?.plan_type||'',current_premium:plan?.premium??'',
     old_plan_carrier:client?.old_plan_carrier||'',old_plan_id:client?.old_plan_id||'',old_plan_member_id:client?.old_plan_member_id||'',old_plan_year:client?.old_plan_year||''

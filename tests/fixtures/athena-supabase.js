@@ -7,7 +7,7 @@ const clients=[{
   gender:'female',veteran:false
 }];
 const reviews=[],documents=[],vault={}; let count=0;
-const medicare_details=[{client_id:'00000000-0000-4000-8000-000000000014',part_a_date:'2025-01-01',part_b_date:'2025-02-01',medicaid_level:'QMB'}];
+const medicare_details=[{client_id:'00000000-0000-4000-8000-000000000014',part_a_date:'2025-01-01',part_b_date:'2025-02-01',medicaid_level:'QMB',sunfire_code:'SF-JANE-001'}];
 const health_plans=[{id:'00000000-0000-4000-8000-000000000041',client_id:'00000000-0000-4000-8000-000000000014',carrier:'Old Carrier',plan_name:'Original Coverage',plan_id:'H0000-000',member_id:'M000',plan_type:'HMO',premium:12,status:'active'}];
 const client_doctors=[{id:'00000000-0000-4000-8000-000000000042',client_id:'00000000-0000-4000-8000-000000000014',doctor_name:'Dr Smith',specialty:'Primary Care',city:'Corinth',state:'MS',notes:'In network'}];
 const client_medications=[{id:'00000000-0000-4000-8000-000000000043',client_id:'00000000-0000-4000-8000-000000000014',medication_name:'Metformin',strength:'500mg',frequency:'Daily',notes:'Old note',status:'active'}];

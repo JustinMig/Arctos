@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { NAV } from '../core.js';
 import { shell } from '../views.js';
+import { loadAthenaClientSections, syncAthenaClient } from '../athena-crm-sync.js';
 
 const read = name => readFile(new URL('../'+name,import.meta.url),'utf8');
 
@@ -33,7 +34,7 @@ test('new intake and annual Medicare review get separate starter actions and nin
   assert.match(s,/data-at-saved/);
   assert.match(s,/const SECTIONS = \[/);
   for(const key of ['Doctors & pharmacies','Prescriptions','Needs & priorities','Plan recommendation',
-    'Hospital protection','Review, SOA & follow-up','Medicare & Medicaid'])
+    'Hospital protection','Review, SOA & follow-up','Medicare & Medicaid','SunFire','sunfire_code'])
     assert.ok(s.includes(key),key);
   assert.match(s,/Already in CRM — skip this section/);
   assert.match(s,/data-at-hip-total/);
@@ -80,4 +81,34 @@ test('Athena includes secure attached documents without deleting client files', 
   assert.match(style,/athena-medicare\.css/);
   const css=await read('athena-medicare.css');
   assert.match(css,/@media\(max-width:680px\)/);
+});
+
+test('SunFire code loads from and saves back to the linked CRM Medicare record', async () => {
+  const id='00000000-0000-4000-8000-000000000014';
+  const tables={
+    clients:[{id,old_plan_carrier:null,old_plan_id:null,old_plan_member_id:null,old_plan_year:null}],
+    medicare_details:[{client_id:id,part_a_date:'2025-01-01',part_b_date:'2025-02-01',medicaid_level:'QMB',sunfire_code:'SF-OLD'}],
+    health_plans:[],client_doctors:[],client_medications:[],client_pharmacies:[]
+  };
+  const db={from(table){
+    let op='read',changes={},conditions=[],max=Infinity,single=false;
+    const query={
+      select(){return query;},eq(key,value){conditions.push([key,value]);return query;},order(){return query;},limit(value){max=value;return query;},
+      update(value){op='update';changes=value;return query;},insert(value){op='insert';changes=value;return query;},
+      maybeSingle(){single=true;return run();},then(resolve,reject){return run().then(resolve,reject);}
+    };
+    async function run(){
+      const rows=tables[table]||[];
+      const found=rows.filter(row=>conditions.every(([key,value])=>row[key]===value)).slice(0,max);
+      if(op==='update')found.forEach(row=>Object.assign(row,changes));
+      if(op==='insert'){rows.push({...changes});found.splice(0,found.length,rows.at(-1));}
+      return {data:single?(found[0]||null):found,error:null};
+    }
+    return query;
+  }};
+  const loaded=await loadAthenaClientSections(db,id);
+  assert.equal(loaded.fields.sunfire_code,'SF-OLD');
+  const updated=await syncAthenaClient(db,{clientId:id,data:{sunfire_code:'SF-NEW'},edited:['sunfire_code']});
+  assert.equal(tables.medicare_details[0].sunfire_code,'SF-NEW');
+  assert.deepEqual(updated,['Medicare information']);
 });

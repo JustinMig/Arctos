@@ -27,7 +27,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }
   let athenaFeature = null, athenaModule = null;
   async function athenaMedicare() {
-    if (!athenaModule) athenaModule = import('./athena-medicare.js?v=old-plan-1')
+    if (!athenaModule) athenaModule = import('./athena-medicare.js?v=sunfire-review-1')
       .then(({ createAthenaMedicareFeature }) => {
         athenaFeature = createAthenaMedicareFeature();
         return athenaFeature;

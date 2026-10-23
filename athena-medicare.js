@@ -1,7 +1,7 @@
 
 import { supabase } from './supabase-client.js';
 import { esc, dateISO, dateText } from './core.js';
-import { loadAthenaClientSections, syncAthenaClient } from './athena-crm-sync.js?v=old-plan-1';
+import { loadAthenaClientSections, syncAthenaClient } from './athena-crm-sync.js?v=sunfire-review-1';
 import { saveAthenaRecoveryDraft, readAthenaRecoveryDraft, clearAthenaRecoveryDraft } from './athena-draft-store.js';
 import { openSoaForClient, viewLatestSoaForClient } from './client-soa-compliance.js';
 import { athenaDocumentsMarkup, bindAthenaDocuments } from './athena-client-documents.js';
@@ -15,7 +15,7 @@ const FILE_LIMIT = 25 * 1024 * 1024;
 const ALLOWED_FILES = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf']);
 const FIELD_GROUPS = {
   1: ['first_name','last_name','dob','phone','email','address','city','state','zip','county','gender','veteran'],
-  2: ['part_a','part_b','medicaid_status','medicaid_level','medicare_status','eligibility_notes','medicare_gov_username','medicare_gov_email','medicare_gov_notes'],
+  2: ['part_a','part_b','medicaid_status','medicaid_level','medicare_status','eligibility_notes','sunfire_code','medicare_gov_username','medicare_gov_email','medicare_gov_notes'],
   3: ['current_carrier','current_plan','current_plan_id','current_year','current_member_id','current_plan_type','current_premium','current_like','current_dislike','old_plan_carrier','old_plan_id','old_plan_member_id','old_plan_year'],
   4: [],
   5: [],
@@ -90,6 +90,7 @@ function sectionBody(index) {
       '<label class="at-field"><span>Medicaid number (secure)</span><input name="medicaid_number" type="text" autocomplete="off" spellcheck="false" maxlength="35"></label>' +
       choice('medicaid_level','Medicaid level',[['QMB','QMB'],['QMB+','QMB+'],['SLMB','SLMB'],['SLMB+','SLMB+'],['FBDE','Full Benefit Dual Eligible'],['QI','QI'],['QDWI','QDWI'],['other','Other']]) +
       area('eligibility_notes','Eligibility / assistance notes') ) +
+      atSubsection('SunFire','sunfire', control('sunfire_code','SunFire Code','text','Enter SunFire Code')) +
       atSubsection('Medicare.gov','medicare-gov', '<label class="at-field"><span>Username</span><input name="medicare_gov_username" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' +
       '<label class="at-field"><span>Password</span><input name="medicare_gov_password_temporary" type="text" autocomplete="off" spellcheck="false"></label>' +
       '<label class="at-field"><span>Verification Type</span><select name="medicare_gov_verification_type_temporary"><option value="">Select…</option><option value="text">Text</option><option value="email">Email</option></select></label>' +
