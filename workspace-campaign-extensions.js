@@ -1,5 +1,5 @@
 // Load when opening Campaigns or a campaign inside Work. No initial-login observer cost.
-import './campaign-stage-layout.js';
+import './campaign-stage-layout.js?v=campaign-completion-notes-1';
 import './campaign-call-placeholder.js';
 import './campaign-list-compact.js';
 import './campaign-management-controls.js';
