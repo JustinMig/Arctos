@@ -62,12 +62,13 @@ export function makeClientSearch(db, { now = () => new Date() } = {}) {
       }
     }
     const selectedProduct = String(product).trim().toLowerCase();
+    if (selectedProduct !== 'deceased') q = q.neq('status','deceased');
     if (selectedProduct === 't65' || selectedProduct === '65plus') {
       const bounds = clientAgeBounds(selectedProduct, now());
       if (bounds.min) q = q.gte('date_of_birth', bounds.min);
       q = q.lte('date_of_birth', bounds.max);
     } else if (selectedProduct === 'deceased') q = q.eq('status', 'deceased');
-    else { q = q.neq('status', 'deceased'); if (selectedProduct) q = q.contains('products', [selectedProduct]); }
+    else if (selectedProduct) q = q.contains('products', [selectedProduct]);
     if (agent) q = q.eq('assigned_agent_id', agent);
     if (birthYear) {
       if (!/^\d{4}$/.test(String(birthYear))) throw new Error('Enter a four-digit birth year.');
