@@ -48,6 +48,8 @@ export function makeClientSearch(db, { now = () => new Date() } = {}) {
     }
 
     const decoded = decodeProductAndAge(product);
+    // Deceased records are exclusively accessible from the dedicated archive.
+    if (decoded.product !== 'deceased') q = q.neq('status','deceased');
     q = applyProductFilter(q, decoded.product);
 
     if (decoded.age === 't65' || decoded.age === '65plus') {
