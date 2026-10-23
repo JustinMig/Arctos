@@ -4,7 +4,8 @@ import { centralPremiumPeriod, summarizePremiumProduction } from './client-summa
 const ICONS = {
   total: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M2 21v-2a6 6 0 0 1 12 0v2m0-6a5 5 0 0 1 8 4v2"/></svg>',
   medicare: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-4.8-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.2-8 11-8 11Z"/><path d="M12 9v6m-3-3h6"/></svg>',
-  life: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c5-3 8-6.3 8-11V5l-8-3-8 3v6c0 4.7 3 8 8 11Z"/><path d="M8 12h8m-4-4v8"/></svg>'
+  life: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c5-3 8-6.3 8-11V5l-8-3-8 3v6c0 4.7 3 8 8 11Z"/><path d="M8 12h8m-4-4v8"/></svg>',
+  deceased: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 9h14M7 21h10"/></svg>'
 };
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CMS_MA_RATES = Object.freeze({ 2026: { initial: 694, renewal: 347 }, 2027: { initial: 725, renewal: 363 } });
@@ -17,17 +18,18 @@ function agentScope() {
   const role = String(mhRepository.profile?.role || '').toLowerCase();
   return role === 'agent' ? (mhRepository.user?.id || '') : '';
 }
-function countQuery(product = '') {
-  let query = supabase.from('clients').select('id', { count: 'exact', head: true }).neq('status', 'deceased');
+function countQuery(product = '', status = 'active') {
+  let query = supabase.from('clients').select('id', { count: 'exact', head: true });
+  query = status === 'deceased' ? query.eq('status', 'deceased') : query.neq('status', 'deceased');
   const scopedAgent = agentScope();
   if (scopedAgent) query = query.eq('assigned_agent_id', scopedAgent);
   if (product) query = query.contains('products', [product]);
   return query;
 }
 mhRepository.clientSummaryCounts = async function clientSummaryCounts() {
-  const [totalResult, medicareResult, lifeResult] = await Promise.all([countQuery(), countQuery('medicare'), countQuery('life')]);
-  for (const result of [totalResult, medicareResult, lifeResult]) if (result.error) throw result.error;
-  return { total:Number(totalResult.count||0), medicare:Number(medicareResult.count||0), life:Number(lifeResult.count||0) };
+  const [totalResult, medicareResult, lifeResult, deceasedResult] = await Promise.all([countQuery(), countQuery('medicare'), countQuery('life'), countQuery('', 'deceased')]);
+  for (const result of [totalResult, medicareResult, lifeResult, deceasedResult]) if (result.error) throw result.error;
+  return { total:Number(totalResult.count||0), medicare:Number(medicareResult.count||0), life:Number(lifeResult.count||0), deceased:Number(deceasedResult.count||0) };
 };
 
 function currentContractYear() {
@@ -135,6 +137,9 @@ mhRepository.commissions = async function commissionsCompat({ type, agent } = {}
 };
 
 function statCard(kind, label) {
+  if (kind === 'deceased') {
+    return `<button type="button" class="client-summary-card is-deceased" data-open-deceased aria-controls="deceased-client-archive" aria-expanded="false" title="Open deceased client records"><span class="client-summary-icon">${ICONS[kind]}</span><strong data-client-summary="${kind}">—</strong><span class="client-summary-label">${label}</span></button>`;
+  }
   return `<article class="client-summary-card is-${kind}"><span class="client-summary-icon">${ICONS[kind]}</span><strong data-client-summary="${kind}">—</strong><span class="client-summary-label">${label}</span></article>`;
 }
 function ensureClientStats(panel) {
@@ -144,7 +149,7 @@ function ensureClientStats(panel) {
   grid.dataset.clientSummaryGrid = 'true';
   grid.setAttribute('aria-label','Client totals');
   grid.setAttribute('aria-live','polite');
-  grid.innerHTML = [statCard('total','Total Clients'),statCard('medicare','Medicare Clients'),statCard('life','Life Clients')].join('');
+  grid.innerHTML = [statCard('total','Total Clients'),statCard('medicare','Medicare Clients'),statCard('life','Life Clients'),statCard('deceased','Deceased Clients')].join('');
   panel.before(grid);
   void refreshClientStats(grid);
 }
@@ -156,7 +161,7 @@ async function refreshClientStats(existing = null) {
   try {
     const counts = await mhRepository.clientSummaryCounts();
     if (token !== statsToken || !grid.isConnected) return;
-    for (const key of ['total','medicare','life']) {
+    for (const key of ['total','medicare','life','deceased']) {
       const node = grid.querySelector(`[data-client-summary="${key}"]`);
       const next = Number(counts[key] || 0).toLocaleString('en-US');
       if (node && node.textContent !== next) node.textContent = next;
