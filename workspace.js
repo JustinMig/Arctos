@@ -237,6 +237,10 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     const button = root.querySelector('[data-open-deceased]');
     const close = root.querySelector('[data-close-deceased]');
     if (!button || !close) return;
+    // Every new visit to the Clients page begins in active-search mode.
+    state.archive.token++;
+    state.archive.open = false;
+    state.archive.loading = false;
     const display = open => {
       state.archive.open = open;
       const search = root.querySelector('#client-active-search');
