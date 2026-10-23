@@ -184,7 +184,7 @@ function decorateCommunications(host) {
   callPanel.className = 'mh-call-panel';
   callPanel.dataset.channelPanel = 'calls';
   callPanel.hidden = true;
-  callPanel.innerHTML = `<div class="mh-call-head"><div><span class="eyebrow">RingCentral</span><h2>Client Call Data</h2><p>Read-only call history and recordings for saved Arctos clients. Calling is not enabled in this CRM.</p></div><div class="mh-call-actions"><button type="button" class="btn secondary" data-refresh-calls>Refresh Call Data</button></div></div>
+  callPanel.innerHTML = `<div class="mh-call-head"><div><span class="eyebrow">RingCentral</span><h2>Client Call Data</h2><p>RingCentral calls for saved Arctos clients. Review missed calls and voicemails by day, save notes, or set appointments. Deleting hides records from Arctos only. Calling is not enabled.</p></div><div class="mh-call-actions"><button type="button" class="btn secondary" data-refresh-calls>Refresh Call Data</button></div></div>
     <div class="mh-call-summary"><div><span>Stored Calls</span><strong data-call-total>—</strong></div><div><span>Inbound</span><strong data-call-inbound>—</strong></div><div><span>Recordings</span><strong data-call-recordings>—</strong></div></div>
     <div class="mh-call-status" data-call-status>Open Call Data to load saved calls.</div><div class="mh-call-list" data-call-list></div>`;
 
