@@ -4,12 +4,12 @@ import { CONTACT_OUTCOMES, outcomeLabel, isScheduledOutcome } from '../campaigns
 import { campaignUpdateOptions, RETURN_TO_STEP_ONE } from '../campaign-return-step-one.js';
 import { createCampaignRepository } from '../campaigns-repository.js';
 
-test('normal contact outcomes stay unchanged',()=>assert.equal(CONTACT_OUTCOMES.length,5));
+test('all seven contact outcomes are available',()=>assert.equal(CONTACT_OUTCOMES.length,7));
 for(const [status] of CONTACT_OUTCOMES){
   test(`can return to Step 1 from ${status}`,()=>assert(campaignUpdateOptions({contact_status:status}).some(([key])=>key===RETURN_TO_STEP_ONE)));
 }
 test('Step 1 does not show a redundant reset',()=>assert(!campaignUpdateOptions({contact_status:'not_contacted'}).some(([key])=>key===RETURN_TO_STEP_ONE)));
-test('completed cards reopen rather than accidentally rebook',()=>{for(const contact_status of ['appointment','declined'])assert.deepEqual(campaignUpdateOptions({contact_status}),[[RETURN_TO_STEP_ONE,'Return to Step 1']]);});
+test('completed cards reopen and old appointment/declined statuses can be explicitly completed',()=>{for(const contact_status of ['appointment','declined'])assert.deepEqual(campaignUpdateOptions({contact_status}),[['completed','Completed'],[RETURN_TO_STEP_ONE,'Return to Step 1']]);assert.deepEqual(campaignUpdateOptions({contact_status:'completed'}),[[RETURN_TO_STEP_ONE,'Return to Step 1']]);});
 test('correction history is clearly labeled, not scheduled',()=>{assert.equal(outcomeLabel(RETURN_TO_STEP_ONE),'Returned to Step 1');assert.equal(isScheduledOutcome(RETURN_TO_STEP_ONE),false);});
 test('reset uses separate RPC and forwards only its allowed fields',async()=>{
   const calls=[];
