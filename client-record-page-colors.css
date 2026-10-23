@@ -30,3 +30,23 @@
 .client-form.client-four-tabs [data-panel="medications"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="medications"]>details.field-group:nth-of-type(2)>summary{background:#dce9eb!important}
 .client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(1),.client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(1)>summary{background:#eee3d9!important}
 .client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(2),.client-form.client-four-tabs [data-panel="notes"]>details.field-group:nth-of-type(2)>summary{background:#dfe6ed!important}
+
+/* Medical tab: visible dark outer rim on BOTH section containers
+   (Doctors & Pharmacies, and Medications), matching Coverage card outlines. */
+.client-form.client-four-tabs [data-client-group-panel="medical"] [data-client-category="doctors"],
+.client-form.client-four-tabs [data-client-group-panel="medical"] [data-client-category="medications"],
+.client-form.client-four-tabs [data-client-category="doctors"],
+.client-form.client-four-tabs [data-client-category="medications"]{
+  border:2px solid #252d34!important;
+  border-radius:13px!important;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(27,35,42,.12)!important;
+}
+.client-form.client-four-tabs [data-client-category="doctors"]>summary,
+.client-form.client-four-tabs [data-client-category="medications"]>summary{
+  border-bottom:1px solid transparent;
+}
+.client-form.client-four-tabs [data-client-category="doctors"][open]>summary,
+.client-form.client-four-tabs [data-client-category="medications"][open]>summary{
+  border-bottom-color:#252d34!important;
+}
