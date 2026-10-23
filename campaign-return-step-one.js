@@ -6,7 +6,8 @@ export function campaignUpdateOptions(row) {
   if (row.contact_status === 'not_contacted') return CONTACT_OUTCOMES;
   const reset = [RETURN_TO_STEP_ONE, 'Return to Step 1'];
   // Completed clients can be reopened without accidentally scheduling another event.
-  if (['appointment', 'declined'].includes(row.contact_status)) return [reset];
+  if (row.contact_status === 'completed') return [reset];
+  if (['appointment', 'declined'].includes(row.contact_status)) return [['completed', 'Completed'], reset];
   return [...CONTACT_OUTCOMES, reset];
 }
 
