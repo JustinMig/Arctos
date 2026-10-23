@@ -3,7 +3,7 @@ import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSor
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
 import { supabase } from './supabase-repository.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=original-mm-contacts-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=client-campaign-fix-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository, { ensureClientFeatures, ensureCampaignFeatures, ensureLeadFeatures, ensureQuickFeatures } = {}) {
@@ -44,7 +44,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   async function campaigns() {
     if (!repository.campaigns) throw new Error('Campaign storage is not connected.');
     if (ensureCampaignFeatures) await ensureCampaignFeatures();
-    if (!campaignModule) campaignModule = import('./campaigns-ui.js?v=campaign-completion-notes-1').then(({ createCampaignFeature }) => {
+    if (!campaignModule) campaignModule = import('./campaigns-ui.js?v=client-campaign-fix-1').then(({ createCampaignFeature }) => {
       campaignFeature = createCampaignFeature({ repository, dialogs, openClient, onCalendarChange: () => { state.calendarLoadedKey = ''; state.calendarLoadedAt = 0; state.events = []; drawCalendar({ force: true }); } });
       return campaignFeature;
     }).catch(error => { campaignModule = null; throw error; });
