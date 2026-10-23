@@ -1,6 +1,6 @@
 import { makeClientSearch } from './client-age-search.js?v=deceased-archive-1';
 import { createCampaignRepository } from './campaigns-repository.js';
-import { createWorkspace } from './workspace.js?v=american-amicable-2026-1';
+import { createWorkspace } from './workspace.js?v=overview-client-actions-1';
 import { mhRepository, supabase } from './supabase-repository.js?v=american-amicable-2026-1';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
