@@ -5,7 +5,8 @@ const ICONS = {
   total: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M2 21v-2a6 6 0 0 1 12 0v2m0-6a5 5 0 0 1 8 4v2"/></svg>',
   medicare: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-4.8-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.2-8 11-8 11Z"/><path d="M12 9v6m-3-3h6"/></svg>',
   life: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c5-3 8-6.3 8-11V5l-8-3-8 3v6c0 4.7 3 8 8 11Z"/><path d="M8 12h8m-4-4v8"/></svg>',
-  deceased: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 9h14M7 21h10"/></svg>'
+  deceased: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 9h14M7 21h10"/></svg>',
+  birthdays: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M4 14h16M12 10V5M9 5a1.4 1.4 0 0 1 3 0m0 0a1.4 1.4 0 0 1 3 0"/></svg>'
 };
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CMS_MA_RATES = Object.freeze({ 2026: { initial: 694, renewal: 347 }, 2027: { initial: 725, renewal: 363 } });
@@ -27,9 +28,14 @@ function countQuery(product = '', status = 'active') {
   return query;
 }
 mhRepository.clientSummaryCounts = async function clientSummaryCounts() {
-  const [totalResult, medicareResult, lifeResult, deceasedResult] = await Promise.all([countQuery(), countQuery('medicare'), countQuery('life'), countQuery('', 'deceased')]);
-  for (const result of [totalResult, medicareResult, lifeResult, deceasedResult]) if (result.error) throw result.error;
-  return { total:Number(totalResult.count||0), medicare:Number(medicareResult.count||0), life:Number(lifeResult.count||0), deceased:Number(deceasedResult.count||0) };
+  const [totalResult, medicareResult, lifeResult, deceasedResult, birthdaysResult] = await Promise.all([
+    countQuery(), countQuery('medicare'), countQuery('life'), countQuery('', 'deceased'),
+    supabase.rpc('client_birthdays_this_month')
+  ]);
+  for (const result of [totalResult, medicareResult, lifeResult, deceasedResult, birthdaysResult]) if (result.error) throw result.error;
+  return { total:Number(totalResult.count||0), medicare:Number(medicareResult.count||0),
+    life:Number(lifeResult.count||0), deceased:Number(deceasedResult.count||0),
+    birthdays:Array.isArray(birthdaysResult.data)?birthdaysResult.data.length:0 };
 };
 
 function currentContractYear() {
@@ -137,8 +143,13 @@ mhRepository.commissions = async function commissionsCompat({ type, agent } = {}
 };
 
 function statCard(kind, label) {
-  if (kind === 'deceased') {
-    return `<button type="button" class="client-summary-card is-deceased" data-open-deceased aria-controls="deceased-client-archive" aria-expanded="false" title="Open deceased client records"><span class="client-summary-icon">${ICONS[kind]}</span><strong data-client-summary="${kind}">—</strong><span class="client-summary-label">${label}</span></button>`;
+  if (kind === 'deceased' || kind === 'birthdays') {
+    const archive = kind === 'deceased';
+    return `<button type="button" class="client-summary-card is-${kind}"
+      ${archive?'data-open-deceased aria-controls="deceased-client-archive"':'data-open-birthdays aria-controls="client-birthday-list"'}
+      aria-expanded="false" title="${archive?'Open deceased client records':'Open birthdays this month'}">
+      <span class="client-summary-icon">${ICONS[kind]}</span>
+      <strong data-client-summary="${kind}">—</strong><span class="client-summary-label">${label}</span></button>`;
   }
   return `<article class="client-summary-card is-${kind}"><span class="client-summary-icon">${ICONS[kind]}</span><strong data-client-summary="${kind}">—</strong><span class="client-summary-label">${label}</span></article>`;
 }
@@ -149,7 +160,7 @@ function ensureClientStats(panel) {
   grid.dataset.clientSummaryGrid = 'true';
   grid.setAttribute('aria-label','Client totals');
   grid.setAttribute('aria-live','polite');
-  grid.innerHTML = [statCard('total','Total Clients'),statCard('medicare','Medicare Clients'),statCard('life','Life Clients'),statCard('deceased','Deceased Clients')].join('');
+  grid.innerHTML = [statCard('total','Total Clients'),statCard('medicare','Medicare Clients'),statCard('life','Life Clients'),statCard('deceased','Deceased Clients'),statCard('birthdays','Birthdays')].join('');
   panel.before(grid);
   void refreshClientStats(grid);
 }
@@ -161,7 +172,7 @@ async function refreshClientStats(existing = null) {
   try {
     const counts = await mhRepository.clientSummaryCounts();
     if (token !== statsToken || !grid.isConnected) return;
-    for (const key of ['total','medicare','life','deceased']) {
+    for (const key of ['total','medicare','life','deceased','birthdays']) {
       const node = grid.querySelector(`[data-client-summary="${key}"]`);
       const next = Number(counts[key] || 0).toLocaleString('en-US');
       if (node && node.textContent !== next) node.textContent = next;
@@ -277,3 +288,21 @@ if (app) new MutationObserver(mutations => {
   if (mutations.some(mutation => [...mutation.addedNodes].some(node => node instanceof Element && (node.matches?.('.client-search-panel,dialog.commissions-dialog') || node.querySelector?.('.client-search-panel,dialog.commissions-dialog'))))) enhance(app);
 }).observe(app,{childList:true,subtree:true});
 enhance();
+
+/* Birthday totals follow the live month in Central time. No stale monthly
+   snapshots or scheduled job required; the 1st updates on the next view. */
+const birthdayMonthKey=()=>new Intl.DateTimeFormat('en-CA',{
+  timeZone:'America/Chicago',year:'numeric',month:'2-digit'
+}).format(new Date());
+let lastBirthdayMonth=birthdayMonthKey();
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && document.querySelector('[data-client-summary-grid]')) {
+    const month=birthdayMonthKey();
+    if(month!==lastBirthdayMonth){lastBirthdayMonth=month;void refreshClientStats();}
+  }
+});
+setInterval(()=>{
+  if(!document.querySelector('[data-client-summary-grid]'))return;
+  const month=birthdayMonthKey();
+  if(month!==lastBirthdayMonth){lastBirthdayMonth=month;void refreshClientStats();}
+},60_000);
