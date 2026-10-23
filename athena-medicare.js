@@ -1,7 +1,7 @@
 
 import { supabase } from './supabase-client.js';
 import { esc, dateISO, dateText } from './core.js';
-import { loadAthenaClientSections, syncAthenaClient } from './athena-crm-sync.js';
+import { loadAthenaClientSections, syncAthenaClient } from './athena-crm-sync.js?v=old-plan-1';
 import { saveAthenaRecoveryDraft, readAthenaRecoveryDraft, clearAthenaRecoveryDraft } from './athena-draft-store.js';
 import { openSoaForClient, viewLatestSoaForClient } from './client-soa-compliance.js';
 import { athenaDocumentsMarkup, bindAthenaDocuments } from './athena-client-documents.js';
