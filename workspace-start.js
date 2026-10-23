@@ -17,6 +17,9 @@ import { installClientDateAndDragDrop } from './client-date-dragdrop.js';
 import { installClientDuplicateCheck } from './client-duplicate-check.js?v=duplicate-override-1';
 import { installFastNavigation } from './navigation-speed.js?v=arctos-nav-1';
 import { createFeatureLoader } from './feature-loader.js';
+// Client footer actions must initialize on EVERY CRM login, not only after
+// visiting Messages. This module also initializes the Text Client button.
+import './ringcentral-ui-adjustments.js?v=client-footer-always-1';
 
 const root = document.querySelector('#app');
 installPullToRefresh();
@@ -93,7 +96,6 @@ export async function startWorkspace() {
     if (communicationsPromise) return communicationsPromise;
     communicationsPromise = import('./communications-ui.js?v=communications-perf-3')
       .then(() => import('./ringcentral-readonly.js?v=ringcentral-review-1'))
-      .then(() => import('./ringcentral-ui-adjustments.js?v=footer-call-data-2'))
       .then(() => import('./communications-layout-fix.js?v=communications-layout-2'))
       .then(() => import('./communications-delete.js?v=communications-delete-2'))
       .then(() => import('./communications-open-client.js?v=communications-open-client-2'))
