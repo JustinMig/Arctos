@@ -218,6 +218,11 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const counts = await Promise.all(filters.map(async ([key, product]) => {
         let q = supabase.from('client_search_results').select('id',{count:'exact',head:true});
         q = key === 'deceased' ? q.eq('status','deceased') : q.neq('status','deceased');
+        // Match the Clients search agent scope, in addition to database RLS.
+        if (!['owner','admin'].includes(repository.profile?.role)) {
+          if (!repository.user?.id) throw new Error('You must be signed in to view client totals.');
+          q = q.eq('assigned_agent_id',repository.user.id);
+        }
         if (product && product !== 'deceased') q = q.contains('products',[product]);
         const {count,error} = await q;
         if (error) throw error;
@@ -266,8 +271,11 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     a.loading = true; a.error=''; a.message='Loading deceased client records…';
     drawDeceasedClients();
     try {
+      const restrictedAgent = ['owner','admin'].includes(repository.profile?.role)
+        ? '' : repository.user?.id;
+      if (restrictedAgent === undefined) throw new Error('Sign in before opening deceased client records.');
       const result = await repository.searchClients({
-        product:'deceased',query:'',sortBy:'name',sortDirection:'asc',
+        product:'deceased',query:'',agent:restrictedAgent,sortBy:'name',sortDirection:'asc',
         limit:50,cursor:more?a.nextCursor:null
       });
       if (token !== a.token || state.destroyed || !a.open || state.route !== 'clients') return;
