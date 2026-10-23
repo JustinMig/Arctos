@@ -1,7 +1,7 @@
 import { makeClientSearch } from './client-age-search.js?v=shared-notes-search-1';
 import { createCampaignRepository } from './campaigns-repository.js';
-import { createWorkspace } from './workspace.js?v=glance-zip-calendar-1';
-import { mhRepository, supabase } from './supabase-repository.js';
+import { createWorkspace } from './workspace.js?v=old-plan-1';
+import { mhRepository, supabase } from './supabase-repository.js?v=old-plan-1';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
 import { installPullToRefresh } from './pull-to-refresh.js';
@@ -54,7 +54,7 @@ export async function startWorkspace() {
   // large optional client/campaign enhancement chunk. Previously these imports
   // were awaited, delaying EVERY login and dashboard opening.
   const ensureFeature = createFeatureLoader({
-    client: () => import('./workspace-extensions.js?v=doctors-notes-1'),
+    client: () => import('./workspace-extensions.js?v=old-plan-1'),
     campaign: () => import('./workspace-campaign-extensions.js?v=arctos-perf-1'),
     lead: () => import('./workspace-lead-extensions.js?v=arctos-perf-1'),
     quick: () => import('./workspace-quick-extensions.js?v=arctos-perf-1')
