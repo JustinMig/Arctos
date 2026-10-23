@@ -1,6 +1,6 @@
 import { makeClientSearch } from './client-age-search.js?v=deceased-archive-1';
 import { createCampaignRepository } from './campaigns-repository.js?v=campaign-completion-notes-1';
-import { createWorkspace } from './workspace.js?v=client-overview-age-1';
+import { createWorkspace } from './workspace.js?v=ringcentral-review-1';
 import { mhRepository, supabase } from './supabase-repository.js?v=original-mm-contacts-1';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
@@ -92,11 +92,12 @@ export async function startWorkspace() {
   const loadCommunicationsFeatures = () => {
     if (communicationsPromise) return communicationsPromise;
     communicationsPromise = import('./communications-ui.js?v=communications-perf-3')
-      .then(() => import('./ringcentral-readonly.js?v=readonly-calls-3'))
+      .then(() => import('./ringcentral-readonly.js?v=ringcentral-review-1'))
       .then(() => import('./ringcentral-ui-adjustments.js?v=footer-call-data-2'))
       .then(() => import('./communications-layout-fix.js?v=communications-layout-2'))
       .then(() => import('./communications-delete.js?v=communications-delete-2'))
       .then(() => import('./communications-open-client.js?v=communications-open-client-2'))
+      .then(() => import('./ringcentral-call-review.js?v=ringcentral-review-1'))
       .catch(error => {
         communicationsPromise = null;
         console.error('Communications UI failed to load.', error);
