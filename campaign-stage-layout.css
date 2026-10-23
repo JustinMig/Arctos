@@ -27,3 +27,69 @@
 .campaigns-root .cmp-counter-card:focus-visible{outline:3px solid #93b6cf;outline-offset:2px}
 @media(max-width:760px){.cmp-counter-card[data-cmp-counter-view][aria-pressed=true]::after{top:4px;right:4px;width:10px;height:10px;font-size:8px}}
 @media(forced-colors:active){.cmp-counter-card[data-cmp-counter-view][aria-pressed=true]{outline:3px solid Highlight;outline-offset:-4px}.cmp-counter-card[data-cmp-counter-view][aria-pressed=true] .cmp-counter-label{text-decoration:underline}.cmp-counter-card[data-cmp-counter-view][aria-pressed=true]::after{background:Highlight;color:HighlightText;forced-color-adjust:none}}
+
+/* Sixth stage: a recorded face-to-face contact, separate from No Answer and Completed. */
+.cmp-counter-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.cmp-counter-card[data-cmp-counter-view=face_to_face]{background:#edf3fb;border-color:#c5d4e8;--cmp-selected-bg:#3f5878}
+.cmp-counter-card[data-cmp-counter-view=face_to_face] .cmp-counter-icon{background:#dce8f5;color:#3c618b}
+.cmp-badge.is-face_to_face{background:#e9f0f9;color:#405e82;border-color:#c5d4e8}
+.cmp-badge.is-completed{background:#e6f3e9;color:#356747;border-color:#b5d7c1}
+/* Every campaign client retains its own compact, collapsed notes dropdown.
+   Expanded notes span the whole client card, not the narrow name column. */
+.cmp-member .cmp-card-notes{
+  box-sizing:border-box;
+  grid-column:1/-1;
+  min-width:0;
+  width:100%;
+  margin:3px 0 0;
+  border:1px solid #d8e2e8;
+  border-radius:8px;
+  background:#f5f8fa;
+  color:#243c4d;
+  overflow:hidden;
+}
+.cmp-member[data-cmp-stage-status] .cmp-card-notes{grid-column:1/-1!important;grid-row:2;width:100%;margin-top:1px}
+.cmp-member .cmp-card-notes>summary{
+  list-style:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-height:30px;
+  padding:5px 10px;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+  color:#35566d;
+  background:#eef3f7;
+}
+.cmp-member .cmp-card-notes>summary::-webkit-details-marker{display:none}
+.cmp-member .cmp-card-notes>summary:hover{background:#e2edf4}
+.cmp-member .cmp-card-notes[open]>summary{border-bottom:1px solid #cfdee7}
+.cmp-member .cmp-card-notes[open]>summary>span:last-child{transform:rotate(180deg)}
+.cmp-member .cmp-card-notes>summary:focus-visible{outline:2px solid #427b9a;outline-offset:-2px}
+.cmp-member .cmp-card-note-body{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px 12px;
+  align-items:end;
+  min-width:0;
+  padding:10px 11px;
+  background:#fff;
+}
+.cmp-member .cmp-card-saved-note{grid-column:1/-1;min-width:0;display:grid;gap:4px;margin:0;padding:8px 10px;background:#edf5f0;border:1px solid #d3e4d8;border-radius:7px}
+.cmp-member .cmp-card-saved-note strong{font-size:10px!important;font-weight:900!important;color:#42634e!important;white-space:normal!important;overflow:visible!important}
+.cmp-member .cmp-card-saved-note span{font-size:12px;color:#20394a;white-space:pre-wrap;overflow-wrap:anywhere;max-height:145px;overflow:auto}
+.cmp-member .cmp-card-note-empty{grid-column:1/-1;font-size:11px;color:#657887;margin:0}
+.cmp-member .cmp-card-note-body .field{min-width:0;display:grid;gap:4px;margin:0}
+.cmp-member .cmp-card-note-body .field>span{font-size:11px;font-weight:750;color:#304d60}
+.cmp-member .cmp-card-note-body textarea{box-sizing:border-box;display:block;width:100%;min-width:0;min-height:70px;resize:vertical;border:1px solid #9bb2c1;border-radius:7px;background:#fff;color:#162f40;font:inherit;font-size:13px;padding:8px;line-height:1.4}
+.cmp-member .cmp-card-note-body textarea:focus-visible{outline:2px solid #4e839f;outline-offset:1px}
+.cmp-member .cmp-card-note-body .btn{min-height:38px!important;padding:8px 13px!important;width:auto!important;white-space:nowrap!important;border:1px solid #9ab2bf!important;background:#e6eff5!important;color:#1d455e!important;font-size:11px!important;cursor:pointer}
+.cmp-member .cmp-card-note-body .btn:disabled{opacity:.6;cursor:wait}
+.cmp-member .cmp-card-note-status{grid-column:1/-1;font-size:11px;color:#31546c;min-height:0}
+@media(max-width:760px){
+  .cmp-counter-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .cmp-member .cmp-card-note-body{grid-template-columns:minmax(0,1fr)}
+  .cmp-member .cmp-card-note-body .btn{width:100%!important}
+}
