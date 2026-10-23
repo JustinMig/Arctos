@@ -1,4 +1,4 @@
-import { CLIENT_RESULT_FIELDS, clientAgeBounds, clientSearchOrders } from './client-search.js';
+import { CLIENT_RESULT_FIELDS, clientAgeBounds, clientSearchOrders } from './client-search.js?v=deceased-archive-1';
 
 function decodeProductAndAge(value = '') {
   const raw = String(value || '').trim().toLowerCase();
