@@ -259,3 +259,52 @@ label.btn:has(> input[data-multi-camera]) {
 .old-plan-details .old-plan-heading small{font-size:12px;color:#557080}
 .old-plan-details .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media(max-width:620px){.old-plan-details .form-grid{grid-template-columns:1fr}}
+
+/* All client-upload lists: high contrast file names, numbers and View/Remove actions.
+   Override older dark-theme rules even in nested Coverage > Health Plan upload controls. */
+.client-form .multi-file-row,
+.client-form .document-row,
+.client-form .life-policy-document-row,
+.client-form .cfh-file,
+.client-form .medicare-card-manager,
+.client-form .life-policy-documents .life-policy-document-row,
+.client-dialog .multi-file-row,
+.client-dialog .document-row,
+.client-dialog .medicare-card-manager{
+  background:#f8fafc!important;
+  border-color:#9aabb8!important;
+  color:#111827!important;
+}
+.client-form .multi-file-row :is(strong,span,small,b,em,a),
+.client-form .document-row :is(strong,span,small,b,em,a),
+.client-form .life-policy-document-row :is(strong,span,small,b,em,a),
+.client-form .cfh-file :is(strong,span,small,b,em,a),
+.client-form .medicare-card-manager :is(strong,span,small,b,em,a),
+.client-dialog .multi-file-row :is(strong,span,small,b,em,a),
+.client-dialog .document-row :is(strong,span,small,b,em,a),
+.client-dialog .medicare-card-manager :is(strong,span,small,b,em,a){
+  color:#111827!important;
+  -webkit-text-fill-color:#111827!important;
+  opacity:1!important;
+}
+.client-form :is(.multi-file-row,.document-row,.life-policy-document-row,.cfh-file,.medicare-card-manager,.life-policy-documents,.document-row-actions,.medicare-card-actions,.mh-file-preview-actions) :is(button,.btn,a),
+.client-dialog :is(.multi-file-row,.document-row,.life-policy-document-row,.cfh-file,.medicare-card-manager,.document-row-actions,.medicare-card-actions) :is(button,.btn,a){
+  color:#111827!important;
+  -webkit-text-fill-color:#111827!important;
+  background:#eaf0f5!important;
+  border:1px solid #9dacb8!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+.client-form :is(.multi-file-row,.document-row,.life-policy-document-row,.cfh-file,.medicare-card-manager) :is(button,.btn,a):hover,
+.client-dialog :is(.multi-file-row,.document-row,.life-policy-document-row,.cfh-file,.medicare-card-manager) :is(button,.btn,a):hover{
+  background:#dce8f0!important;
+  color:#111827!important;
+  -webkit-text-fill-color:#111827!important;
+}
+/* File-list names and numerical details must never inherit the white themed text. */
+.client-form :is(.multi-file-empty,.medicare-card-status,.document-status,.life-policy-document-status),
+.client-dialog :is(.multi-file-empty,.medicare-card-status,.document-status,.life-policy-document-status){
+ color:#243746!important;
+ -webkit-text-fill-color:#243746!important;
+}
