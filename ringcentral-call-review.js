@@ -92,6 +92,8 @@ function makeUI(panel){
  const allList=panel.querySelector('[data-call-list]');
  allList?.before(wrapper);
  let mode='all',date=DAY_ALL,records={calls:[],voicemails:[]},loaded=false,token=0,loading=false;
+ // Only days the user explicitly opens are expanded; all dates start closed.
+ const openDays=new Set();
  const list=wrapper.querySelector('[data-review-results]');
  const status=wrapper.querySelector('[data-review-status]');
  const dates=wrapper.querySelector('[data-review-date-tools]');
@@ -109,13 +111,34 @@ function makeUI(panel){
    status.textContent=loaded?`0 ${mode==='missed'?'missed calls':'voicemails'} for selected dates.`:'Loading RingCentral call data…';
    return;
   }
-  let previous='';
-  list.innerHTML=chosen.map(row=>{
-   const group=dayKey(row.date);
-   const head=group!==previous?`<h3 class="mh-review-day-heading">${new Date(group+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</h3>`:'';
-   previous=group;
-   return head+card(row);
+  // Group actual records under native <details> so days are collapsed by
+  // default, even for the first/only date in either review tab.
+  const byDay=new Map();
+  for(const row of chosen){
+   const key=dayKey(row.date);
+   if(!byDay.has(key))byDay.set(key,[]);
+   byDay.get(key).push(row);
+  }
+  list.innerHTML=[...byDay].map(([day,items])=>{
+   const label=new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{
+    weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'UTC'
+   });
+   const count=items.length;
+   return `<details class="mh-review-day" data-review-day="${day}"${openDays.has(day)?' open':''}>
+    <summary class="mh-review-day-heading">
+     <span class="mh-review-day-title">${label}</span>
+     <span class="mh-review-day-count">${count} ${count===1?'record':'records'}</span>
+     <span class="mh-review-day-chevron" aria-hidden="true">⌄</span>
+    </summary>
+    <div class="mh-review-day-cards">${items.map(card).join('')}</div>
+   </details>`;
   }).join('');
+  list.querySelectorAll('[data-review-day]').forEach(day=>{
+   day.addEventListener('toggle',()=>{
+    if(day.open)openDays.add(day.dataset.reviewDay);
+    else openDays.delete(day.dataset.reviewDay);
+   });
+  });
   status.textContent=`${chosen.length} ${mode==='missed'?'missed call':'voicemail'}${chosen.length===1?'':'s'} ${date===DAY_ALL?'across available days':'on '+date} · saved Arctos clients only.`;
   bindRows();
  };
@@ -139,6 +162,7 @@ function makeUI(panel){
   }finally{loading=false;if(wrapper.isConnected)refreshButton.disabled=false;}
  };
  const selectMode=value=>{
+  if(mode!==value)openDays.clear();
   mode=value;
   wrapper.querySelectorAll('[data-review-view]').forEach(button=>{
    const active=button.dataset.reviewView===value;
@@ -203,9 +227,9 @@ function makeUI(panel){
   });
  };
  wrapper.querySelectorAll('[data-review-view]').forEach(button=>button.onclick=()=>selectMode(button.dataset.reviewView));
- input.onchange=()=>{date=input.value||DAY_ALL;draw();};
- wrapper.querySelector('[data-review-all-days]').onclick=()=>{date=DAY_ALL;input.value='';draw();};
- wrapper.querySelector('[data-review-today]').onclick=()=>{date=dayKey(new Date());input.value=date;draw();};
+ input.onchange=()=>{date=input.value||DAY_ALL;openDays.clear();draw();};
+ wrapper.querySelector('[data-review-all-days]').onclick=()=>{date=DAY_ALL;input.value='';openDays.clear();draw();};
+ wrapper.querySelector('[data-review-today]').onclick=()=>{date=dayKey(new Date());input.value=date;openDays.clear();draw();};
  wrapper.querySelector('[data-review-refresh]').onclick=()=>void refresh({force:true});
  const onCallsChanged=event=>{if(event.detail?.kind==='calls' && mode!=='all')void refresh();};
  const onRingCentralRefresh=()=>{if(mode==='missed')void refresh();};
