@@ -92,3 +92,70 @@
 #client-active-search[hidden],#deceased-client-archive[hidden]{display:none!important}
 @media(max-width:760px){.client-deceased-head{align-items:stretch;flex-direction:column}}
 
+
+/* Client month-of-birth archive and independent multi-select texting. */
+#client-birthday-list[hidden]{display:none!important}
+.client-birthday-archive{
+ border:2px solid #d8be94;border-radius:14px;background:#fffcf7;
+ padding:16px;margin:0 0 18px;min-width:0
+}
+.client-birthday-archive .client-deceased-head{border-bottom-color:#e4d5bb}
+.client-birthday-archive .client-deceased-head h2{color:#654a2f}
+.client-birthday-archive .client-deceased-head p{color:#726653}
+.client-birthday-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0 12px}
+.client-birthday-tools [hidden]{display:none!important}
+.client-birthday-list{display:grid;gap:7px}
+.client-birthday-row{display:flex;align-items:center;gap:9px;min-width:0}
+.client-birthday-client{
+ flex:1 1 auto;display:flex;gap:12px;align-items:center;text-align:left;
+ min-width:0;min-height:54px;padding:9px 12px;
+ border:1px solid #e1d2b6;border-radius:10px;background:#fff;color:#2b4355;
+ font:inherit;cursor:pointer
+}
+.client-birthday-client:hover{background:#fcf5e9;border-color:#c7a773}
+.birthday-day{display:grid;place-items:center;flex:0 0 43px;
+ height:41px;border-radius:9px;background:#f8e8c9;color:#79532b;font-weight:900;font-size:20px}
+.birthday-client-name{display:grid;gap:3px;min-width:0;flex:1}
+.birthday-client-name strong{font-size:14px;overflow-wrap:anywhere}
+.birthday-client-name small{font-size:11px;color:#6c7e88;overflow-wrap:anywhere}
+.birthday-arrow{font-size:24px;color:#8f8068}
+.birthday-text-check,.sms-select-check{
+ flex:0 0 auto;display:grid;place-items:center;align-self:stretch;min-width:40px;
+ border:1px solid #bcd4dc;border-radius:9px;background:#eaf4f8;cursor:pointer
+}
+.birthday-text-check input,.sms-select-check input{width:20px;height:20px;accent-color:#28647f}
+.sms-selection-bar{
+ display:flex;align-items:center;flex-wrap:wrap;gap:7px;
+ padding:10px 12px;border:1px solid #b6d4df;border-radius:10px;
+ background:#e9f4f7;color:#234c61;margin-bottom:10px
+}
+.sms-selection-bar>strong{margin-right:auto;font-size:12px}
+.sms-selection-bar .btn{min-height:35px;font-size:12px!important}
+.sms-select-row{display:flex;align-items:stretch;gap:8px;min-width:0}
+.sms-select-row>.client-result{flex:1 1 auto;min-width:0}
+#client-results [data-cmp-selectionbar][hidden]{display:none!important}
+#client-search .search-actions{flex-wrap:wrap}
+#client-search [data-start-mass-text]{border-color:#8eb8ca;background:#e9f5f9;color:#17475f}
+#client-search [data-start-mass-text].is-selected{background:#cfe9f4;border-color:#4c87a2}
+.mass-text-dialog .mass-text-form{display:grid;gap:12px;min-width:0}
+.mass-text-dialog .mass-text-form textarea{
+ width:100%;box-sizing:border-box;resize:vertical;min-height:115px;
+ padding:10px 12px;border:1px solid #adc4d3;border-radius:9px;
+ background:#fff;color:#193b50;font:inherit
+}
+.mass-text-dialog .mass-text-recipients{display:grid;gap:7px;
+ padding:10px 12px;border:1px solid #d1e1e9;border-radius:8px;background:#f8fbfd;font-size:12px}
+.mass-text-dialog .mass-text-recipients>div{display:flex;flex-wrap:wrap;gap:5px}
+.mass-text-dialog .mass-text-recipients span{padding:4px 7px;background:#e7f1f6;border-radius:7px}
+.mass-text-dialog .mass-text-consent{display:flex;align-items:flex-start;gap:10px;line-height:1.45;font-size:12px;
+ font-weight:650;color:#244a60;border:1px solid #c6dae3;border-radius:9px;padding:11px;background:#f1f8fb}
+.mass-text-dialog .mass-text-consent input{width:18px;height:18px;flex:0 0 auto;accent-color:#24657b}
+@media(max-width:620px){
+ #client-search .search-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #client-search [data-start-mass-text]{grid-column:1/-1}
+ .client-birthday-archive{padding:11px}
+ .sms-selection-bar>strong{flex-basis:100%}
+ .sms-selection-bar .btn{flex:1 1 40%}
+ .sms-select-row{gap:4px}
+ .birthday-text-check,.sms-select-check{min-width:31px}
+}
