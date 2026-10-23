@@ -17,7 +17,7 @@ test('invalid or overnight duration cannot book',()=>{assert.equal(slotIsBooked(
 test('server sort uses allowlist and stable tie breakers',()=>{assert.deepEqual(memberOrders('state','desc')[0],['state_sort',false]);assert.equal(memberOrders('injection','desc')[0][0],'last_name_sort');assert.equal(memberOrders('county','asc').at(-1)[0],'id')});
 test('search values are quoted rather than executable filter fragments',()=>{assert.equal(JSON.parse(safeSearchPattern('O\'Neil, (Jones)')),"%O'Neil, (Jones)%");assert.equal(safeSearchPattern('%%__'),'')});
 test('invalid result rejects before contacting database',async()=>{let called=false;const repo=createCampaignRepository({rpc:()=>{called=true}});await assert.rejects(()=>repo.recordContact({p_outcome:'unexpected'}));assert.equal(called,false)});
-test('workspace integration preserves canonical opener and lazy loading',()=>{const source=readFileSync(new URL('../workspace.js',import.meta.url),'utf8');assert.match(source,/campaigns-ui\\.js/);assert.match(source,/createCampaignFeature\\(\\{ repository, dialogs, openClient/);assert.match(source,/#client-results \\[data-client-id/)});
+test('workspace integration preserves canonical opener and lazy loading',()=>{const source=readFileSync(new URL('../workspace.js',import.meta.url),'utf8');assert.ok(source.includes('campaigns-ui.js'));assert.ok(source.includes('createCampaignFeature({ repository, dialogs, openClient'));assert.ok(source.includes('#client-results [data-client-id'));});
 
 test('hidden campaign duration stays in FormData and never causes false overlap warnings',()=>{
   const hide=readFileSync(new URL('../campaign-hide-duration.js',import.meta.url),'utf8');
