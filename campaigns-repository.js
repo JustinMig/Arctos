@@ -76,6 +76,16 @@ export function createCampaignRepository(db) {
     async recordContact(payload) {
       if (!CONTACT_OUTCOMES.some(([key]) => key === payload.p_outcome)) throw new Error('Choose a contact result.');
       return check(await db.rpc('campaign_record_contact', payload));
+    },
+    async saveMemberNote(payload) {
+      const note = String(payload?.p_note || '').trim();
+      if (!note || note.length > 4000) throw new Error('Enter a note between 1 and 4000 characters.');
+      return check(await db.rpc('campaign_save_member_note', {
+        p_member_id: payload.p_member_id,
+        p_operation_id: payload.p_operation_id,
+        p_expected_version: payload.p_expected_version,
+        p_note: note
+      }));
     }
   };
 }
