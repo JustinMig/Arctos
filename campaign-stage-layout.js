@@ -4,13 +4,16 @@ const STATUS_LABELS = {
   voicemail: 'Voicemail Left',
   follow_up: 'Follow Up / More Info Needed',
   appointment: 'Appointment',
-  declined: 'Declined'
+  declined: 'Declined',
+  completed: 'Completed',
+  face_to_face: 'Face to Face Meeting'
 };
 
 const VIEW_LABELS = {
   stage1: 'Clients To Contact',
   voicemail: 'Voicemail Left',
   no_answer: 'No Answer',
+  face_to_face: 'Face to Face Meeting',
   follow_up: 'Follow Up / More Info Needed',
   completed: 'Completed'
 };
@@ -19,6 +22,7 @@ const ICONS = {
   stage1: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v4H7z"/><path d="M5 7h14v14H5z"/><path d="M8 11h8M8 15h5"/></svg>',
   voicemail: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0Zm8 0a4 4 0 1 0 8 0 4 4 0 1 0-8 0Z"/><path d="M8 16h8"/></svg>',
   no_answer: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h4l2 5-3 2a14 14 0 0 0 3 3l2-3 5 2v4c0 2-2 3-4 3C9 20 4 15 4 8c0-2 1-4 3-4Z"/><path d="m16 4 4 4m0-4-4 4"/></svg>',
+  face_to_face: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><path d="M2 20v-3a5 5 0 0 1 8-4m4 0a5 5 0 0 1 8 4v3M9 17l3 2 3-2"/></svg>',
   follow_up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H8l-4 4Z"/><path d="M8 9h8M8 13h5"/></svg>',
   completed: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>'
 };
@@ -43,7 +47,7 @@ function compactCard(card, status) {
 
 function viewMatches(status, view) {
   if (view === 'stage1') return status === 'not_contacted';
-  if (view === 'completed') return status === 'appointment' || status === 'declined';
+  if (view === 'completed') return status === 'appointment' || status === 'declined' || status === 'completed';
   return status === view;
 }
 
@@ -64,7 +68,7 @@ function syncCounterState(counters) {
 }
 
 function buildCounters(root, grouped) {
-  const completed = grouped.appointment.length + grouped.declined.length;
+  const completed = grouped.appointment.length + grouped.declined.length + grouped.completed.length;
   const stageOneCount = grouped.not_contacted.length;
   let counters = root.querySelector('[data-cmp-counters]');
   if (!counters) {
@@ -79,6 +83,7 @@ function buildCounters(root, grouped) {
     counterButton('stage1', 'Total Clients', stageOneCount),
     counterButton('voicemail', 'Voicemail Left', grouped.voicemail.length),
     counterButton('no_answer', 'No Answer', grouped.no_answer.length),
+    counterButton('face_to_face', 'Face to Face', grouped.face_to_face.length),
     counterButton('follow_up', 'Follow Up', grouped.follow_up.length),
     counterButton('completed', 'Completed', completed)
   );
@@ -141,7 +146,7 @@ function renderView(root, members, cards) {
 
 function switchView(root, members, cards, view) {
   activeView = view;
-  const grouped = { not_contacted: [], no_answer: [], voicemail: [], follow_up: [], appointment: [], declined: [] };
+  const grouped = { not_contacted: [], no_answer: [], voicemail: [], face_to_face: [], follow_up: [], appointment: [], declined: [], completed: [] };
   cards.forEach(card => (grouped[card.dataset.cmpStageStatus] || (grouped[card.dataset.cmpStageStatus] = [])).push(card));
   const counters = buildCounters(root, grouped);
   renderView(root, members, cards);
