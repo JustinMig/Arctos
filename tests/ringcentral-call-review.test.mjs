@@ -41,3 +41,20 @@ test('Sync does not reset hidden state or saved staff notes',()=>{
  assert.match(backend,/requireCrmUser\(/);
  assert.match(audio,/getClient\(row\.client_id,user\)/);
 });
+
+test('missed calls and voicemails show collapsed daily accordions until explicitly opened',()=>{
+ const css=readFileSync(new URL('../ringcentral-call-review.css',import.meta.url),'utf8');
+ assert.match(js,/const openDays=new Set\(\)/);
+ assert.match(js,/const byDay=new Map\(\)/);
+ assert.match(js,/byDay\.get\(key\)\.push\(row\)/);
+ assert.match(js,/<details class="mh-review-day" data-review-day=/);
+ assert.match(js,/<summary class="mh-review-day-heading">/);
+ assert.match(js,/items\.map\(card\)\.join\(''\)/);
+ // An "open" attribute is emitted ONLY for dates the user clicked.
+ assert.match(js,/openDays\.has\(day\)\?' open':''/);
+ assert.match(js,/day\.addEventListener\('toggle'/);
+ assert.match(js,/if\(day\.open\)openDays\.add/);
+ assert.match(js,/if\(mode!==value\)openDays\.clear\(\)/);
+ assert.match(css,/\.mh-review-day:not\(\[open\]\)>\.mh-review-day-cards\{display:none!important\}/);
+ assert.match(css,/\.mh-review-day\[open\] \.mh-review-day-chevron/);
+});
