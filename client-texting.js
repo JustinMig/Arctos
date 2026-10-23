@@ -230,15 +230,22 @@ if (!Dialogs.prototype.__smsPatched) {
   const originalOpen = Dialogs.prototype.open;
   Dialogs.prototype.open = function(options = {}) {
     if (options.kind !== 'client-dialog') return originalOpen.call(this, options);
+    // The client-record dialog supplies its own authoritative clientId.
+    // The opener may lose focus while lazy client features load; never rely
+    // exclusively on the last focused search row.
     const invoker = document.activeElement;
-    const initialId = invoker?.getAttribute?.('data-client-id') || '';
+    const initialId = String(options.clientId || invoker?.getAttribute?.('data-client-id') || '');
     let controller;
     const originalSave = options.onSave;
     controller = originalOpen.call(this, {
       ...options,
       onSave: originalSave ? async form => {
         const result = await originalSave(form);
-        const id = mhRepository.lastSavedClientId;
+        // The working CRM may load its repository with a cache-busting URL.
+        // Use the actual saved record (and dialog client ID) before falling back
+        // to this module's repository copy, so newly saved clients get both actions.
+        const id = result?.id || controller?.node?.dataset.clientId ||
+          mhRepository.lastSavedClientId;
         if (id) await controller?.__setSmsClientId?.(id);
         return result;
       } : null
