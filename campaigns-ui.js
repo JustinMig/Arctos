@@ -17,7 +17,7 @@ const problem = error => error?.message || 'This action could not finish. Please
 /** Uses the workspace's existing dialog stack and canonical client-record opener. */
 export function createCampaignFeature({ repository, dialogs, openClient, onCalendarChange = () => {} }) {
   const api = repository.campaigns;
-  const state = { host: null, campaign: null, campaignId: null, list: [], listCursor: null, listStatus: 'active', members: [], cursor: null, token: 0, loading: false, filter: 'all', query: '', sort: 'name', direction: 'asc', message: '', error: '' };
+  const state = { host: null, campaign: null, campaignId: null, list: [], listCursor: null, listStatus: 'active', members: [], cursor: null, token: 0, loading: false, filter: 'all', query: '', sort: 'name', direction: 'asc', message: '', error: '', noteOpen: new Set() };
   const selection = new Map();
   let selectionMode = false, searchHost = null, searchRows = [];
   const agents = () => (repository.agents || []).filter(a => a.active !== false);
@@ -33,10 +33,26 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
     const deceased = row.client_status === 'deceased';
     const locked = deceased || state.campaign?.status !== 'active';
     const next = row.next_event_date ? `${dateText(row.next_event_date)}${row.next_event_time ? ` · ${timeLabel(row.next_event_time.slice(0,5))}` : ''} · ${row.next_event_status || 'scheduled'}` : 'No appointment / follow-up set';
+    const hasNote = !!String(row.last_note || '').trim();
     return `<article class="cmp-member" data-cmp-member="${esc(row.id)}">
-      <div class="cmp-person"><strong>${esc(fullName(row))}</strong><span>${esc(phone(row.phone))}</span><small>${esc(locationText(row))}</small><small>${esc(deceased ? 'Deceased — contact disabled' : (row.products || []).map(p => String(p).replaceAll('_',' ')).join(' · '))}</small></div>
+      <div class="cmp-person">
+        <strong>${esc(fullName(row))}</strong>
+        <details class="cmp-card-notes" data-cmp-card-notes="${esc(row.id)}"${state.noteOpen.has(row.id) ? ' open' : ''}>
+          <summary><span>Notes${hasNote ? ' • Saved' : ' • Add optional note'}</span><span aria-hidden="true">⌄</span></summary>
+          <div class="cmp-card-note-body">
+            ${hasNote ? `<p class="cmp-card-saved-note"><strong>Latest note</strong><span>${esc(row.last_note)}</span></p>` : '<p class="cmp-card-note-empty">No campaign notes recorded yet.</p>'}
+            ${locked ? '<p class="cmp-card-note-empty">This record is read-only.</p>' : `
+            <label class="field"><span>New campaign note</span><textarea data-cmp-note-input maxlength="4000" rows="3" placeholder="Type a note about this client…"></textarea></label>
+            <button type="button" class="btn secondary" data-cmp-save-note="${esc(row.id)}">Save Note</button>`}
+            <small class="cmp-card-note-status" data-cmp-note-status role="status" aria-live="polite"></small>
+          </div>
+        </details>
+        <span>${esc(phone(row.phone))}</span>
+        <small>${esc(locationText(row))}</small>
+        <small>${esc(deceased ? 'Deceased — contact disabled' : (row.products || []).map(p => String(p).replaceAll('_',' ')).join(' · '))}</small>
+      </div>
       <div class="cmp-status"><span class="cmp-badge ${deceased ? 'is-deceased' : `is-${esc(row.contact_status)}`}">${esc(deceased ? 'Deceased' : outcomeLabel(row.contact_status))}</span><small>${Number(row.attempt_count || 0)} contact update${row.attempt_count === 1 ? '' : 's'}</small></div>
-      <div class="cmp-activity"><small>Last contact: ${esc(campaignTimestamp(row.last_contacted_at))}</small><span>${esc(next)}</span>${row.next_action ? `<small>${esc(row.next_action)}</small>` : ''}${row.last_note ? `<p>${esc(row.last_note)}</p>` : ''}</div>
+      <div class="cmp-activity"><small>Last contact: ${esc(campaignTimestamp(row.last_contacted_at))}</small><span>${esc(next)}</span>${row.next_action ? `<small>${esc(row.next_action)}</small>` : ''}</div>
       <div class="cmp-actions"><button type="button" class="btn secondary" data-client-id="${esc(row.client_id)}">Open Client</button><label class="cmp-update-select"><span class="cmp-sr-only">Spoke / Update — ${esc(fullName(row))}</span><select data-cmp-update="${esc(row.id)}"${locked ? ' disabled' : ''}><option value="">Spoke / Update</option>${options(campaignUpdateOptions(row))}</select></label></div>
     </article>`;
   }
@@ -67,6 +83,36 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
     filter.querySelectorAll('select').forEach(el => el.onchange = () => filter.requestSubmit());
     h.querySelectorAll('[data-client-id]').forEach(b => b.onclick = () => openClient(b.dataset.clientId));
     h.querySelectorAll('[data-cmp-update]').forEach(el => el.onchange = () => { const row = state.members.find(r => r.id === el.dataset.cmpUpdate); const outcome = el.value; el.value = ''; if (row && outcome) contactDialog(row, outcome); });
+    h.querySelectorAll('[data-cmp-card-notes]').forEach(detail => {
+      detail.addEventListener('toggle', () => {
+        if (detail.open) state.noteOpen.add(detail.dataset.cmpCardNotes);
+        else state.noteOpen.delete(detail.dataset.cmpCardNotes);
+      });
+    });
+    h.querySelectorAll('[data-cmp-save-note]').forEach(button => button.addEventListener('click', async () => {
+      const row=state.members.find(item=>item.id===button.dataset.cmpSaveNote);
+      const detail=button.closest('[data-cmp-card-notes]');
+      const input=detail?.querySelector('[data-cmp-note-input]');
+      const status=detail?.querySelector('[data-cmp-note-status]');
+      if(!row||!input||!status)return;
+      const note=input.value.trim();
+      if(!note){status.textContent='Enter a note before saving.';input.focus();return;}
+      const opId=crypto.randomUUID();
+      button.disabled=true;
+      status.textContent='Saving note…';
+      state.noteOpen.add(row.id);
+      try {
+        const saved=await api.saveMemberNote({
+          p_member_id:row.id,p_operation_id:opId,
+          p_expected_version:row.version,p_note:note
+        });
+        if(!saved?.saved)throw new Error('The note was not confirmed by the database.');
+        state.message=`Campaign note saved for ${fullName(row)}.`;
+        void loadDetail();
+      } catch(error) {
+        if(status.isConnected)status.textContent=problem(error);
+      } finally {if(button.isConnected)button.disabled=false;}
+    }));
     h.querySelector('[data-cmp-more]')?.addEventListener('click', () => loadDetail(true));
   }
   async function loadList(more = false) {
@@ -135,12 +181,12 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
     }
     const campaign=state.campaign, operationId=crypto.randomUUID(); let blocks=[],availabilityToken=0,checking=false,available=false,timer=null,historyLoaded=false;
     const availableAgents=admin()?agents():agents().filter(a=>a.id===userId()||a.id===campaign.assigned_agent_id);
-    const d=dialogs.open({title:'Spoke / Update',hint:fullName(row),kind:'campaign-dialog campaign-contact-dialog',body:`<form class="cmp-form" novalidate><label class="field"><span>Contact Result</span><select name="outcome">${options(CONTACT_OUTCOMES,initialOutcome)}</select></label><div class="cmp-selected-client"><strong>${esc(fullName(row))}</strong><span>${esc(phone(row.phone))} · ${esc(locationText(row))}</span><small>Existing client · ${esc(campaign.name)}</small></div><fieldset class="cmp-schedule" data-cmp-schedule><legend data-cmp-schedule-title>Set Appointment</legend><label class="field cmp-agent"><span>Agent Calendar</span><select name="agent_id">${options(availableAgents.map(a=>[a.id,a.full_name]),campaign.assigned_agent_id)}</select></label><div class="cmp-form-grid">${field('event_date','Date',dateText(campaignToday()),'data-date inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" required')}<label class="field"><span>Time</span><select name="start_time" required><option value="">Choose a date first</option></select></label><label class="field"><span>Duration</span><select name="duration">${options([[15,'15 minutes'],[30,'30 minutes'],[45,'45 minutes'],[60,'1 hour'],[90,'1½ hours'],[120,'2 hours']],30)}</select></label>${field('next_action','Next Action / More Information Needed','','maxlength="500" placeholder="What needs to be discussed or collected?"')}</div>${row.next_event_id&&row.next_event_status==='scheduled'?`<label class="cmp-replace"><input type="checkbox" name="replace_event"> Replace the previous scheduled item (${esc(dateText(row.next_event_date))} ${esc(timeLabel(String(row.next_event_time||'').slice(0,5)))})</label>`:''}<div class="cmp-availability" data-cmp-availability role="status">Checking calendar…</div><button type="button" class="cmp-back" data-cmp-retry>Recheck availability</button><p class="cmp-help">Times are Central Time (8:00 AM–8:00 PM). Already scheduled times are disabled; open times remain selectable.</p></fieldset><label class="field"><span>Notes</span><textarea name="note" rows="4" maxlength="4000" placeholder="Conversation notes, purpose of appointment, or what to follow up on"></textarea></label><p class="cmp-help" data-cmp-save-help></p></form><details class="cmp-history"><summary>Previous Contact Updates</summary><div data-cmp-history>${empty('Open to view the latest 30 updates.')}</div></details>`,footer:footer(isScheduledOutcome(initialOutcome)?'Save & Add to Calendar':'Save Contact Update'),onSave:async form=>{
+    const d=dialogs.open({title:'Spoke / Update',hint:fullName(row),kind:'campaign-dialog campaign-contact-dialog',body:`<form class="cmp-form" novalidate><label class="field"><span>Contact Result</span><select name="outcome">${options(CONTACT_OUTCOMES,initialOutcome)}</select></label><div class="cmp-selected-client"><strong>${esc(fullName(row))}</strong><span>${esc(phone(row.phone))} · ${esc(locationText(row))}</span><small>Existing client · ${esc(campaign.name)}</small></div><fieldset class="cmp-schedule" data-cmp-schedule><legend data-cmp-schedule-title>Set Appointment</legend><label class="field cmp-agent"><span>Agent Calendar</span><select name="agent_id">${options(availableAgents.map(a=>[a.id,a.full_name]),campaign.assigned_agent_id)}</select></label><div class="cmp-form-grid">${field('event_date','Date',dateText(campaignToday()),'data-date inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" required')}<label class="field"><span>Time</span><select name="start_time" required><option value="">Choose a date first</option></select></label><label class="field"><span>Duration</span><select name="duration">${options([[15,'15 minutes'],[30,'30 minutes'],[45,'45 minutes'],[60,'1 hour'],[90,'1½ hours'],[120,'2 hours']],30)}</select></label>${field('next_action','Next Action / More Information Needed','','maxlength="500" placeholder="What needs to be discussed or collected?"')}</div>${row.next_event_id&&row.next_event_status==='scheduled'?`<label class="cmp-replace"><input type="checkbox" name="replace_event"> Replace the previous scheduled item (${esc(dateText(row.next_event_date))} ${esc(timeLabel(String(row.next_event_time||'').slice(0,5)))})</label>`:''}<div class="cmp-availability" data-cmp-availability role="status">Checking calendar…</div><button type="button" class="cmp-back" data-cmp-retry>Recheck availability</button><p class="cmp-help">Times are Central Time (8:00 AM–8:00 PM). Already scheduled times are disabled; open times remain selectable.</p></fieldset><label class="field"><span>Campaign Note (optional)</span><textarea name="note" rows="4" maxlength="4000" placeholder="Record the result of this contact or completion. This note will appear in the client's collapsible Notes box."></textarea></label><p class="cmp-help" data-cmp-save-help></p></form><details class="cmp-history"><summary>Previous Contact Updates</summary><div data-cmp-history>${empty('Open to view the latest 30 updates.')}</div></details>`,footer:footer(isScheduledOutcome(initialOutcome)?'Save & Add to Calendar':'Save Contact Update'),onSave:async form=>{
       const v=Object.fromEntries(new FormData(form)), scheduled=isScheduledOutcome(v.outcome), bookingMinutes=Number(v.duration || 30);
       if(scheduled){if(checking||!available)throw new Error('Check calendar availability before saving.');if(!dateISO(v.event_date)||!v.start_time)throw new Error('Choose a valid date and available time.');if(slotIsBooked(v.start_time,bookingMinutes,blocks,v.replace_event?row.next_event_id:''))throw new Error('That time overlaps another scheduled appointment. Choose an available time.');const current=await api.availability(v.agent_id,dateISO(v.event_date));if(slotIsBooked(v.start_time,bookingMinutes,current,v.replace_event?row.next_event_id:''))throw new Error('An appointment was added at that time. Recheck the available times.');}
       const result=await api.recordContact({p_member_id:row.id,p_operation_id:operationId,p_expected_version:row.version,p_outcome:v.outcome,p_note:v.note||'',p_next_action:scheduled?v.next_action||'':'',p_event_date:scheduled?dateISO(v.event_date):null,p_start_time:scheduled?v.start_time:null,p_duration_minutes:scheduled?bookingMinutes:30,p_agent_id:scheduled?v.agent_id:null,p_replace_event:scheduled&&v.replace_event==='on'});
       if(!result?.saved)throw new Error('The contact update was not confirmed. Your notes remain open.');
-      state.message=scheduled?'Contact result and calendar entry saved.':'Contact result saved.';
+      state.message=scheduled?'Contact result and calendar entry saved.':v.outcome==='completed'?'Client moved to Completed.':'Contact result and campaign note saved.';
       if(result.event_id){window.MHCalendarSync?.refresh({force:true});onCalendarChange();}
       void loadDetail();
     }});
@@ -165,7 +211,13 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
       catch(error){if(token===availabilityToken&&d.node.isConnected)availability.textContent=`Availability could not load: ${problem(error)}`;}
       finally{if(token===availabilityToken){checking=false;if(d.node.isConnected)drawTimes();}}
     }
-    function switchOutcome(){const scheduled=isScheduledOutcome(form.elements.outcome.value);schedule.hidden=!scheduled;schedule.disabled=!scheduled;form.querySelector('[data-cmp-schedule-title]').textContent=form.elements.outcome.value==='follow_up'?'Set Follow Up / More Info Needed':'Set Appointment';d.node.querySelector('[data-save]').textContent=scheduled?'Save & Add to Calendar':'Save Contact Update';form.querySelector('[data-cmp-save-help]').textContent=scheduled?'Saves the contact result and calendar entry together. Cancelling this window saves neither.':'Records this contact attempt. Existing appointments and follow-ups are not cancelled.';if(scheduled)void checkAvailability();else{availabilityToken++;clearTimeout(timer);checking=false;available=false;}}
+    function switchOutcome(){const scheduled=isScheduledOutcome(form.elements.outcome.value);schedule.hidden=!scheduled;schedule.disabled=!scheduled;form.querySelector('[data-cmp-schedule-title]').textContent=form.elements.outcome.value==='follow_up'?'Set Follow Up / More Info Needed':'Set Appointment';d.node.querySelector('[data-save]').textContent=scheduled?'Save & Add to Calendar':'Save Contact Update';form.querySelector('[data-cmp-save-help]').textContent=scheduled
+      ? 'Saves the contact result and calendar entry together. Cancelling saves neither.'
+      : form.elements.outcome.value==='completed'
+        ? 'Moves this client to the Completed box. Add a note above if needed; existing calendar entries are not cancelled.'
+        : form.elements.outcome.value==='face_to_face'
+          ? 'Records a face-to-face meeting and moves this client to the Face to Face box without scheduling an appointment.'
+          : 'Records this contact result. Notes are optional and stay on the client card. Existing calendar entries are not cancelled.';if(scheduled)void checkAvailability();else{availabilityToken++;clearTimeout(timer);checking=false;available=false;}}
     form.elements.outcome.onchange=switchOutcome;
     date.addEventListener('input',()=>{availabilityToken++;available=false;time.disabled=true;clearTimeout(timer);timer=setTimeout(checkAvailability,250);});date.addEventListener('change',checkAvailability);agent.onchange=checkAvailability;duration.onchange=drawTimes;if(replace)replace.onchange=drawTimes;form.querySelector('[data-cmp-retry]').onclick=checkAvailability;
     const history=d.node.querySelector('.cmp-history');history.addEventListener('toggle',async()=>{if(!history.open||historyLoaded)return;historyLoaded=true;const host=history.querySelector('[data-cmp-history]');host.innerHTML=empty('Loading contact history…');try{const rows=await api.history(row.id);if(host.isConnected)host.innerHTML=rows.map(entry=>`<article><strong>${esc(outcomeLabel(entry.outcome))}</strong><small>${esc(campaignTimestamp(entry.created_at))}</small><p>${esc(entry.note||'No note entered')}</p>${entry.next_action?`<p>${esc(entry.next_action)}</p>`:''}</article>`).join('')||empty('No previous contact updates.');}catch(error){historyLoaded=false;if(host.isConnected)host.textContent=problem(error);}});
@@ -199,7 +251,7 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
       if(String(client.status||'').toLowerCase()==='deceased')throw new Error('Deceased clients cannot be added to campaigns.');
       chooseCampaignForSelection([client]);
     },
-    mount(host,{ campaignId = null }={}) { state.host=host;state.campaignId=campaignId;state.campaign=null;if(state.campaignId)void loadDetail();else void loadList(); },
+    mount(host,{ campaignId = null }={}) { state.host=host;state.campaignId=campaignId;state.campaign=null;state.noteOpen.clear();if(state.campaignId)void loadDetail();else void loadList(); },
     unmount() { state.token++;state.loading=false;state.host=null; },
     enhanceSearch,
     refreshClient(client) { state.members=state.members.map(row=>row.client_id===client.id?{...row,first_name:client.first_name,last_name:client.last_name,phone:client.phone,county:client.county,state:client.state,products:client.products,client_status:client.status}:row);if(selection.has(client.id)){if(client.status==='deceased')selection.delete(client.id);else selection.set(client.id,client);}if(live())render(); },
