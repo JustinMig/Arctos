@@ -514,6 +514,10 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       hydrate(form, record);
       wireTabs(d.node);
       d.attachForm(form);
+      // Deceased archive records open directly to their retained documents and files.
+      if (loaded.id && state.archive.open && String(loaded.status||'').toLowerCase()==='deceased') {
+        form.querySelector('[data-client-group-tab="files"]')?.click();
+      }
       // One editable overview note, backed by the existing clients.notes field.
       // Sync with Notes & Files so either view edits the same note and Save Client persists it.
       const glanceNote = form.querySelector('[data-client-glance-note]');
