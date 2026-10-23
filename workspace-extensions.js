@@ -25,6 +25,6 @@ import './client-pharmacy-postsave.js?v=optimization-2';
 import './client-notes-extras.js?v=arctos-files-1';
 import './client-files-hub.js?v=arctos-files-1';
 import './client-imported-documents.js';
-import './client-summary-commissions.js';
+import './client-summary-commissions.js?v=compact-deceased-1';
 import './life-commission-filters.js';
 import './new-client-clean-close.js?v=new-client-isolation-1';
