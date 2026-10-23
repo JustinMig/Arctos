@@ -36,7 +36,7 @@
 @import "./mobile-bottom-toolbar.css";
 @import "./ma-plans.css";
 @import "./athena-medicare.css";
-@import "./client-four-tabs.css";
+@import "./client-four-tabs.css?v=overview-client-actions-1";
 @import "./arctos-daily-dashboard.css";
 @import "./work-queue.css";
 @import "./client-files-hub.css";
