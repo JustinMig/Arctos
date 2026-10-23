@@ -75,6 +75,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     calendarLoadedAt: initialCalendarCache?.loadedAt || 0,
     calendarLoadingKey: '',
     search: { query: '', product: '', agent: '', sortBy: 'name', sortDirection: 'asc', applied: null, loading: false, rows: null, error: '', message: '', token: 0, cursor: null, nextCursor: null },
+    archive: { open:false, rows:null, loading:false, error:'', message:'', nextCursor:null, token:0 },
     destroyed: false
   };
   const connected = repository.connected === true;
@@ -132,6 +133,8 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     };
     if (route === 'clients') {
       bindSearch();
+      bindDeceasedArchive();
+      void refreshClientStats();
       // Start client enhancements while the user is searching, before they open the editor.
       if (ensureClientFeatures) void ensureClientFeatures().catch(error => console.error('Client features unavailable:', error));
     }
@@ -203,6 +206,90 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       if(!data?.id)throw Error('Appointment could not be found.');
       openAppointment(data.event_date,data,()=>workFeature?.refresh());
     }catch(error){alert(error?.message||'Unable to open appointment.');}
+  }
+
+  async function refreshClientStats() {
+    const cards = root.querySelector('.client-stats-grid');
+    if (!cards || !connected) return;
+    const filters = [
+      ['total',null], ['medicare','medicare'], ['life','life'], ['deceased','deceased']
+    ];
+    try {
+      const counts = await Promise.all(filters.map(async ([key, product]) => {
+        let q = supabase.from('client_search_results').select('id',{count:'exact',head:true});
+        q = key === 'deceased' ? q.eq('status','deceased') : q.neq('status','deceased');
+        if (product && product !== 'deceased') q = q.contains('products',[product]);
+        const {count,error} = await q;
+        if (error) throw error;
+        return [key,count ?? 0];
+      }));
+      if (!cards.isConnected || state.route !== 'clients') return;
+      for (const [key,count] of counts) {
+        const node = cards.querySelector('[data-client-stat="'+key+'"]');
+        if (node) node.textContent = Number(count).toLocaleString('en-US');
+      }
+    } catch (error) {
+      console.warn('Client summary counts could not load:',error?.message||error);
+      if (cards.isConnected) cards.title = 'Client counts could not load; client records remain available.';
+    }
+  }
+  function bindDeceasedArchive() {
+    const button = root.querySelector('[data-open-deceased]');
+    const close = root.querySelector('[data-close-deceased]');
+    if (!button || !close) return;
+    const display = open => {
+      state.archive.open = open;
+      const search = root.querySelector('#client-active-search');
+      const archive = root.querySelector('#deceased-client-archive');
+      if (search) search.hidden = open;
+      if (archive) archive.hidden = !open;
+      button.setAttribute('aria-expanded',String(open));
+      button.classList.toggle('is-selected',open);
+      if (open) void loadDeceasedClients(false);
+      else {
+        state.archive.token++;
+        state.archive.loading = false;
+      }
+    };
+    button.addEventListener('click',() => display(!state.archive.open));
+    close.addEventListener('click',() => { display(false); button.focus(); });
+  }
+  async function loadDeceasedClients(more = false) {
+    const a = state.archive;
+    if (more && (a.loading || !a.nextCursor)) return;
+    const token = ++a.token;
+    if (!more) { a.rows=null; a.nextCursor=null; }
+    a.loading = true; a.error=''; a.message='Loading deceased client records…';
+    drawDeceasedClients();
+    try {
+      const result = await repository.searchClients({
+        product:'deceased',query:'',sortBy:'name',sortDirection:'asc',
+        limit:50,cursor:more?a.nextCursor:null
+      });
+      if (token !== a.token || state.destroyed || !a.open || state.route !== 'clients') return;
+      if (!result || !Array.isArray(result.rows)) throw new Error('Archive query returned invalid records.');
+      // Server-side status filtering keeps this list completely separate from active searches.
+      const rows = more?[...(a.rows||[]),...result.rows]:result.rows;
+      a.rows = [...new Map(rows.filter(row=>String(row.status||'').toLowerCase()==='deceased').map(row=>[row.id,row])).values()];
+      a.nextCursor=result.nextCursor||null;
+      a.message=a.rows.length
+        ? a.rows.length+' deceased client'+(a.rows.length===1?'':'s')+' shown • Select a client to open their complete record and files.'
+        : 'No deceased clients are currently recorded.';
+    } catch (error) {
+      if (token !== a.token || state.destroyed) return;
+      a.error=error?.message||'Unable to load deceased clients.';
+      a.message='';
+    } finally {
+      if (token===a.token && !state.destroyed) { a.loading=false; drawDeceasedClients(); }
+    }
+  }
+  function drawDeceasedClients() {
+    const host=root.querySelector('#deceased-client-results');
+    if (!host || !state.archive.open) return;
+    host.setAttribute('aria-busy',String(state.archive.loading));
+    host.innerHTML=clientResultsMarkup(state.archive);
+    host.querySelectorAll('[data-client-id]').forEach(button => button.addEventListener('click',()=>openClient(button.dataset.clientId)));
+    host.querySelector('[data-more]')?.addEventListener('click',()=>loadDeceasedClients(true));
   }
 
   function bindSearch() {
@@ -281,11 +368,21 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }
   function patchClient(saved) {
     campaignFeature?.refreshClient(saved);
-    if (!state.search.rows) return;
-    state.search.rows = state.search.rows.map(row => row.id === saved.id ? { ...row, ...saved } : row);
-    const record = state.search.rows.find(row => row.id === saved.id);
-    const row = root.querySelector(`#client-results [data-client-id="${CSS.escape(saved.id)}"]`);
-    if (row && record) row.innerHTML = clientResultContent(record);
+    void refreshClientStats();
+    const isDeceased = String(saved.status||'').toLowerCase()==='deceased';
+    if (state.search.rows) {
+      state.search.rows = state.search.rows.map(row=>row.id===saved.id?{...row,...saved}:row)
+        .filter(row=>String(row.status||'').toLowerCase()!=='deceased');
+      const row = root.querySelector(`#client-results [data-client-id="${CSS.escape(saved.id)}"]`);
+      const record = state.search.rows.find(item=>item.id===saved.id);
+      if (row && record) row.innerHTML = clientResultContent(record);
+      else if (row) row.remove();
+      if (isDeceased && !state.search.rows.length && state.search.applied) {
+        state.search.message='No matching active clients found.';
+        drawResults();
+      }
+    }
+    if (state.archive.open) void loadDeceasedClients(false);
   }
   function wireTabs(node) {
     const form=node.querySelector('form.client-form');
