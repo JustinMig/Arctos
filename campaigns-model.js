@@ -1,14 +1,15 @@
 /** Campaigns have one Contact stage. Outcomes are not sequential workflow steps. */
 export const CONTACT_OUTCOMES = Object.freeze([
   ['no_answer', 'No Answer'], ['voicemail', 'Voicemail Left'], ['declined', 'Declined'],
-  ['appointment', 'Appointment'], ['follow_up', 'Follow Up / More Info Needed']
+  ['appointment', 'Appointment'], ['follow_up', 'Follow Up / More Info Needed'],
+  ['face_to_face', 'Face to Face Meeting'], ['completed', 'Completed']
 ]);
 export const CAMPAIGN_TOPICS = Object.freeze([
   ['general', 'General Client Review'], ['medicare', 'Medicare'], ['life', 'Life'],
   ['health', 'Health'], ['retirement', 'Retirement'], ['other', 'Other']
 ]);
 export const isScheduledOutcome = value => value === 'appointment' || value === 'follow_up';
-export const outcomeLabel = value => value === 'return_step1' ? 'Returned to Step 1' : CONTACT_OUTCOMES.find(([key]) => key === value)?.[1] || 'Not Contacted';
+export const outcomeLabel = value => value === 'note' ? 'Note Added' : value === 'return_step1' ? 'Returned to Step 1' : CONTACT_OUTCOMES.find(([key]) => key === value)?.[1] || 'Not Contacted';
 export const fullName = client => [client?.first_name, client?.last_name].filter(Boolean).join(' ').trim() || 'Client';
 const centralDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' });
 const centralStamp = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
