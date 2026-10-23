@@ -134,7 +134,6 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     if (route === 'clients') {
       bindSearch();
       bindDeceasedArchive();
-      void refreshClientStats();
       // Start client enhancements while the user is searching, before they open the editor.
       if (ensureClientFeatures) void ensureClientFeatures().catch(error => console.error('Client features unavailable:', error));
     }
@@ -208,60 +207,39 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     }catch(error){alert(error?.message||'Unable to open appointment.');}
   }
 
-  async function refreshClientStats() {
-    const cards = root.querySelector('.client-stats-grid');
-    if (!cards || !connected) return;
-    const filters = [
-      ['total',null], ['medicare','medicare'], ['life','life'], ['deceased','deceased']
-    ];
-    try {
-      const counts = await Promise.all(filters.map(async ([key, product]) => {
-        let q = supabase.from('client_search_results').select('id',{count:'exact',head:true});
-        q = key === 'deceased' ? q.eq('status','deceased') : q.neq('status','deceased');
-        // Match the Clients search agent scope, in addition to database RLS.
-        if (!['owner','admin'].includes(repository.profile?.role)) {
-          if (!repository.user?.id) throw new Error('You must be signed in to view client totals.');
-          q = q.eq('assigned_agent_id',repository.user.id);
-        }
-        if (product && product !== 'deceased') q = q.contains('products',[product]);
-        const {count,error} = await q;
-        if (error) throw error;
-        return [key,count ?? 0];
-      }));
-      if (!cards.isConnected || state.route !== 'clients') return;
-      for (const [key,count] of counts) {
-        const node = cards.querySelector('[data-client-stat="'+key+'"]');
-        if (node) node.textContent = Number(count).toLocaleString('en-US');
-      }
-    } catch (error) {
-      console.warn('Client summary counts could not load:',error?.message||error);
-      if (cards.isConnected) cards.title = 'Client counts could not load; client records remain available.';
-    }
-  }
   function bindDeceasedArchive() {
-    const button = root.querySelector('[data-open-deceased]');
+    // The three existing compact counters are injected after the page mounts.
+    // Delegate the click so their matching compact Deceased card works immediately.
+    const searchArea = root.querySelector('#client-active-search');
     const close = root.querySelector('[data-close-deceased]');
-    if (!button || !close) return;
-    // Every new visit to the Clients page begins in active-search mode.
+    if (!searchArea || !close) return;
     state.archive.token++;
     state.archive.open = false;
     state.archive.loading = false;
     const display = open => {
       state.archive.open = open;
+      const button = root.querySelector('[data-open-deceased]');
       const search = root.querySelector('#client-active-search');
       const archive = root.querySelector('#deceased-client-archive');
       if (search) search.hidden = open;
       if (archive) archive.hidden = !open;
-      button.setAttribute('aria-expanded',String(open));
-      button.classList.toggle('is-selected',open);
+      if (button) {
+        button.setAttribute('aria-expanded', String(open));
+        button.classList.toggle('is-selected',open);
+      }
       if (open) void loadDeceasedClients(false);
       else {
         state.archive.token++;
         state.archive.loading = false;
       }
     };
-    button.addEventListener('click',() => display(!state.archive.open));
-    close.addEventListener('click',() => { display(false); button.focus(); });
+    searchArea.addEventListener('click', event => {
+      if (event.target.closest('[data-open-deceased]')) display(!state.archive.open);
+    });
+    close.addEventListener('click', () => {
+      display(false);
+      root.querySelector('[data-open-deceased]')?.focus();
+    });
   }
   async function loadDeceasedClients(more = false) {
     const a = state.archive;
@@ -380,7 +358,6 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }
   function patchClient(saved) {
     campaignFeature?.refreshClient(saved);
-    void refreshClientStats();
     const isDeceased = String(saved.status||'').toLowerCase()==='deceased';
     if (state.search.rows) {
       state.search.rows = state.search.rows.map(row=>row.id===saved.id?{...row,...saved}:row)
