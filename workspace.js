@@ -1841,6 +1841,18 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }, 15000);
   window.addEventListener('mig:calendar-refresh-request', refreshVisibleCalendar);
   window.addEventListener('mig:calendar-refreshed', applyCalendarRefresh);
+  // The birthday panel stays correct if the app is left open over the 1st.
+  const refreshBirthdayMonth=()=>{
+    if(state.destroyed||state.route!=='clients'||!state.birthdays.open)return;
+    const newMonth=birthdayMonth();
+    if(state.birthdays.month!==newMonth){
+      state.massText.selected.clear();
+      state.birthdays.selectMode=false;
+      void loadBirthdays();
+    }
+  };
+  const birthdayMonthPoll=setInterval(refreshBirthdayMonth,60_000);
+  document.addEventListener('visibilitychange',refreshBirthdayMonth);
   changeRoute();
   return { destroy() {
     state.destroyed = true;
@@ -1853,6 +1865,8 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     window.removeEventListener('hashchange', changeRoute);
     window.removeEventListener('keydown', escapeMenu);
     clearInterval(calendarPoll);
+    clearInterval(birthdayMonthPoll);
+    document.removeEventListener('visibilitychange',refreshBirthdayMonth);
     window.removeEventListener('mig:calendar-refresh-request', refreshVisibleCalendar);
     window.removeEventListener('mig:calendar-refreshed', applyCalendarRefresh);
     root.replaceChildren();
