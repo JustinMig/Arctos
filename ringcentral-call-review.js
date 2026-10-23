@@ -98,9 +98,10 @@ function makeUI(panel){
  const input=wrapper.querySelector('[data-review-date]');
  const visibleRows=()=>mode==='missed'?records.calls:records.voicemails;
  const draw=()=>{
-  if(!wrapper.isConnected || mode==='all')return;
+  if(!wrapper.isConnected)return;
   wrapper.querySelector('[data-missed-count]').textContent=String(records.calls.length);
   wrapper.querySelector('[data-vm-count]').textContent=String(records.voicemails.length);
+  if(mode==='all')return;
   const chosen=visibleRows().filter(row=>date===DAY_ALL||dayKey(row.date)===date).sort((a,b)=>new Date(b.date)-new Date(a.date));
   releaseRecordings(list);
   if(!chosen.length){
@@ -207,8 +208,15 @@ function makeUI(panel){
  wrapper.querySelector('[data-review-today]').onclick=()=>{date=dayKey(new Date());input.value=date;draw();};
  wrapper.querySelector('[data-review-refresh]').onclick=()=>void refresh({force:true});
  const onCallsChanged=event=>{if(event.detail?.kind==='calls' && mode!=='all')void refresh();};
+ const onRingCentralRefresh=()=>{if(mode==='missed')void refresh();};
+ // The Calls section is remounted on route changes: remove previous listeners.
+ window.__arctosCallReviewCleanup?.();
  window.addEventListener('mig:communications-changed',onCallsChanged);
- wrapper.addEventListener('DOMNodeRemoved',()=>window.removeEventListener('mig:communications-changed',onCallsChanged),{once:true});
+ window.addEventListener('mig:ringcentral-calls-updated',onRingCentralRefresh);
+ window.__arctosCallReviewCleanup=()=>{
+  window.removeEventListener('mig:communications-changed',onCallsChanged);
+  window.removeEventListener('mig:ringcentral-calls-updated',onRingCentralRefresh);
+ };
  panel.dataset.callReviewMounted='true';
 }
 function mount(){
