@@ -325,3 +325,9 @@
 .at-unfinished-grid .at-unfinished-item .at-btn{font-size:11px;padding:7px 9px;min-height:33px;white-space:nowrap}
 @media(max-width:850px){.at-unfinished-grid{grid-template-columns:1fr}}
 @media(max-width:480px){.at-unfinished-grid .at-unfinished-item{padding:9px;gap:5px}.at-unfinished-grid .at-unfinished-item .at-btn{padding:7px 8px}}
+
+/* Old plan details are explicitly separated from the current plan in Athena Step 3. */
+.at-old-plan-details{box-sizing:border-box;border:2px solid #283b4b;border-radius:12px;background:#f2f6f9;padding:14px;margin:12px 0}
+.at-old-plan-details h3{margin:0 0 12px;color:#1a3446;font-size:16px}
+.at-old-plan-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:600px){.at-old-plan-grid{grid-template-columns:1fr}}
