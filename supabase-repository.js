@@ -112,6 +112,7 @@ export const mhRepository = {
   async saveClient(record, options = {}) {
     const products = ['medicare','life','retirement'].filter(k => record[`product_${k}`]);
     const clientPayload = {
+      old_plan_carrier: clean(record.old_plan_carrier), old_plan_id: clean(record.old_plan_id), old_plan_member_id: clean(record.old_plan_member_id), old_plan_year: clean(record.old_plan_year),
       assigned_agent_id: clean(record.assigned_agent_id) || this.user?.id || null,
       first_name: record.first_name?.trim(), last_name: record.last_name?.trim(), date_of_birth: clean(record.date_of_birth), gender: clean(record.gender),
       email: clean(record.email), phone: clean(record.phone), address1: clean(record.address), city: clean(record.city), county: clean(record.county), state: clean(record.state), zip_code: clean(record.zip),
