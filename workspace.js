@@ -500,7 +500,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         <button type="button" class="btn secondary" data-client-campaign-more hidden>Load More Campaigns</button>
         <p class="cmp-help" data-client-campaign-message role="status" aria-live="polite">Loading campaigns…</p>
       </form>`,
-      footer: saveFooter('Add to Campaign'),
+      footer: saveFooter('Add to Campaign').replace('data-save="stay"', 'data-save="close"'),
       onSave: async form => {
         let id = form.elements.namedItem('campaign_id')?.value;
         const label = form.elements.namedItem('campaign_id')?.selectedOptions?.[0]?.textContent || 'campaign';
