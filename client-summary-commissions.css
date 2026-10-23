@@ -46,3 +46,24 @@
   .client-summary-grid .client-summary-label{font-size:.55rem}
   .client-summary-grid .client-summary-card strong{font-size:.92rem}
 }
+
+/* Five small client counters; birthday list sits directly after Deceased. */
+.client-summary-grid{grid-template-columns:repeat(5,minmax(0,1fr));max-width:1040px}
+.client-summary-grid .client-summary-card.is-birthdays{
+ cursor:pointer;font:inherit;background:#fff6e9;border:1px solid #ecd8b2;color:#665037;
+}
+.client-summary-grid .client-summary-card.is-birthdays .client-summary-icon{
+ background:#f7e7c9;color:#956c37;
+}
+.client-summary-grid .client-summary-card.is-birthdays:hover,
+.client-summary-grid .client-summary-card.is-birthdays.is-selected{
+ background:#f9edd9;border-color:#bf9764;
+}
+.client-summary-grid .client-summary-card.is-birthdays:focus-visible{outline:3px solid #6791ad;outline-offset:2px}
+@media(max-width:700px){
+ .client-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:100%}
+ .client-summary-grid .client-summary-card{min-height:57px}
+}
+@media(max-width:390px){
+ .client-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
