@@ -15,8 +15,34 @@
  border:1px solid #b7c9d5!important}
 .mh-review-status{font-size:12px;font-weight:750;color:#3e6174;margin:0}
 .mh-review-results{display:grid;gap:9px;min-width:0}
-.mh-review-day-heading{margin:12px 0 0;padding:8px 11px;border-left:4px solid #577e95;background:#eaf1f6;
- border-radius:6px;color:#24445a;font-size:13px;font-weight:850}
+/* Missed Calls and Voicemails: each day is a native, closed-by-default
+   disclosure group. Notes, appointments, and playback stay inside that day. */
+.mh-review-day{
+ box-sizing:border-box;min-width:0;overflow:hidden;
+ background:#fff;border:1px solid #c8d8e2;border-radius:10px;
+}
+.mh-review-day-heading{
+ display:flex;align-items:center;gap:10px;list-style:none;
+ min-height:48px;margin:0;padding:10px 13px;
+ border-left:4px solid #577e95;background:#eaf1f6;
+ border-radius:0;color:#24445a;font-size:13px;font-weight:850;
+ cursor:pointer;
+}
+.mh-review-day-heading::-webkit-details-marker{display:none}
+.mh-review-day-heading:hover{background:#e1eef5}
+.mh-review-day-heading:focus-visible{outline:2px solid #457b9a;outline-offset:-3px}
+.mh-review-day[open]>.mh-review-day-heading{border-bottom:1px solid #c8d8e2}
+.mh-review-day-title{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.mh-review-day-count{
+ flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 7px;
+ border-radius:999px;background:#d5e5ed;color:#36576b;
+}
+.mh-review-day-chevron{
+ flex:0 0 auto;line-height:1;font-size:22px;color:#476c81;transition:transform .15s ease;
+}
+.mh-review-day[open] .mh-review-day-chevron{transform:rotate(180deg)}
+.mh-review-day:not([open])>.mh-review-day-cards{display:none!important}
+.mh-review-day-cards{display:grid;gap:9px;padding:10px;background:#fafcfd;min-width:0}
 .mh-review-card{box-sizing:border-box;min-width:0;padding:12px 13px;display:grid;gap:8px;
  border:1px solid #c8d7e0;border-left:4px solid #6287a0;background:#fff;border-radius:10px;color:#213d50}
 .mh-review-card[data-review-type=voicemail]{border-left-color:#826a9a}
