@@ -3,7 +3,7 @@ import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSor
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
 import { supabase } from './supabase-repository.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=overview-client-actions-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=original-mm-contacts-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository, { ensureClientFeatures, ensureCampaignFeatures, ensureLeadFeatures, ensureQuickFeatures } = {}) {
