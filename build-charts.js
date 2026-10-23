@@ -1,3 +1,4 @@
+import { listAmericanAmicablePlans, getAmericanAmicableBuild } from './american-amicable-build-data.js?v=2026-agent-guides-1';
 /** Saved underwriting chart references, not a live carrier feed or an approval engine.
  * Transcribed without interpolating or changing the existing M&M chart values.
  * Source: JustinMig/Mayer-insurance-crm, lib/build-charts.ts,
@@ -105,7 +106,18 @@ const findChart = company => typeof company === 'string'
 export function listBuildCharts() {
   return charts.map(chart => ({
     company: chart.company,
-    heights: chart.rows.map(row => ({ value: row[0], label: heightLabel(row[0]) }))
+    heights: chart.rows.map(row => ({ value: row[0], label: heightLabel(row[0]) })),
+    ...(chart.key === 'american-amicable' ? {
+      plans: [
+        ...listAmericanAmicablePlans().map(plan => ({
+          ...plan, ageGroups:plan.ageGroups.map(group=>({
+            ...group, heights:group.heights.map(height=>({value:height,label:heightLabel(height)}))
+          }))
+        })),
+        {key:'senior-choice-reference',name:'Senior Choice (older saved reference)',ages:'Older guide; not re-verified',
+          ageGroups:[{key:'adult',label:'Original saved Senior Choice',heights:chart.rows.map(row=>({value:row[0],label:heightLabel(row[0])}))}]}
+      ]
+    } : {})
   }));
 }
 
@@ -118,6 +130,15 @@ export function lookupBuildChart(criteria = {}) {
   if (typeof raw === 'string' && !/^\d+$/.test(raw.trim())) return null;
   const height = Number(raw);
   if (!Number.isInteger(height)) return null;
+  if (chart.key === 'american-amicable' && criteria.plan && criteria.plan !== 'senior-choice-reference') {
+    const match = getAmericanAmicableBuild({plan:criteria.plan,ageGroup:criteria.ageGroup,heightInches:height});
+    if (!match) return null;
+    return {company:chart.company,heightInches:height,height:heightLabel(height),
+      plan:match.plan,ageGroup:match.ageGroup,values:match.values,
+      source:match.source,warnings:match.warnings,referenceOnly:true};
+  }
+  // Backwards-compatible Senior Choice reference retained; six uploaded guides
+  // are selected explicitly by product in the interactive tool.
   const row = chart.rows.find(value => value[0] === height);
   if (!row) return null;
   const warnings = [...(chart.warnings || [])];
