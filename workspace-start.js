@@ -99,7 +99,7 @@ export async function startWorkspace() {
       .then(() => import('./communications-layout-fix.js?v=communications-layout-2'))
       .then(() => import('./communications-delete.js?v=communications-delete-2'))
       .then(() => import('./communications-open-client.js?v=communications-open-client-2'))
-      .then(() => import('./ringcentral-call-review.js?v=ringcentral-review-1'))
+      .then(() => import('./ringcentral-call-review.js?v=call-days-collapsed-1'))
       .catch(error => {
         communicationsPromise = null;
         console.error('Communications UI failed to load.', error);
