@@ -1,6 +1,6 @@
 import { makeClientSearch } from './client-age-search.js?v=deceased-archive-1';
 import { createCampaignRepository } from './campaigns-repository.js?v=campaign-completion-notes-1';
-import { createWorkspace } from './workspace.js?v=client-footer-always-1';
+import { createWorkspace } from './workspace.js?v=birthday-bulk-text-1';
 import { mhRepository, supabase } from './supabase-repository.js?v=original-mm-contacts-1';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
@@ -57,7 +57,7 @@ export async function startWorkspace() {
   // large optional client/campaign enhancement chunk. Previously these imports
   // were awaited, delaying EVERY login and dashboard opening.
   const ensureFeature = createFeatureLoader({
-    client: () => import('./workspace-extensions.js?v=compact-deceased-1'),
+    client: () => import('./workspace-extensions.js?v=birthday-bulk-text-1'),
     campaign: () => import('./workspace-campaign-extensions.js?v=campaign-completion-notes-1'),
     lead: () => import('./workspace-lead-extensions.js?v=arctos-perf-1'),
     quick: () => import('./workspace-quick-extensions.js?v=arctos-perf-1')
