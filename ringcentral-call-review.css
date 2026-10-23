@@ -1,0 +1,52 @@
+/* RingCentral Call Data review — visible missed calls grouped by Central day and voicemail inbox. */
+.mh-review-dashboard{display:grid;gap:10px;min-width:0}
+.mh-review-filter-head{display:grid;gap:10px;padding:10px 12px;border:1px solid #cfdee6;background:#f4f8fa;border-radius:11px}
+.mh-review-tabs{display:flex;flex-wrap:wrap;gap:7px}
+.mh-review-tabs button{appearance:none;border:1px solid #abc2d0;background:#fff;color:#24475b;border-radius:9px;
+  padding:9px 12px;min-height:40px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.mh-review-tabs button.active{background:#234d65;border-color:#234d65;color:#fff}
+.mh-review-tabs button strong{font-size:12px;color:inherit}
+.mh-review-date-tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;min-width:0}
+.mh-review-date-tools[hidden],.mh-review-results[hidden],.mh-call-list[hidden],.mh-review-status[hidden]{display:none!important}
+.mh-review-date-tools label{display:grid;gap:4px;font-size:11px;font-weight:850;color:#405e6f}
+.mh-review-date-tools input[type=date]{min-height:36px;padding:6px 9px;border:1px solid #aec3d1;
+ border-radius:8px;background:#fff;color:#163a4e;font:inherit;font-size:13px}
+.mh-review-date-tools button{min-height:36px;font-size:11px!important;color:#1c4258!important;background:#fdfefe!important;
+ border:1px solid #b7c9d5!important}
+.mh-review-status{font-size:12px;font-weight:750;color:#3e6174;margin:0}
+.mh-review-results{display:grid;gap:9px;min-width:0}
+.mh-review-day-heading{margin:12px 0 0;padding:8px 11px;border-left:4px solid #577e95;background:#eaf1f6;
+ border-radius:6px;color:#24445a;font-size:13px;font-weight:850}
+.mh-review-card{box-sizing:border-box;min-width:0;padding:12px 13px;display:grid;gap:8px;
+ border:1px solid #c8d7e0;border-left:4px solid #6287a0;background:#fff;border-radius:10px;color:#213d50}
+.mh-review-card[data-review-type=voicemail]{border-left-color:#826a9a}
+.mh-review-top,.mh-review-meta,.mh-review-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.mh-review-top{justify-content:space-between}
+.mh-review-top strong{font-size:14px;color:#1c3b50}
+.mh-review-top small{font-size:11px;color:#547082}
+.mh-review-meta{gap:7px 12px;font-size:12px;color:#506b7c;font-weight:650}
+.mh-review-kind{font-weight:850;color:#345c79}
+.mh-review-card[data-review-type=voicemail] .mh-review-kind{color:#735b91}
+.mh-review-notes{border:1px solid #d4e1e9;border-radius:8px;background:#f7fafd;min-width:0}
+.mh-review-notes summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;
+ color:#264b61;font-size:12px;font-weight:850;padding:9px 11px;min-height:35px}
+.mh-review-notes summary::-webkit-details-marker{display:none}
+.mh-review-notes[open] summary span{transform:rotate(180deg)}
+.mh-review-note-body{display:grid;gap:8px;padding:9px 12px 12px;border-top:1px solid #d4e1e9}
+.mh-review-note-body label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#31576b}
+.mh-review-note-body textarea{box-sizing:border-box;min-height:76px;width:100%;max-width:100%;resize:vertical;
+ padding:10px;border:1px solid #a4bdcb;border-radius:8px;background:#fff;color:#193448;font:inherit;font-size:13px}
+.mh-review-note-body button{justify-self:start;font-size:12px!important;border:1px solid #aec5d1!important;color:#23485e!important;background:#e8f3f8!important}
+.mh-review-actions{justify-content:flex-start;gap:8px}
+.mh-review-actions button{min-height:36px;font-size:12px!important;font-weight:800;color:#234558!important;background:#eff5f8!important}
+.mh-review-actions button.mh-review-delete{color:#943b36!important;background:#fff4f3!important;border-color:#d6aaa6!important}
+.mh-review-actions button:disabled,.mh-review-note-body button:disabled{opacity:.55;cursor:not-allowed}
+.mh-review-message{margin:0;color:#386b57;font-size:11px;min-height:0}
+.mh-review-message:empty{display:none}
+.mh-review-audio{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.mh-review-audio audio{width:min(100%,420px);height:36px}
+@media(max-width:620px){.mh-review-filter-head{padding:9px}.mh-review-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.mh-review-tabs button{min-width:0;padding:7px 4px;min-height:43px;font-size:10px;overflow-wrap:anywhere}
+.mh-review-date-tools button{flex:1}.mh-review-date-tools label{flex:1 1 100%}
+.mh-review-date-tools input[type=date]{width:100%;box-sizing:border-box}
+.mh-review-actions button{flex:1 1 130px}}
