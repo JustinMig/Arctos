@@ -3,6 +3,13 @@ export { supabase } from './supabase-client.js';
 
 const clean = v => v === '' || v === undefined ? null : v;
 const money = v => v === '' || v === undefined || v === null ? null : Number(v);
+/* The 302 original M&M company contacts are stored in Arctos.company_contacts.
+   Cache per authenticated user for a few minutes so every keystroke does not
+   repeat the full directory query, while preserving subsequent edits. */
+let companyContactCache = { ownerId: null, refreshedAt: 0, rows: [] };
+const contactLines = value => String(value ?? '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+const contactDigitSearch = value => String(value ?? '').replace(/\D/g, '');
+
 const one = async query => { const { data, error } = await query.maybeSingle(); if (error) throw error; return data; };
 async function saveOne(table, clientId, existingId, payload) {
   const body = { ...payload, client_id: clientId };
@@ -199,7 +206,35 @@ export const mhRepository = {
 
   async listNotes() { const { data, error } = await supabase.from('client_notes').select('*').order('created_at', { ascending: false }).limit(100); if (error) throw error; return data || []; },
   async saveNote(value) { const body = { client_id: clean(value.client_id), author_id: this.user?.id, title: value.title || 'Note', body: value.body || value.notes || '', pinned: !!value.pinned }; const { data, error } = value.id ? await supabase.from('client_notes').update(body).eq('id', value.id).select().single() : await supabase.from('client_notes').insert(body).select().single(); if (error) throw error; return data; },
-  async searchContacts(query = '') { let q = supabase.from('company_contacts').select('*').order('company').limit(50); if (query) q = q.ilike('company', `%${query.replace(/[%]/g,' ')}%`); const { data, error } = await q; if (error) throw error; return data || []; },
+  async searchContacts(request = {}) {
+    const query = typeof request === 'string' ? request : request?.query ?? '';
+    const limit = Math.max(1, Math.min(250, Number(typeof request === 'string' ? 50 : request?.limit ?? 50) || 50));
+    const ownerId = this.user?.id || '';
+    if (!ownerId || !this.profile?.active) throw new Error('Sign in with an active CRM account to view company contacts.');
+    if (companyContactCache.ownerId !== ownerId || Date.now() - companyContactCache.refreshedAt > 5 * 60_000) {
+      // Full 302-company directory is small; local filtering supports phone,
+      // fax, email, and notes as well as company name. RLS checks all rows.
+      const { data, error } = await supabase.from('company_contacts')
+        .select('id,company,department,phone,fax,email,website,notes')
+        .order('company',{ascending:true}).limit(1000);
+      if (error) throw error;
+      companyContactCache = {ownerId,refreshedAt:Date.now(),rows:(data || []).map(row=>({
+        id:row.id, company:row.company || '',department:row.department || '',
+        phones:contactLines(row.phone),faxes:contactLines(row.fax),
+        emails:contactLines(row.email),notes:contactLines(row.notes),
+        website:row.website || ''
+      }))};
+    }
+    const needle = String(query).trim().toLocaleLowerCase('en-US').slice(0,160);
+    const words = needle.split(/\s+/).filter(Boolean);
+    const digits = contactDigitSearch(needle);
+    return companyContactCache.rows.filter(row => {
+      if (!words.length) return true;
+      const searchable = [row.company,row.department,...row.phones,...row.faxes,...row.emails,...row.notes,row.website].join(' ').toLocaleLowerCase('en-US');
+      if (words.every(word=>searchable.includes(word))) return true;
+      return digits.length>=3 && [ ...row.phones,...row.faxes ].some(phone=>contactDigitSearch(phone).includes(digits));
+    }).slice(0,limit);
+  },
   async commissions({ agent } = {}) {
     let q = supabase.from('commissions').select('*').order('earned_date', { ascending: false }).limit(500);
     if (agent) q = q.eq('agent_id', agent);
