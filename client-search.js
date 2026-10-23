@@ -67,7 +67,7 @@ export function makeClientSearch(db, { now = () => new Date() } = {}) {
       if (bounds.min) q = q.gte('date_of_birth', bounds.min);
       q = q.lte('date_of_birth', bounds.max);
     } else if (selectedProduct === 'deceased') q = q.eq('status', 'deceased');
-    else if (selectedProduct) q = q.contains('products', [selectedProduct]);
+    else { q = q.neq('status', 'deceased'); if (selectedProduct) q = q.contains('products', [selectedProduct]); }
     if (agent) q = q.eq('assigned_agent_id', agent);
     if (birthYear) {
       if (!/^\d{4}$/.test(String(birthYear))) throw new Error('Enter a four-digit birth year.');
@@ -84,10 +84,20 @@ export function makeClientSearch(db, { now = () => new Date() } = {}) {
 }
 const optionMarkup = (items, current) => items.map(([value, label]) => `<option value="${esc(value)}"${String(value) === String(current) ? ' selected' : ''}>${esc(label)}</option>`).join('');
 export function clientSearchMarkup(s) {
-  return `<section class="panel-card dark-card client-search-panel" aria-label="Client search">
+  return `<section class="client-stats-grid" aria-label="Client totals">
+    <div class="client-stat-card"><span>Total Clients</span><strong data-client-stat="total" aria-live="polite">—</strong></div>
+    <div class="client-stat-card"><span>Medicare Clients</span><strong data-client-stat="medicare" aria-live="polite">—</strong></div>
+    <div class="client-stat-card"><span>Life Clients</span><strong data-client-stat="life" aria-live="polite">—</strong></div>
+    <button type="button" class="client-stat-card client-stat-deceased" data-open-deceased aria-controls="deceased-client-archive" aria-expanded="false">
+      <span>Deceased Clients</span><strong data-client-stat="deceased" aria-live="polite">—</strong>
+      <small>Click to view records →</small>
+    </button>
+  </section>
+  <div id="client-active-search">
+  <section class="panel-card dark-card client-search-panel" aria-label="Client search">
     <form id="client-search" class="search-form">
       <label class="field query-field"><span>Search Clients</span><input name="query" autocomplete="off" value="${esc(s.query)}" placeholder="Search clients…" enterkeyhint="search"></label>
-      <label class="field"><span>Product / Status</span><select name="product">${optionMarkup([['', 'All Products / Statuses'], ['medicare', 'Medicare'], ['life', 'Life'], ['retirement', 'Retirement'], ['t65', 'T65'], ['65plus', '65+'], ['deceased', 'Deceased']], String(s.product || '').toLowerCase())}</select></label>
+      <label class="field"><span>Product / Status</span><select name="product">${optionMarkup([['', 'All Products / Statuses'], ['medicare', 'Medicare'], ['life', 'Life'], ['retirement', 'Retirement'], ['t65', 'T65'], ['65plus', '65+']], String(s.product || '').toLowerCase())}</select></label>
       <input type="hidden" name="agent" value="${esc(s.agent || '')}">
       <div class="search-actions"><button type="submit" class="btn primary">Search</button><button type="button" class="btn secondary" data-reset-search>Clear</button></div>
     </form>
@@ -97,7 +107,15 @@ export function clientSearchMarkup(s) {
     <label class="field"><span>Sort by</span><select name="sortBy" form="client-search" data-client-sort>${optionMarkup([['name','Client Name'],['state','State'],['county','County'],['created_at','Date Added']], s.sortBy || 'name')}</select></label>
     <label class="field"><span>Order</span><select name="sortDirection" form="client-search" data-client-sort-direction>${clientSortDirectionOptions(s.sortBy, s.sortDirection)}</select></label>
   </section>
-  <div id="client-results" aria-live="polite"></div>`;
+  <div id="client-results" aria-live="polite"></div>
+  </div>
+  <section id="deceased-client-archive" class="client-deceased-archive" aria-label="Deceased clients" hidden>
+    <header class="client-deceased-head"><div><h2>Deceased Clients</h2>
+      <p>Archived client records remain intact, including coverage history, documents and files.</p></div>
+      <button type="button" class="btn secondary" data-close-deceased>← Back to Client Search</button>
+    </header>
+    <div id="deceased-client-results" aria-live="polite"></div>
+  </section>`;
 }
 export function clientSortDirectionOptions(sortBy, sortDirection) {
   const sort = normalizeClientSort(sortBy, sortDirection);
