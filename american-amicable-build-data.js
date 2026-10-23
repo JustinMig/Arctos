@@ -99,9 +99,9 @@ const juvenile = {
 `),['Juvenile chart is an underwriting guide; the carrier reserves discretion by age/build.'])
 };
 const expenseLabels = [
-  'Immediate / Preferred — maximum weight',
+  'Immediate — maximum weight',
   'Return of Premium — upper-weight band',
-  'Immediate / Preferred — minimum weight',
+  'Immediate — minimum weight',
   'Return of Premium — lower-weight band'
 ];
 const expenseNotes = [
@@ -235,5 +235,5 @@ export function getAmericanAmicableBuild({plan,ageGroup,heightInches}) {
   if(!row)return null;
   return {plan:found.name,ageGroup:ageBandName[key]||found.adultLabel||('Ages '+found.ages),
     values:group.labels.map((label,i)=>({label,value:row[i+1]+' lb'})),
-    source:group.source,warnings:group.warnings||[]};
+    source:group.source,warnings:(group.warnings||[]).filter(note=>!note.startsWith('SOURCE DISCREPANCY:') || heightInches===58)};
 }
