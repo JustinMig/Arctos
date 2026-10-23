@@ -209,7 +209,7 @@ export const mhRepository = {
     return { rows, total: rows.reduce((sum, row) => sum + Number(row.amount || 0), 0) };
   },
   async listBuildCharts() {
-    const { listBuildCharts } = await import('./build-charts.js');
+    const { listBuildCharts } = await import('./build-charts.js?v=american-amicable-2026-1');
     return listBuildCharts();
   },
   async getBuildChart(criteria = {}) {
