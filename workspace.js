@@ -499,7 +499,8 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const campaignShortcut=form.querySelector('[data-client-add-campaign]');
       const appointmentShortcut=form.querySelector('[data-client-add-appointment]');
       syncOverviewClientActions=()=>{
-        const available=!!record?.id && String(record.status||'').toLowerCase()!=='deceased';
+        const selectedStatus=form.elements.namedItem('status')?.value || record.status || '';
+        const available=!!record?.id && String(selectedStatus).toLowerCase()!=='deceased';
         for(const button of [campaignShortcut,appointmentShortcut]) {
           if(!button)continue;
           button.disabled=!available;
@@ -508,6 +509,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         }
       };
       syncOverviewClientActions();
+      form.addEventListener('change', syncOverviewClientActions);
       campaignShortcut?.addEventListener('click',async()=>{
         if(!record?.id) return;
         campaignShortcut.disabled=true;
