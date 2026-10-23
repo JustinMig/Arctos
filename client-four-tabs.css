@@ -170,3 +170,11 @@
 @media(max-width:380px){
  .client-four-tabs .client-overview-shortcuts:not(:has([data-client-athena])) button:last-child{grid-column:auto}
 }
+
+/* Inline confirmation for the reliable Client at a Glance campaign action. */
+.client-four-tabs .client-overview-shortcuts .client-campaign-action-status{
+  flex-basis:100%;grid-column:1/-1;display:block;width:100%;
+  font-size:12px;line-height:1.4;font-weight:750;
+  color:#2b6651;overflow-wrap:anywhere;
+}
+.client-four-tabs .client-overview-shortcuts .client-campaign-action-status:empty{display:none}
