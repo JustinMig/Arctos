@@ -3,6 +3,7 @@
    No replacement of entire client, doctor, medication, pharmacy or policy collections. */
 const CLIENT={first_name:'first_name',last_name:'last_name',dob:'date_of_birth',phone:'phone',email:'email',address:'address1',city:'city',state:'state',zip:'zip_code',county:'county',gender:'gender',veteran:'veteran'};
 const MEDICARE={part_a:'part_a_date',part_b:'part_b_date',medicaid_level:'medicaid_level'};
+const OLD_PLAN={old_plan_carrier:'old_plan_carrier',old_plan_id:'old_plan_id',old_plan_member_id:'old_plan_member_id',old_plan_year:'old_plan_year'};
 const PLAN={current_carrier:'carrier',current_plan:'plan_name',current_plan_id:'plan_id',current_member_id:'member_id',current_plan_type:'plan_type',current_premium:'premium'};
 const trim = value=>String(value??'').trim();
 const maybe = value=>trim(value)===''?null:value;
@@ -17,7 +18,8 @@ async function many(query,label){
   return data||[];
 }
 export async function loadAthenaClientSections(db,id){
-  const [med,plan,doctors,medications,pharmacy]=await Promise.all([
+  const [client,med,plan,doctors,medications,pharmacy]=await Promise.all([
+    one(db.from('clients').select('old_plan_carrier,old_plan_id,old_plan_member_id,old_plan_year').eq('id',id),'Old plan'),
     one(db.from('medicare_details').select('part_a_date,part_b_date,medicaid_level').eq('client_id',id),'Medicare'),
     one(db.from('health_plans').select('id,carrier,plan_name,plan_id,member_id,plan_type,premium').eq('client_id',id).order('created_at',{ascending:false}).limit(1),'Current plan'),
     many(db.from('client_doctors').select('id,doctor_name,specialty,city,state,notes').eq('client_id',id).order('created_at',{ascending:true}),'Doctors'),
@@ -27,7 +29,8 @@ export async function loadAthenaClientSections(db,id){
   const fields={
     part_a:med?.part_a_date||'',part_b:med?.part_b_date||'',medicaid_level:med?.medicaid_level||'',
     current_carrier:plan?.carrier||'',current_plan:plan?.plan_name||'',current_plan_id:plan?.plan_id||'',
-    current_member_id:plan?.member_id||'',current_plan_type:plan?.plan_type||'',current_premium:plan?.premium??''
+    current_member_id:plan?.member_id||'',current_plan_type:plan?.plan_type||'',current_premium:plan?.premium??'',
+    old_plan_carrier:client?.old_plan_carrier||'',old_plan_id:client?.old_plan_id||'',old_plan_member_id:client?.old_plan_member_id||'',old_plan_year:client?.old_plan_year||''
   };
   return {fields,
     doctors:doctors.map(x=>({crm_id:x.id,name:x.doctor_name||'',specialty:x.specialty||'',city:x.city||'',state:x.state||'',network:x.notes||''})),
@@ -47,6 +50,7 @@ export async function syncAthenaClient(db,{clientId,data,edited=[],editedLists=[
       if(edits.has(key))out[col]=convert(key,data[key]);
     return out;
   };
+  const oldPlanFields=fields(OLD_PLAN,3);
   const client=fields(CLIENT,1,(key,v)=>{
     const str=trim(v);
     if(['first_name','last_name'].includes(key)){
@@ -55,7 +59,8 @@ export async function syncAthenaClient(db,{clientId,data,edited=[],editedLists=[
     }
     return key==='veteran' ? str==='yes'?true:str==='no'?false:null : maybe(str);
   });
-  if(!createdClient&&Object.keys(client).length){
+  Object.assign(client,oldPlanFields);
+  if(Object.keys(client).length){
     if(!await one(db.from('clients').update(client).eq('id',clientId).select('id'),'Update client'))
       throw Error('The CRM did not allow this client update.');
     updated.push('client information');
