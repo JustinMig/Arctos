@@ -91,7 +91,7 @@ export function clientSearchMarkup(s) {
       <label class="field query-field"><span>Search Clients</span><input name="query" autocomplete="off" value="${esc(s.query)}" placeholder="Search clients…" enterkeyhint="search"></label>
       <label class="field"><span>Product / Status</span><select name="product">${optionMarkup([['', 'All Products / Statuses'], ['medicare', 'Medicare'], ['life', 'Life'], ['retirement', 'Retirement'], ['t65', 'T65'], ['65plus', '65+']], String(s.product || '').toLowerCase())}</select></label>
       <input type="hidden" name="agent" value="${esc(s.agent || '')}">
-      <div class="search-actions"><button type="submit" class="btn primary">Search</button><button type="button" class="btn secondary" data-reset-search>Clear</button></div>
+      <div class="search-actions"><button type="submit" class="btn primary">Search</button><button type="button" class="btn secondary" data-reset-search>Clear</button><button type="button" class="btn secondary" data-start-mass-text>Mass Text Clients</button></div>
     </form>
   </section>
   <section class="client-result-toolbar" aria-label="Sort client search results" data-client-result-toolbar${s.applied ? '' : ' hidden'}>
