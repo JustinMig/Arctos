@@ -3,7 +3,7 @@ import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSor
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
 import { supabase } from './supabase-repository.js';
-import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=glance-zip-calendar-1';
+import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=old-plan-1';
 
 /** Repository injection is for the future isolated backend and local tests, never a legacy connection. */
 export function createWorkspace(root, repository = disconnectedRepository, { ensureClientFeatures, ensureCampaignFeatures, ensureLeadFeatures, ensureQuickFeatures } = {}) {
@@ -26,7 +26,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }
   let athenaFeature = null, athenaModule = null;
   async function athenaMedicare() {
-    if (!athenaModule) athenaModule = import('./athena-medicare.js')
+    if (!athenaModule) athenaModule = import('./athena-medicare.js?v=old-plan-1')
       .then(({ createAthenaMedicareFeature }) => {
         athenaFeature = createAthenaMedicareFeature();
         return athenaFeature;
