@@ -469,6 +469,120 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     }
     return openClientReady(id);
   }
+  /**
+   * A saved client's Add to Campaign button must work independently of the
+   * campaign page and its optional observers. Reuse the authenticated campaign
+   * repository directly; the ordinary campaign page still uses its existing UI.
+   */
+  function openClientCampaignPicker(client, onAdded = () => {}) {
+    const api = repository.campaigns;
+    if (!api) throw new Error('Campaign storage is not connected.');
+    if (!client?.id) throw new Error('Save this client first, then add them to a campaign.');
+    if (String(client.status || '').toLowerCase() === 'deceased')
+      throw new Error('Deceased clients cannot be added to a campaign.');
+    if (!repository.user?.id) throw new Error('Sign in before assigning a campaign.');
+
+    const clientName = [client.first_name, client.last_name].filter(Boolean).join(' ').trim() || 'Client';
+    const generatedId = crypto.randomUUID();
+    const d = dialogs.open({
+      title: 'Add Client to Campaign',
+      hint: clientName,
+      kind: 'campaign-dialog client-campaign-picker',
+      body: `<form class="cmp-form client-campaign-picker-form" novalidate>
+        <p class="cmp-help">Select an existing active campaign or create a new campaign. This will add ${esc(clientName)} without changing the client record.</p>
+        <label class="field"><span>Campaign</span><select name="campaign_id" required>
+          <option value="">Loading active campaigns…</option>
+        </select></label>
+        <label class="field" data-client-campaign-new hidden>
+          <span>New Campaign Name</span>
+          <input name="new_campaign_name" type="text" maxlength="120" placeholder="Name of the new campaign">
+        </label>
+        <button type="button" class="btn secondary" data-client-campaign-more hidden>Load More Campaigns</button>
+        <p class="cmp-help" data-client-campaign-message role="status" aria-live="polite">Loading campaigns…</p>
+      </form>`,
+      footer: saveFooter('Add to Campaign'),
+      onSave: async form => {
+        let id = form.elements.namedItem('campaign_id')?.value;
+        const label = form.elements.namedItem('campaign_id')?.selectedOptions?.[0]?.textContent || 'campaign';
+        if (!id) throw new Error('Choose an existing campaign or create a new one.');
+        if (id === '__new__') {
+          const name = String(form.elements.namedItem('new_campaign_name')?.value || '').trim();
+          if (!name || name.length > 120) throw new Error('Enter a campaign name (1–120 characters).');
+          const created = await api.save({
+            id: generatedId, name, topic: 'general',
+            assigned_agent_id: repository.user.id
+          }, repository.user.id);
+          if (!created?.id) throw new Error('The new campaign was not saved.');
+          id = created.id;
+        }
+        const already = await api.existingClients(id, [client.id]);
+        if (already.some(row => row.client_id === client.id)) {
+          onAdded('This client is already in ' + label + '.');
+          return;
+        }
+        const count = await api.addClients(id, [client.id], repository.user.id);
+        if (count < 1) {
+          const check = await api.existingClients(id, [client.id]);
+          if (!check.some(row => row.client_id === client.id))
+            throw new Error('The client could not be added. Refresh and retry.');
+        }
+        onAdded('Client added to ' + (label === '+ Create a new campaign' ?
+          String(form.elements.namedItem('new_campaign_name')?.value || '').trim() : label) + '.');
+      }
+    });
+
+    const form = d.node.querySelector('.client-campaign-picker-form');
+    const select = form.elements.namedItem('campaign_id');
+    const nameField = form.querySelector('[data-client-campaign-new]');
+    const newName = form.elements.namedItem('new_campaign_name');
+    const more = form.querySelector('[data-client-campaign-more]');
+    const message = form.querySelector('[data-client-campaign-message]');
+    let rows = [], cursor = null, loading = false;
+    const updateChoice = () => {
+      const creating = select.value === '__new__';
+      nameField.hidden = !creating;
+      newName.required = creating;
+      if (!creating) newName.value = '';
+    };
+    select.addEventListener('change', updateChoice);
+
+    const load = async () => {
+      if (loading || !d.node.isConnected) return;
+      loading = true;
+      more.disabled = true;
+      message.textContent = 'Loading active campaigns…';
+      try {
+        const result = await api.list({status: 'active', cursor});
+        if (!d.node.isConnected) return;
+        if (!Array.isArray(result?.rows)) throw new Error('Campaign list could not be loaded.');
+        rows = [...new Map([...rows, ...result.rows].map(row => [row.id, row])).values()];
+        cursor = result.nextCursor || null;
+        const previous = select.value;
+        select.innerHTML = options([
+          ['', 'Choose a campaign'],
+          ...rows.map(c => [c.id, c.name]),
+          ['__new__', '+ Create a new campaign']
+        ], previous);
+        if (!rows.some(row => row.id === previous) && previous !== '__new__') select.value = '';
+        more.hidden = !cursor;
+        message.textContent = rows.length
+          ? rows.length + ' active campaign' + (rows.length === 1 ? '' : 's') + ' available.'
+          : 'No active campaigns found. Choose Create a new campaign.';
+        updateChoice();
+      } catch (error) {
+        if (!d.node.isConnected) return;
+        message.textContent = 'Campaigns could not load: ' + (error?.message || 'Retry.');
+        select.innerHTML = options([['', 'Choose a campaign'], ['__new__', '+ Create a new campaign']]);
+      } finally {
+        loading = false;
+        if (d.node.isConnected) more.disabled = false;
+      }
+    };
+    more.addEventListener('click', load);
+    d.attachForm(form);
+    void load();
+    return d;
+  }
   function openClientReady(id = null) {
     let record = {};
     let syncOverviewClientActions = null;
@@ -510,19 +624,19 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       };
       syncOverviewClientActions();
       form.addEventListener('change', syncOverviewClientActions);
-      campaignShortcut?.addEventListener('click',async()=>{
+      campaignShortcut?.addEventListener('click',()=>{
         if(!record?.id) return;
-        campaignShortcut.disabled=true;
+        const selectedStatus = form.elements.namedItem('status')?.value || record.status;
+        if(String(selectedStatus||'').toLowerCase()==='deceased')return;
+        const status = form.querySelector('[data-client-campaign-status]');
         try {
-          const feature=await campaigns();
-          if(!form.isConnected)return;
-          feature.addClientToCampaign({
-            id:record.id,first_name:record.first_name,last_name:record.last_name,
-            phone:record.phone,city:record.city,state:record.state,county:record.county,status:record.status
+          openClientCampaignPicker({...record,status:selectedStatus}, message=>{
+            if(status?.isConnected)status.textContent=message;
           });
         } catch(error) {
-          if(form.isConnected)d.error(error?.message||'Could not open the campaign selector.');
-        } finally { if(form.isConnected)syncOverviewClientActions(); }
+          if(status?.isConnected)status.textContent=error?.message || 'Unable to open campaign selector.';
+          else if(form.isConnected)d.error(error?.message||'Unable to open campaign selector.');
+        }
       });
       appointmentShortcut?.addEventListener('click',()=>{
         if(!record?.id)return;
