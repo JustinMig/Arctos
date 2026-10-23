@@ -159,6 +159,7 @@ async function drawGlobalCalls(panel, { message = '' } = {}) {
     status.textContent = message || `Arctos client calls only · Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
     await bindRecordings(list);
     communicationsRendered(list);
+    window.dispatchEvent(new CustomEvent('mig:ringcentral-calls-updated'));
   } catch (error) {
     if (panel.isConnected) status.textContent = error instanceof Error ? error.message : 'Unable to load call data.';
   }
@@ -188,6 +189,7 @@ function decorateCommunications(host) {
     <div class="mh-call-status" data-call-status>Open Call Data to load saved calls.</div><div class="mh-call-list" data-call-list></div>`;
 
   host.replaceChildren(tabs, textPanel, callPanel);
+  window.dispatchEvent(new CustomEvent('mig:call-panel-ready',{detail:{panel:callPanel}}));
   let callsLoaded = false;
   const choose = async channel => {
     tabs.querySelectorAll('[data-channel]').forEach(button => {
