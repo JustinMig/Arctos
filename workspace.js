@@ -2,6 +2,7 @@ import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, date
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js?v=compact-deceased-1';
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
+import { ageFromBirthDate } from './client-age-utils.js?v=2026-10-23';
 import { supabase } from './supabase-repository.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=client-campaign-fix-1';
 
@@ -434,8 +435,10 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const value=name=>form.elements.namedItem(name)?.value?.trim()||'';
       const name=[value('first_name'),value('last_name')].filter(Boolean).join(' ')||'New Client';
       const dob=value('date_of_birth'),location=[value('city'),value('state')].filter(Boolean).join(', ');
+      const age = ageFromBirthDate(dob);
+      const dobAndAge=dob ? 'DOB: '+dob+(age===null?'':' (Age: '+age+')') : '';
       const zip=value('zip')||value('zip_code');
-      const details=[dob?'DOB: '+dob:'',value('phone'),location,zip?'ZIP: '+zip:''].filter(Boolean);
+      const details=[dobAndAge,value('phone'),location,zip?'ZIP: '+zip:''].filter(Boolean);
       const title=form.querySelector('[data-client-summary-name]');
       const meta=form.querySelector('[data-client-summary-meta]');
       if(title)title.textContent=name;
@@ -444,6 +447,33 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     form.addEventListener('input',updateSummary);
     form.addEventListener('change',updateSummary);
     updateSummary();
+    // Age is derived afresh every time a record opens and also refreshes at
+    // local midnight while the record stays open (including across birthdays).
+    // Do not store age: DOB stays the single source of truth.
+    let ageRefreshTimer = null;
+    const refreshAfterMidnight = () => {
+      if(!node.isConnected || !node.open)return;
+      const now=new Date();
+      const nextMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,2);
+      ageRefreshTimer=setTimeout(()=>{
+        if(!node.isConnected || !node.open)return;
+        updateSummary();
+        refreshAfterMidnight();
+      },Math.max(1000,nextMidnight.getTime()-now.getTime()));
+    };
+    const onVisibilityChange=()=>{
+      if(document.visibilityState==='visible' && node.isConnected && node.open){
+        updateSummary();
+        clearTimeout(ageRefreshTimer);
+        refreshAfterMidnight();
+      }
+    };
+    refreshAfterMidnight();
+    document.addEventListener('visibilitychange',onVisibilityChange);
+    node.addEventListener('close',()=>{
+      clearTimeout(ageRefreshTimer);
+      document.removeEventListener('visibilitychange',onVisibilityChange);
+    },{once:true});
   }
   const pendingClientOpens = new Map();
   function openClient(id = null) {
