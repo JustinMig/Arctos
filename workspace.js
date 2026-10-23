@@ -77,6 +77,8 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     calendarLoadingKey: '',
     search: { query: '', product: '', agent: '', sortBy: 'name', sortDirection: 'asc', applied: null, loading: false, rows: null, error: '', message: '', token: 0, cursor: null, nextCursor: null },
     archive: { open:false, rows:null, loading:false, error:'', message:'', nextCursor:null, token:0 },
+    birthdays: { open:false, rows:[], loading:false, error:'', token:0, selectMode:false, month:'' },
+    massText: { mode:false, selected:new Map() },
     destroyed: false
   };
   const connected = repository.connected === true;
@@ -135,6 +137,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     if (route === 'clients') {
       bindSearch();
       bindDeceasedArchive();
+      bindBirthdayArchive();
       // Start client enhancements while the user is searching, before they open the editor.
       if (ensureClientFeatures) void ensureClientFeatures().catch(error => console.error('Client features unavailable:', error));
     }
@@ -283,6 +286,209 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     host.querySelector('[data-more]')?.addEventListener('click',()=>loadDeceasedClients(true));
   }
 
+
+  // Current-month birthdays come from a server-side date comparison. The list
+  // is generated on opening rather than saved as a monthly snapshot, so at
+  // midnight on the 1st it naturally switches to the new month's birthdays.
+  function birthdayMonth() {
+    return new Intl.DateTimeFormat('en-US',{
+      timeZone:'America/Chicago',month:'long',year:'numeric'
+    }).format(new Date());
+  }
+  function bindBirthdayArchive() {
+    const searchArea=root.querySelector('#client-active-search');
+    const close=root.querySelector('[data-close-birthdays]');
+    if(!searchArea||!close)return;
+    state.birthdays.open=false;state.birthdays.token++;state.birthdays.selectMode=false;
+    const show=open=>{
+      const birthday=root.querySelector('#client-birthday-list');
+      const search=root.querySelector('#client-active-search');
+      const deceased=root.querySelector('#deceased-client-archive');
+      state.birthdays.open=open;
+      if(search)search.hidden=open;
+      if(birthday)birthday.hidden=!open;
+      if(deceased)deceased.hidden=true;
+      const counter=root.querySelector('[data-open-birthdays]');
+      counter?.setAttribute('aria-expanded',String(open));
+      counter?.classList.toggle('is-selected',open);
+      if(open)void loadBirthdays();
+      else {state.birthdays.token++;state.birthdays.selectMode=false;}
+    };
+    searchArea.addEventListener('click',event=>{
+      if(event.target.closest('[data-open-birthdays]'))show(true);
+    });
+    close.addEventListener('click',()=>{show(false);root.querySelector('[data-open-birthdays]')?.focus();});
+    root.querySelector('[data-birthday-select]')?.addEventListener('click',()=>{
+      state.birthdays.selectMode=!state.birthdays.selectMode;
+      drawBirthdays();
+    });
+    root.querySelector('[data-birthday-send]')?.addEventListener('click',()=>openMassTextComposer());
+  }
+  async function loadBirthdays(){
+    const b=state.birthdays,token=++b.token;
+    b.loading=true;b.error='';b.rows=[];b.month=birthdayMonth();
+    drawBirthdays();
+    try{
+      const {data,error}=await supabase.rpc('client_birthdays_this_month');
+      if(error)throw error;
+      if(state.route!=='clients'||!b.open||token!==b.token||state.destroyed)return;
+      // The authenticated SECURITY INVOKER function enforces client RLS.
+      b.rows=Array.isArray(data)?data.filter(c=>String(c.status||'').toLowerCase()!=='deceased'):[];
+    }catch(error){
+      if(token!==b.token)return;
+      b.error=error?.message||'Birthday records could not be loaded.';
+    }finally{if(token===b.token){b.loading=false;drawBirthdays();}}
+  }
+  function drawBirthdays(){
+    const b=state.birthdays;
+    if(!b.open)return;
+    const host=root.querySelector('#client-birthday-results');
+    const title=root.querySelector('[data-birthday-heading]');
+    if(!host)return;
+    if(title)title.textContent=b.month+' Birthdays';
+    const selected=root.querySelector('[data-birthday-selected]');
+    const send=root.querySelector('[data-birthday-send]');
+    const button=root.querySelector('[data-birthday-select]');
+    if(selected)selected.textContent=String(state.massText.selected.size);
+    if(send){send.hidden=!b.selectMode;send.disabled=!state.massText.selected.size;}
+    if(button)button.textContent=b.selectMode?'Done Selecting':'Choose Birthday Clients for Text';
+    if(b.loading){host.innerHTML='<p class="result-status">Loading birthday clients…</p>';return;}
+    if(b.error){host.innerHTML=`<p class="notice error" role="alert">${esc(b.error)}</p>`;return;}
+    if(!b.rows.length){host.innerHTML='<p class="result-status">No clients with birthdays this month.</p>';return;}
+    host.innerHTML=`<p class="result-status">${b.rows.length} client${b.rows.length===1?'':'s'} with birthdays this month. Select a name to open their record.</p>
+      <div class="client-birthday-list">${b.rows.map(c=>{
+        const name=[c.first_name,c.last_name].filter(Boolean).join(' ')||'Client';
+        const day=Number(c.birthday_day)||Number(String(c.date_of_birth||'').slice(-2));
+        const chosen=state.massText.selected.has(c.id);
+        const canText=!!String(c.phone||'').replace(/\D/g,'').match(/^1?\d{10}$/);
+        return `<div class="client-birthday-row">
+          ${b.selectMode?`<label class="birthday-text-check"><input type="checkbox" data-birthday-text-id="${esc(c.id)}" ${chosen?'checked':''} ${canText?'':'disabled'} aria-label="Select ${esc(name)} for text"></label>`:''}
+          <button type="button" class="client-birthday-client" data-client-id="${esc(c.id)}">
+            <span class="birthday-day">${esc(day)}</span>
+            <span class="birthday-client-name"><strong>${esc(name)}</strong><small>${esc(c.phone||'No phone saved')}</small></span>
+            <span class="birthday-arrow" aria-hidden="true">›</span>
+          </button></div>`;
+      }).join('')}</div>`;
+    host.querySelectorAll('[data-client-id]').forEach(node=>node.onclick=()=>openClient(node.dataset.clientId));
+    host.querySelectorAll('[data-birthday-text-id]').forEach(node=>node.onchange=()=>{
+      const c=b.rows.find(r=>r.id===node.dataset.birthdayTextId);
+      if(!c)return;
+      if(node.checked&&state.massText.selected.size>=250){node.checked=false;return;}
+      if(node.checked)state.massText.selected.set(c.id,c);
+      else state.massText.selected.delete(c.id);
+      if(selected)selected.textContent=String(state.massText.selected.size);
+      if(send)send.disabled=!state.massText.selected.size;
+    });
+  }
+  // Mass Text selection matches the Campaigns checkbox workflow and persists
+  // across searches and pages. The server revalidates every selected client.
+  function enhanceMassTextResults(host,rows=[]){
+    if(!host?.isConnected)return;
+    host.querySelector('[data-sms-selection-bar]')?.remove();
+    host.querySelectorAll('.sms-select-row').forEach(wrapper=>{
+      const button=wrapper.querySelector('button.client-result[data-client-id]');
+      if(button)wrapper.replaceWith(button);
+    });
+    const active=state.massText.mode;
+    root.querySelector('[data-start-mass-text]')?.classList.toggle('is-selected',active);
+    const campaignBar=host.querySelector('[data-cmp-selectionbar]');
+    if(campaignBar)campaignBar.hidden=active;
+    if(!active)return;
+    const selected=state.massText.selected;
+    const bar=document.createElement('div');
+    bar.className='sms-selection-bar';bar.dataset.smsSelectionBar='true';
+    bar.innerHTML=`<strong data-sms-selected>${selected.size} selected across searches</strong>
+      <button type="button" class="btn secondary" data-sms-select-all>Select All Visible</button>
+      <button type="button" class="btn primary" data-sms-compose ${selected.size?'':'disabled'}>Mass Text Selected</button>
+      <button type="button" class="btn secondary" data-sms-clear>Clear</button>
+      <button type="button" class="btn secondary" data-sms-done>Done Selecting</button>`;
+    host.prepend(bar);
+    const update=()=>{
+      bar.querySelector('[data-sms-selected]').textContent=selected.size+' selected across searches';
+      bar.querySelector('[data-sms-compose]').disabled=!selected.size;
+    };
+    const checkboxes=[];
+    host.querySelectorAll('button.client-result[data-client-id]').forEach(button=>{
+      const c=rows.find(row=>row.id===button.dataset.clientId);
+      if(!c)return;
+      const wrap=document.createElement('div');wrap.className='sms-select-row';
+      const label=document.createElement('label');label.className='sms-select-check';
+      const checkbox=document.createElement('input');checkbox.type='checkbox';
+      checkbox.checked=selected.has(c.id);
+      checkbox.disabled=String(c.status||'').toLowerCase()==='deceased'||!/^1?\d{10}$/.test(String(c.phone||'').replace(/\D/g,''));
+      checkbox.setAttribute('aria-label','Select '+[c.first_name,c.last_name].filter(Boolean).join(' ')+' for texting');
+      label.append(checkbox);button.before(wrap);wrap.append(label,button);checkboxes.push({checkbox,c});
+      checkbox.onchange=()=>{
+        if(checkbox.checked&&selected.size>=250){checkbox.checked=false;return;}
+        if(checkbox.checked)selected.set(c.id,c);else selected.delete(c.id);
+        update();
+      };
+    });
+    bar.querySelector('[data-sms-select-all]').onclick=()=>{
+      for(const {checkbox,c} of checkboxes){
+        if(checkbox.disabled||selected.size>=250)continue;
+        selected.set(c.id,c);checkbox.checked=true;
+      }
+      update();
+    };
+    bar.querySelector('[data-sms-clear]').onclick=()=>{
+      selected.clear();checkboxes.forEach(({checkbox})=>checkbox.checked=false);update();
+    };
+    bar.querySelector('[data-sms-compose]').onclick=()=>openMassTextComposer();
+    bar.querySelector('[data-sms-done]').onclick=()=>{
+      state.massText.mode=false;selected.clear();drawResults();
+    };
+  }
+  function openMassTextComposer(){
+    const people=[...state.massText.selected.values()].filter(c=>
+      String(c.status||'').toLowerCase()!=='deceased' &&
+      /^1?\d{10}$/.test(String(c.phone||'').replace(/\D/g,''))
+    );
+    if(!people.length){alert('Select clients with valid phone numbers first.');return;}
+    const ids=people.map(c=>c.id);
+    let finished=false;
+    const d=dialogs.open({
+      title:'Mass Text Clients',hint:people.length+' selected client'+(people.length===1?'':'s'),
+      kind:'mass-text-dialog',
+      body:`<form class="mass-text-form">
+        <p class="subtle">Text selected clients individually from your office Twilio number. Each message is saved in that client’s conversation.</p>
+        <div class="mass-text-recipients"><strong>Recipients (${people.length})</strong>
+          <div>${people.slice(0,30).map(c=>`<span>${esc([c.first_name,c.last_name].filter(Boolean).join(' ')||'Client')}</span>`).join('')}
+          ${people.length>30?`<span>+ ${people.length-30} more</span>`:''}</div></div>
+        <label class="field"><span>Message (up to 1500 characters)</span>
+          <textarea name="body" rows="5" maxlength="1500" required placeholder="Type your message…"></textarea></label>
+        <label class="mass-text-consent"><input type="checkbox" name="consent" required>
+          <span>I confirm these recipients have given permission to receive this message, it complies with applicable text-message rules, and opt-out requests will be honored.</span></label>
+        <p class="subtle">Use business identification and opt-out instructions for promotional texts. Sending is not automatic; review and confirm first.</p>
+        <p data-mass-text-status role="status" aria-live="polite"></p>
+      </form>`,
+      footer:saveFooter('Send Mass Text').replace('data-save="stay"','data-save="close"'),
+      onSave:async form=>{
+        if(finished)throw Error('This bulk text was already submitted. Refresh the client list to send another.');
+        const message=String(form.elements.namedItem('body')?.value||'').trim();
+        if(!message)throw Error('Enter a text message.');
+        if(!form.elements.namedItem('consent').checked)throw Error('Confirm recipient permission before sending.');
+        if(!confirm('Send this text to up to '+ids.length+' selected clients? This will send real SMS messages.'))throw Error('Sending cancelled.');
+        // Once dispatched, never retry accidentally from the modal.
+        finished=true;
+        const {smsAuthHeaders}=await import('./sms-sync.js');
+        const response=await fetch('/api/twilio-bulk',{
+          method:'POST',headers:{...(await smsAuthHeaders()),'Content-Type':'application/json'},
+          body:JSON.stringify({clientIds:ids,body:message,consentConfirmed:true})
+        });
+        const report=await response.json().catch(()=>({}));
+        if(!response.ok){finished=false;throw Error(report.error||'Mass text failed.');}
+        state.massText.selected.clear();
+        state.massText.mode=false;
+        if(state.birthdays.open){state.birthdays.selectMode=false;drawBirthdays();}
+        else drawResults();
+        alert(`Mass text results: ${Number(report.sent||0)} sent, ${Number(report.failed||0)} failed or excluded.`+
+          (report.failures?.length?'\n'+report.failures.slice(0,12).join('\n'):''));
+      }
+    });
+    d.attachForm(d.node.querySelector('form.mass-text-form'));
+  }
+
   function bindSearch() {
     const form = root.querySelector('#client-search');
     for (const key of ['query', 'product', 'agent']) {
@@ -312,6 +518,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       drawResults();
       form.elements.query.focus();
     };
+    form.querySelector('[data-start-mass-text]')?.addEventListener('click',()=>{
+      state.massText.mode=!state.massText.mode;
+      if(!state.massText.mode)state.massText.selected.clear();
+      if(state.massText.mode)root.querySelector('[data-cmp-exit-selection]')?.click();
+      drawResults();
+    });
     drawResults();
   }
   async function searchClients(more = false) {
@@ -354,8 +566,14 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     host.querySelector('[data-more]')?.addEventListener('click', () => searchClients(true));
     if (repository.campaigns) {
       const token = state.search.token;
-      campaigns().then(feature => { if (host.isConnected && token === state.search.token && !state.destroyed) feature.enhanceSearch(host, state.search.rows || []); }).catch(() => {});
+      campaigns().then(feature => {
+        if (host.isConnected && token === state.search.token && !state.destroyed) {
+          feature.enhanceSearch(host, state.search.rows || []);
+          enhanceMassTextResults(host,state.search.rows || []);
+        }
+      }).catch(()=>enhanceMassTextResults(host,state.search.rows || []));
     }
+    enhanceMassTextResults(host,state.search.rows || []);
   }
   function patchClient(saved) {
     campaignFeature?.refreshClient(saved);
@@ -373,6 +591,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       }
     }
     if (state.archive.open) void loadDeceasedClients(false);
+    if (state.birthdays.open) void loadBirthdays();
   }
   function wireTabs(node) {
     const form=node.querySelector('form.client-form');
