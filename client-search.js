@@ -107,6 +107,14 @@ export function clientSearchMarkup(s) {
       <button type="button" class="btn secondary" data-close-deceased>← Back to Client Search</button>
     </header>
     <div id="deceased-client-results" aria-live="polite"></div>
+  </section>
+  <section id="client-birthday-list" class="client-birthday-archive" aria-label="Birthdays this month" hidden>
+    <header class="client-deceased-head"><div><h2 data-birthday-heading>Birthdays</h2>
+      <p>Clients celebrating birthdays this month. Refreshes automatically when the month changes; deceased clients are excluded.</p></div>
+      <button type="button" class="btn secondary" data-close-birthdays>← Back to Client Search</button>
+    </header>
+    <div class="client-birthday-tools"><button type="button" class="btn secondary" data-birthday-select>Choose Birthday Clients for Text</button><button type="button" class="btn primary" data-birthday-send hidden>Mass Text Selected (<span data-birthday-selected>0</span>)</button></div>
+    <div id="client-birthday-results" aria-live="polite"></div>
   </section>`;
 }
 export function clientSortDirectionOptions(sortBy, sortDirection) {
