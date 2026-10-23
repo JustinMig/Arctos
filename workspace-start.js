@@ -1,6 +1,6 @@
 import { makeClientSearch } from './client-age-search.js?v=deceased-archive-1';
 import { createCampaignRepository } from './campaigns-repository.js?v=campaign-completion-notes-1';
-import { createWorkspace } from './workspace.js?v=client-campaign-fix-1';
+import { createWorkspace } from './workspace.js?v=client-overview-age-1';
 import { mhRepository, supabase } from './supabase-repository.js?v=original-mm-contacts-1';
 import './username-user-access.js?v=1';
 import { installAdminUsers } from './admin-users.js?v=optimization-2';
