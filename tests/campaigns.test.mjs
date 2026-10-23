@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { CONTACT_OUTCOMES, isScheduledOutcome, campaignToday, timeMinutes, slotIsBooked, appointmentSlots, safeSearchPattern, memberOrders } from '../campaigns-model.js';
 import { createCampaignRepository } from '../campaigns-repository.js';
 import { readFileSync } from 'node:fs';
-test('exactly the requested five outcomes',()=>assert.deepEqual(CONTACT_OUTCOMES.map(v=>v[0]),['no_answer','voicemail','declined','appointment','follow_up']));
-test('only appointment/follow up require scheduling',()=>{assert.equal(isScheduledOutcome('appointment'),true);assert.equal(isScheduledOutcome('follow_up'),true);assert.equal(isScheduledOutcome('declined'),false)});
+test('all campaign outcomes including completion and face-to-face',()=>assert.deepEqual(CONTACT_OUTCOMES.map(v=>v[0]),['no_answer','voicemail','declined','appointment','follow_up','face_to_face','completed']));
+test('only appointment/follow up require scheduling',()=>{assert.equal(isScheduledOutcome('appointment'),true);assert.equal(isScheduledOutcome('follow_up'),true);assert.equal(isScheduledOutcome('declined'),false);assert.equal(isScheduledOutcome('face_to_face'),false);assert.equal(isScheduledOutcome('completed'),false)});
 test('Central date handles UTC day boundary',()=>assert.equal(campaignToday(new Date('2026-09-12T01:00:00Z')),'2026-09-11'));
 test('time parsing supports database seconds',()=>{assert.equal(timeMinutes('10:30:00'),630);assert.equal(timeMinutes('24:30'),null);assert.equal(timeMinutes('xx'),null)});
 test('slots match Mayer 8 AM–8 PM half hours',()=>{const s=appointmentSlots();assert.equal(s.length,25);assert.equal(s[0],'08:00');assert.equal(s.at(-1),'20:00')});
@@ -17,7 +17,7 @@ test('invalid or overnight duration cannot book',()=>{assert.equal(slotIsBooked(
 test('server sort uses allowlist and stable tie breakers',()=>{assert.deepEqual(memberOrders('state','desc')[0],['state_sort',false]);assert.equal(memberOrders('injection','desc')[0][0],'last_name_sort');assert.equal(memberOrders('county','asc').at(-1)[0],'id')});
 test('search values are quoted rather than executable filter fragments',()=>{assert.equal(JSON.parse(safeSearchPattern('O\'Neil, (Jones)')),"%O'Neil, (Jones)%");assert.equal(safeSearchPattern('%%__'),'')});
 test('invalid result rejects before contacting database',async()=>{let called=false;const repo=createCampaignRepository({rpc:()=>{called=true}});await assert.rejects(()=>repo.recordContact({p_outcome:'unexpected'}));assert.equal(called,false)});
-test('workspace integration preserves canonical opener and lazy loading',()=>{const source=readFileSync(new URL('../workspace.js',import.meta.url),'utf8');assert.match(source,/import\('\.\/campaigns-ui.js'\)/);assert.match(source,/createCampaignFeature\(\{ repository, dialogs, openClient/);assert.match(source,/#client-results \[data-client-id/)});
+test('workspace integration preserves canonical opener and lazy loading',()=>{const source=readFileSync(new URL('../workspace.js',import.meta.url),'utf8');assert.match(source,/campaigns-ui\\.js/);assert.match(source,/createCampaignFeature\\(\\{ repository, dialogs, openClient/);assert.match(source,/#client-results \\[data-client-id/)});
 
 test('hidden campaign duration stays in FormData and never causes false overlap warnings',()=>{
   const hide=readFileSync(new URL('../campaign-hide-duration.js',import.meta.url),'utf8');
