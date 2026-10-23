@@ -1,5 +1,5 @@
 /* Compact client totals use the same muted campaign-counter language without taking over the page. */
-.client-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 10px;max-width:760px}
+.client-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 10px;max-width:900px}
 .client-summary-card{position:relative;min-width:0;min-height:64px;border:1px solid #d6e0e6;border-radius:9px;padding:5px 6px;display:grid;grid-template-columns:25px auto;grid-template-rows:auto auto;align-items:center;justify-content:center;column-gap:7px;row-gap:1px;text-align:left;box-shadow:0 1px 2px rgba(15,23,42,.025);overflow:hidden}
 .client-summary-icon{grid-row:1/3;width:24px;height:24px;border-radius:7px;display:grid;place-items:center}
 .client-summary-icon svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -30,3 +30,19 @@
 @media(max-width:720px){.tracker-metrics.four{grid-template-columns:1fr 1fr}.commission-filter-field{min-width:0;flex-basis:calc(50% - 4px)}}
 @media(max-width:620px){.client-summary-grid{gap:3px;margin-bottom:8px}.client-summary-card{min-height:54px;padding:4px 3px;border-radius:8px;grid-template-columns:20px auto;column-gap:4px}.client-summary-icon{width:20px;height:20px;border-radius:6px}.client-summary-icon svg{width:11px;height:11px}.client-summary-card strong{font-size:.8rem}.client-summary-label{font-size:.4rem;line-height:1}.commission-tracker{gap:8px}.commission-tracker-tabs{gap:5px}.commission-tracker-tabs button{min-height:52px;padding:6px;grid-template-columns:26px 1fr;gap:0 5px}.commission-tracker-tabs button>span{width:26px;height:26px}.commission-tracker-tabs button b{font-size:.72rem}.commission-tracker-tabs button small{font-size:.52rem}.commission-filter-row{padding:6px;gap:5px}.commission-filter-field select{min-height:42px;font-size:16px}.commission-tracker-panel{padding:8px}.tracker-metrics{gap:5px}.tracker-metrics.three{grid-template-columns:repeat(3,minmax(0,1fr))}.tracker-metrics article{padding:7px 5px}.tracker-metrics article span{font-size:.49rem}.tracker-metrics article strong{font-size:.8rem}.tracker-metrics article small{font-size:.49rem}.medicare-period-grid{gap:5px}.medicare-period-card{padding:7px 6px}.commission-month-table{font-size:.65rem}.commission-month-table th,.commission-month-table td{padding:6px}.commission-tracker-note{font-size:.56rem}}
 @media(max-width:360px){.client-summary-card{min-height:50px}.client-summary-card strong{font-size:.74rem}.client-summary-label{font-size:.37rem}.tracker-metrics.three{grid-template-columns:1fr}.medicare-period-grid{grid-template-columns:1fr}.commission-filter-field{flex-basis:100%}}
+
+/* Deceased is the fourth ORIGINAL compact client counter, not a second oversized row. */
+.client-summary-grid .client-summary-card.is-deceased{
+  appearance:none;font:inherit;cursor:pointer;color:#243c4d;background:#f5eef0;
+  border:1px solid #d9c7ce;text-align:left;
+}
+.client-summary-grid .client-summary-card.is-deceased .client-summary-icon{background:#e9d9df;color:#805264}
+.client-summary-grid .client-summary-card.is-deceased:hover,
+.client-summary-grid .client-summary-card.is-deceased.is-selected{background:#f0e3e8;border-color:#9a7884}
+.client-summary-grid .client-summary-card.is-deceased:focus-visible{outline:3px solid #65879b;outline-offset:2px}
+@media(max-width:620px){
+  .client-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:100%}
+  .client-summary-grid .client-summary-card{min-height:58px}
+  .client-summary-grid .client-summary-label{font-size:.55rem}
+  .client-summary-grid .client-summary-card strong{font-size:.92rem}
+}
