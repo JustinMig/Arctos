@@ -9,3 +9,8 @@
 /* General doctors notes stay above individual doctor cards. */
 [data-panel="doctors"] .health-doctors-general-notes{display:grid;gap:7px;margin:12px 0 16px;padding:13px;border:1px solid #c9d8df;border-radius:10px;background:#f5f9fb;color:#18384a;font-weight:750}
 [data-panel="doctors"] .health-doctors-general-notes textarea{width:100%;box-sizing:border-box;min-height:95px;resize:vertical;padding:11px 12px;border:1px solid #bdccd5;border-radius:8px;background:#fff;color:#172b3a;font:inherit;font-weight:400;line-height:1.5}
+
+/* Distinct, dark outlined Medical sections and individual doctor/medication cards. */
+[data-panel="doctors"],[data-panel="medications"],[data-panel="pharmacies"]{border:2px solid #252d34!important;border-radius:13px!important;padding:15px!important;background:#fff!important;margin-bottom:14px!important}
+[data-panel="doctors"] .health-tab-toolbar,[data-panel="medications"] .health-tab-toolbar,[data-panel="pharmacies"] .pharmacy-panel{border:1.5px solid #252d34!important}
+[data-panel="doctors"] .health-record-card,[data-panel="medications"] .health-record-card{border:1.5px solid #252d34!important}
