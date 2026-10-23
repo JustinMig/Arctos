@@ -93,7 +93,7 @@ async function openWorkspace() {
   root.innerHTML = '<div class="auth-loading" role="status">Opening your workspace…</div>';
   // Download CSS and the authenticated workspace code concurrently rather
   // than paying for two separate network waits on every cold login.
-  const workspaceModule = withTimeout(import('./workspace-start.js?v=compact-deceased-1'), 20000);
+  const workspaceModule = withTimeout(import('./workspace-start.js?v=american-amicable-2026-1'), 20000);
   let sheet = document.querySelector('[data-workspace-css]');
   let stylesReady = Promise.resolve();
   if (!sheet) {
