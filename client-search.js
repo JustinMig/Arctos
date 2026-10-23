@@ -85,16 +85,7 @@ export function makeClientSearch(db, { now = () => new Date() } = {}) {
 }
 const optionMarkup = (items, current) => items.map(([value, label]) => `<option value="${esc(value)}"${String(value) === String(current) ? ' selected' : ''}>${esc(label)}</option>`).join('');
 export function clientSearchMarkup(s) {
-  return `<section class="client-stats-grid" aria-label="Client totals">
-    <div class="client-stat-card"><span>Total Clients</span><strong data-client-stat="total" aria-live="polite">—</strong></div>
-    <div class="client-stat-card"><span>Medicare Clients</span><strong data-client-stat="medicare" aria-live="polite">—</strong></div>
-    <div class="client-stat-card"><span>Life Clients</span><strong data-client-stat="life" aria-live="polite">—</strong></div>
-    <button type="button" class="client-stat-card client-stat-deceased" data-open-deceased aria-controls="deceased-client-archive" aria-expanded="false">
-      <span>Deceased Clients</span><strong data-client-stat="deceased" aria-live="polite">—</strong>
-      <small>Click to view records →</small>
-    </button>
-  </section>
-  <div id="client-active-search">
+  return `  <div id="client-active-search">
   <section class="panel-card dark-card client-search-panel" aria-label="Client search">
     <form id="client-search" class="search-form">
       <label class="field query-field"><span>Search Clients</span><input name="query" autocomplete="off" value="${esc(s.query)}" placeholder="Search clients…" enterkeyhint="search"></label>
