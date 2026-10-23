@@ -37,6 +37,13 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
     return `<article class="cmp-member" data-cmp-member="${esc(row.id)}">
       <div class="cmp-person">
         <strong>${esc(fullName(row))}</strong>
+        <span>${esc(phone(row.phone))}</span>
+        <small>${esc(locationText(row))}</small>
+        <small>${esc(deceased ? 'Deceased — contact disabled' : (row.products || []).map(p => String(p).replaceAll('_',' ')).join(' · '))}</small>
+      </div>
+      <div class="cmp-status"><span class="cmp-badge ${deceased ? 'is-deceased' : `is-${esc(row.contact_status)}`}">${esc(deceased ? 'Deceased' : outcomeLabel(row.contact_status))}</span><small>${Number(row.attempt_count || 0)} contact update${row.attempt_count === 1 ? '' : 's'}</small></div>
+      <div class="cmp-activity"><small>Last contact: ${esc(campaignTimestamp(row.last_contacted_at))}</small><span>${esc(next)}</span>${row.next_action ? `<small>${esc(row.next_action)}</small>` : ''}</div>
+      <div class="cmp-actions"><button type="button" class="btn secondary" data-client-id="${esc(row.client_id)}">Open Client</button><label class="cmp-update-select"><span class="cmp-sr-only">Spoke / Update — ${esc(fullName(row))}</span><select data-cmp-update="${esc(row.id)}"${locked ? ' disabled' : ''}><option value="">Spoke / Update</option>${options(campaignUpdateOptions(row))}</select></label></div>
         <details class="cmp-card-notes" data-cmp-card-notes="${esc(row.id)}"${state.noteOpen.has(row.id) ? ' open' : ''}>
           <summary><span>Notes${hasNote ? ' • Saved' : ' • Add optional note'}</span><span aria-hidden="true">⌄</span></summary>
           <div class="cmp-card-note-body">
@@ -47,13 +54,6 @@ export function createCampaignFeature({ repository, dialogs, openClient, onCalen
             <small class="cmp-card-note-status" data-cmp-note-status role="status" aria-live="polite"></small>
           </div>
         </details>
-        <span>${esc(phone(row.phone))}</span>
-        <small>${esc(locationText(row))}</small>
-        <small>${esc(deceased ? 'Deceased — contact disabled' : (row.products || []).map(p => String(p).replaceAll('_',' ')).join(' · '))}</small>
-      </div>
-      <div class="cmp-status"><span class="cmp-badge ${deceased ? 'is-deceased' : `is-${esc(row.contact_status)}`}">${esc(deceased ? 'Deceased' : outcomeLabel(row.contact_status))}</span><small>${Number(row.attempt_count || 0)} contact update${row.attempt_count === 1 ? '' : 's'}</small></div>
-      <div class="cmp-activity"><small>Last contact: ${esc(campaignTimestamp(row.last_contacted_at))}</small><span>${esc(next)}</span>${row.next_action ? `<small>${esc(row.next_action)}</small>` : ''}</div>
-      <div class="cmp-actions"><button type="button" class="btn secondary" data-client-id="${esc(row.client_id)}">Open Client</button><label class="cmp-update-select"><span class="cmp-sr-only">Spoke / Update — ${esc(fullName(row))}</span><select data-cmp-update="${esc(row.id)}"${locked ? ' disabled' : ''}><option value="">Spoke / Update</option>${options(campaignUpdateOptions(row))}</select></label></div>
     </article>`;
   }
   function render() {
