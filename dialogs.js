@@ -87,7 +87,11 @@ export class Dialogs {
         confirming = true;
         const choice = await manager.confirm();
         confirming = false;
-        if (choice === 'discard') { controller.finish(); return true; }
+        if (choice === 'discard') {
+          try { await controller.discardDraft?.(); }
+          catch { controller.error('The device draft could not be discarded. Keep this record open and try again.'); return false; }
+          controller.finish(); return true;
+        }
         if (choice === 'save') return controller.save(true);
         return false;
       },

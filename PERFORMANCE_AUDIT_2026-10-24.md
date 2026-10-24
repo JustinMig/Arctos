@@ -79,3 +79,12 @@ The preceding release description is historical. Justin subsequently authorized 
 - The workspace imports the canonical repository module, avoiding a second singleton URL in unbundled development. No markup or CSS changes were made in this follow-up.
 - Production build, JavaScript syntax checks and whitespace checks pass.
 - Offline recovery/synchronization and atomic retry-safe saves remain outstanding. Inspection confirms the current save chain spans separate database writes, encrypted-data functions and file uploads; it must not be described as transactional or automatically retried yet.
+
+## Encrypted recovery follow-up
+
+- Open client records now retain encrypted device drafts after edits, with a 500 ms debounce. IndexedDB stores AES-GCM ciphertext and a non-exportable per-agent key. Concurrent tabs cannot replace an existing encryption key; each dialog has its own draft identity. CVV and file contents are excluded. Drafts expire after seven days and are cleared on successful save or explicit Discard Changes.
+- An offline Save makes no server request, retains a draft when storage is available, and explicitly reports that the record has not been saved to the CRM. Storage failure never produces a false success message.
+- Reopening the same client online offers a Recover draft action in the existing message area. Recovery requires the same signed-in agent and client version, restores medical/policy additions and removals, and never saves automatically. Protected fields are recovered only when explicitly edited; untouched identifiers are not replaced by unloaded blanks.
+- Conflicting versions and new-client drafts with an uncertain prior server response are retained but blocked from restoration, preventing an automatic overwrite or duplicate creation. Uploaded/queued files are not restored and must be attached again. This is recovery for records already open during a lost connection, not a fully offline app shell or offline client search.
+- All 244 tests pass; all 178 JavaScript files pass syntax checks; the production build passes. Tests use synthetic data and simulated storage/network state, not live client records or physical iPhone testing. Unavailable device storage does not block online saving or discarding changes.
+- Automatic synchronization, atomic saves, and safe retries after ambiguous server responses remain outstanding. Current saves still span separate database writes and file uploads.

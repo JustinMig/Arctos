@@ -3,6 +3,7 @@ import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSor
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
 import { calendarRefreshInterval } from './connection-policy.js';
+import { installClientRecovery } from './client-draft-recovery.js';
 import { ageFromBirthDate } from './client-age-utils.js?v=2026-10-23';
 import { supabase } from './supabase-repository.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=client-campaign-fix-1';
@@ -864,6 +865,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       hydrate(form, record);
       wireTabs(d.node);
       d.attachForm(form);
+      installClientRecovery({ controller: d, form, getRecord: () => record, getUserId: () => repository.user?.id });
       // These two shortcuts act on the exact saved client, not on a search result.
       // A new client must be saved first. Existing record edits remain in their
       // original dialog while the campaign/appointment dialog is opened.
