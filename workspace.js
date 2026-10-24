@@ -2,6 +2,7 @@ import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, date
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js?v=birthday-bulk-text-1';
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
+import { calendarRefreshInterval } from './connection-policy.js';
 import { ageFromBirthDate } from './client-age-utils.js?v=2026-10-23';
 import { supabase } from './supabase-repository.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=client-campaign-fix-1';
@@ -1837,9 +1838,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   window.addEventListener('hashchange', changeRoute);
   window.addEventListener('keydown', escapeMenu);
   // Keep other agents' new bookings visible without requiring navigation or reload.
+  let lastCalendarPoll = Date.now();
   const calendarPoll = window.setInterval(() => {
     if (document.visibilityState !== 'visible' || state.destroyed) return;
     if (state.route !== 'dashboard' && state.route !== 'appointments') return;
+    if (Date.now() - lastCalendarPoll < calendarRefreshInterval(navigator.connection, navigator.onLine)) return;
+    lastCalendarPoll = Date.now();
     window.MHCalendarSync?.refresh({ force: true });
   }, 15000);
   window.addEventListener('mig:calendar-refresh-request', refreshVisibleCalendar);
