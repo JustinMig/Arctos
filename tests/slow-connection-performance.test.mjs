@@ -63,6 +63,16 @@ test('a medical row removed in another session cannot silently pass as saved',as
   assert.equal(f.requests.filter(r=>r.table==='client_doctors'&&r.action==='delete').length,0);
  }finally{f.close();}
 });
+test('deceased status and product clearing commit together even when a later section fails',async()=>{
+ const f=await clientFixture();try{
+  const record=await f.repo.getClient(f.db.clients[0].id);
+  f.fail('medicare_details');
+  await assert.rejects(f.repo.saveClient({...record,...f.api.serializable(f.form),deceased:true,sunfire_code:'CHANGED'},{expectedVersion:record.updated_at,skipUnchangedLicense:true}),/interrupted save/);
+  assert.equal(f.db.clients[0].status,'deceased');assert.equal(f.db.clients[0].products.length,0);
+  const writes=f.requests.filter(r=>r.table==='clients'&&r.action==='update');
+  assert.equal(writes.length,1);assert.equal(writes[0].payload.status,'deceased');
+ }finally{f.close();}
+});
 test('successive saves retain new row IDs, remove deleted cards, and keep protected values out of returned client events',async()=>{
  const f=await clientFixture();try{
   f.form.querySelector('[data-add-health-record=doctors]').click();f.fill('doctor_2_doctor_name','New Synthetic Doctor');

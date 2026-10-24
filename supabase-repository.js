@@ -118,8 +118,13 @@ export const mhRepository = {
   },
 
   async saveClient(record, options = {}) {
-    const products = ['medicare','life','retirement'].filter(k => record[`product_${k}`]);
+    const deceased = record.deceased === true;
+    const products = deceased ? [] : ['medicare','life','retirement'].filter(k => record[`product_${k}`]);
+    const originalStatus = String(record.status || 'active').toLowerCase();
+    const status = deceased ? 'deceased' : originalStatus === 'deceased' ? 'active'
+      : ['active','inactive','prospect'].includes(originalStatus) ? originalStatus : 'active';
     const clientPayload = {
+      status,
       old_plan_carrier: clean(record.old_plan_carrier), old_plan_id: clean(record.old_plan_id), old_plan_member_id: clean(record.old_plan_member_id), old_plan_year: clean(record.old_plan_year),
       assigned_agent_id: clean(record.assigned_agent_id) || this.user?.id || null,
       first_name: record.first_name?.trim(), last_name: record.last_name?.trim(), date_of_birth: clean(record.date_of_birth), gender: clean(record.gender),
@@ -142,7 +147,7 @@ export const mhRepository = {
       if (!data) throw new Error('This client was changed in another session. Close and reopen the client before saving so newer information is not overwritten.');
       client = data;
     } else {
-      const insertPayload = { ...clientPayload, status: clean(record.status) || 'active' };
+      const insertPayload = clientPayload;
       const { data, error } = await supabase.from('clients').insert(insertPayload).select().single();
       if (error) throw error;
       client = data;
