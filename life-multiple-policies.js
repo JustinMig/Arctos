@@ -1,6 +1,7 @@
 import { Dialogs } from './dialogs.js';
 import { esc, dateText, wireDates } from './core.js';
 import { mhRepository, supabase } from './supabase-repository.js';
+import { sameRecordFields, sameRecordList } from './record-changes.js';
 
 const LIFE_CARRIERS = ['American Amicable','Mutual of Omaha','Physicians Mutual','CiCa/Citizen','CoreBridge','Gerber','TransAmerica','Aflac'];
 const PRODUCTS = ['Term', 'Whole Life', 'Final Expense', 'Universal Life', 'Indexed Universal Life'];
@@ -63,13 +64,23 @@ function parsePolicies(record={}) {
 function isMeaningful(policy){return !!(policy.carrier||policy.product||policy.policy_number||policy.face_amount!==''||policy.premium!==''||policy.effective_date||policy.expiration_date||policy.beneficiary_name||policy.beneficiary_relationship||policy.notes);}
 function withoutLegacyLife(record){const copy={...record};['life_carrier','life_product','life_policy_number','life_face_amount','life_premium','life_frequency','life_effective_date','life_expiration_date','beneficiary_name','beneficiary_relationship','life_notes','_life_id','_life_policies'].forEach(key=>delete copy[key]);return copy;}
 
+function policyPayload(policy) {
+  const beneficiaryNotes=[policy.beneficiary_name,policy.beneficiary_relationship?`(${policy.beneficiary_relationship})`:''].filter(Boolean).join(' ');
+  return {carrier:clean(policy.carrier),product:clean(policy.product),policy_type:clean(policy.product),policy_number:clean(policy.policy_number),face_amount:money(policy.face_amount),premium:money(policy.premium),premium_mode:clean(policy.premium_mode),effective_date:clean(policy.effective_date),expiration_date:clean(policy.expiration_date),beneficiary_name:clean(policy.beneficiary_name),beneficiary_relationship:clean(policy.beneficiary_relationship),beneficiary_notes:clean(beneficiaryNotes),notes:clean(policy.notes),status:'active'};
+}
 async function savePolicies(clientId, policies) {
+  policies = policies.filter(isMeaningful);
+  const previous = policyCache.get(clientId);
+  const payloadFor = policy => policyPayload(policyFromRow(policy));
+  if (sameRecordList(policies, previous, payloadFor)) return previous;
+  const byId = new Map((previous || []).map(policy => [policy.id, policy]));
   const {data:current,error:currentError}=await supabase.from('life_policies').select('id').eq('client_id',clientId);if(currentError)throw currentError;
   const keepIds=[], savedRows=[];
   for(const policy of policies){
     if(!isMeaningful(policy))continue;
-    const beneficiaryNotes=[policy.beneficiary_name,policy.beneficiary_relationship?`(${policy.beneficiary_relationship})`:''].filter(Boolean).join(' ');
-    const payload={client_id:clientId,carrier:clean(policy.carrier),product:clean(policy.product),policy_type:clean(policy.product),policy_number:clean(policy.policy_number),face_amount:money(policy.face_amount),premium:money(policy.premium),premium_mode:clean(policy.premium_mode),effective_date:clean(policy.effective_date),expiration_date:clean(policy.expiration_date),beneficiary_name:clean(policy.beneficiary_name),beneficiary_relationship:clean(policy.beneficiary_relationship),beneficiary_notes:clean(beneficiaryNotes),notes:clean(policy.notes),status:'active'};
+    const before = byId.get(policy.id);
+    if (before && sameRecordFields(policyPayload(policy), payloadFor(before))) {keepIds.push(policy.id);savedRows.push(before);continue;}
+    const payload={client_id:clientId,...policyPayload(policy)};
     if(policy.id){const{data,error}=await supabase.from('life_policies').update(payload).eq('id',policy.id).eq('client_id',clientId).select('*').maybeSingle();if(error)throw error;if(!data?.id)throw new Error('One life policy could not be updated. Please retry.');keepIds.push(data.id);savedRows.push(data);}else{const{data,error}=await supabase.from('life_policies').insert(payload).select('*').single();if(error)throw error;keepIds.push(data.id);savedRows.push(data);}
   }
   const removed=(current||[]).map(row=>row.id).filter(id=>!keepIds.includes(id));if(removed.length){const{error}=await supabase.from('life_policies').delete().eq('client_id',clientId).in('id',removed);if(error)throw error;}
@@ -80,7 +91,7 @@ const baseGetClient=mhRepository.getClient.bind(mhRepository);
 mhRepository.getClient=async function getClientWithAllLifePolicies(id){const [record,policiesResult]=await Promise.all([baseGetClient(id),supabase.from('life_policies').select('*').eq('client_id',id).order('created_at',{ascending:true})]);if(!record)return record;const{data,error}=policiesResult;if(error)throw error;const policies=data||[];policyCache.set(id,policies);return{...record,_life_policies:policies};};
 
 const baseSaveClient=mhRepository.saveClient.bind(mhRepository);
-mhRepository.saveClient=async function saveClientWithAllLifePolicies(record,...args){const policies=parsePolicies(record);const saved=await baseSaveClient(withoutLegacyLife(record),...args);if(!saved?.id)return saved;const savedPolicies=await savePolicies(saved.id,policies);policyCache.set(saved.id,savedPolicies);const dialog=Array.from(document.querySelectorAll('dialog.client-dialog')).at(-1);const form=dialog?.querySelector('form.client-form');if(form)renderLifePanel(form,savedPolicies);return{...saved,_life_policies:savedPolicies};};
+mhRepository.saveClient=async function saveClientWithAllLifePolicies(record,...args){const policies=parsePolicies(record);const saved=await baseSaveClient(withoutLegacyLife(record),...args);if(!saved?.id)return saved;const previous=policyCache.get(saved.id);const savedPolicies=await savePolicies(saved.id,policies);policyCache.set(saved.id,savedPolicies);const dialog=Array.from(document.querySelectorAll('dialog.client-dialog')).at(-1);const form=dialog?.querySelector('form.client-form');if(form&&savedPolicies!==previous)renderLifePanel(form,savedPolicies);return{...saved,_life_policies:savedPolicies};};
 
 const originalOpen=Dialogs.prototype.open;
 Dialogs.prototype.open=function patchedMultiLifeOpen(options={}){const dialogClientId=options.kind==='client-dialog'?(String(options.clientId||'')||null):null;const controller=originalOpen.call(this,options);if(options.kind!=='client-dialog')return controller;const previousAttachForm=controller.attachForm.bind(controller);controller.attachForm=form=>{renderLifePanel(form,dialogClientId?(policyCache.get(dialogClientId)||[]):[]);previousAttachForm(form);};return controller;};

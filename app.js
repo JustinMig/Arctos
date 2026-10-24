@@ -2,6 +2,10 @@ import { supabase, initialAuthUrl } from './supabase-client.js';
 import { recoveryContext, withTimeout } from './auth-flow.js';
 
 const root = document.querySelector('#app');
+// Production builds replace this with a content-hashed, immutable CSS URL.
+// Keep the source/auxiliary-page path available without a build step.
+const workspaceStylesHref = typeof __ARCTOS_WORKSPACE_CSS__ === 'string'
+  ? __ARCTOS_WORKSPACE_CSS__ : '/workspace-styles.css?v=birthday-bulk-text-1';
 const context = recoveryContext(initialAuthUrl || location.href);
 const recoveryKey = 'mig-password-recovery';
 let recoveryUserId = '';
@@ -97,7 +101,7 @@ async function openWorkspace() {
   let sheet = document.querySelector('[data-workspace-css]');
   let stylesReady = Promise.resolve();
   if (!sheet) {
-    sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = '/workspace-styles.css?v=birthday-bulk-text-1'; sheet.dataset.workspaceCss = '';
+    sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = workspaceStylesHref; sheet.dataset.workspaceCss = '';
     stylesReady = withTimeout(new Promise((resolve,reject) => {
       sheet.onload = resolve;
       sheet.onerror = () => reject(new Error('Unable to load workspace styles. Refresh and retry.'));

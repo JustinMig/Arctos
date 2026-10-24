@@ -60,12 +60,10 @@ mhRepository.saveClient = async function saveClientWithPersonalUnderwriting(reco
     smoker: cleanBool(record.smoker),
     veteran: cleanBool(record.veteran)
   };
-  const saved = await baseSaveClient(record, ...args);
+  const saved = await baseSaveClient({ ...record, ...values }, ...args);
   if (!saved?.id) return saved;
-  const { data, error } = await supabase.from('clients').update(values).eq('id', saved.id).select('height_feet,height_inches,weight_lbs,smoker,veteran,updated_at').single();
-  if (error) throw error;
   cache.set(saved.id, values);
-  return { ...saved, ...data };
+  return { ...saved, ...values };
 };
 
 const originalOpen = Dialogs.prototype.open;

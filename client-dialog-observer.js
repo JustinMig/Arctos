@@ -1,6 +1,6 @@
 // Observe only actual client dialogs, rather than every DOM update across
 // the entire CRM. Client forms are injected after the native dialog opens.
-export function observeClientDialogs(onChange) {
+export function observeClientDialogs(onChange, { attributes = [] } = {}) {
   if (typeof onChange !== 'function') throw new TypeError('A dialog callback is required.');
   const attached = new WeakSet();
   const install = dialog => {
@@ -13,9 +13,10 @@ export function observeClientDialogs(onChange) {
       queueMicrotask(() => { queued = false; if (dialog.isConnected) onChange(dialog); });
     };
     const inner = new MutationObserver(records => {
-      if (records.some(record => record.addedNodes.length)) notify();
+      if (records.some(record => record.type === 'attributes' || record.addedNodes.length)) notify();
     });
     inner.observe(dialog, { childList:true, subtree:true });
+    if (attributes.length) inner.observe(dialog, { childList:true, subtree:true, attributes:true, attributeFilter:attributes });
     dialog.addEventListener('close', () => inner.disconnect(), { once:true });
     notify();
   };

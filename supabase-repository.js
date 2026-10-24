@@ -1,4 +1,5 @@
 import { supabase } from './supabase-client.js';
+import { sameRecordFields } from './record-changes.js';
 export { supabase } from './supabase-client.js';
 
 const clean = v => v === '' || v === undefined ? null : v;
@@ -17,11 +18,10 @@ async function saveOne(table, clientId, existingId, payload) {
   const { data, error } = await supabase.from(table).insert(body).select().single(); if (error) throw error; return data;
 }
 async function sensitiveGet(clientId) {
-  try {
-    const { data, error } = await supabase.functions.invoke('client-sensitive', { body: { action: 'get', client_id: clientId } });
-    if (error || data?.error) return null;
-    return data?.sensitive || null;
-  } catch { return null; }
+  const { data, error } = await supabase.functions.invoke('client-sensitive', { body: { action: 'get', client_id: clientId } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data?.sensitive || null;
 }
 async function saveEncryptedLicense(clientId, licenseNumber) {
   const current = await sensitiveGet(clientId) || {};
@@ -107,6 +107,7 @@ export const mhRepository = {
     const p = client.products || [];
     return {
       ...client, address: client.address1 || '', zip: client.zip_code || '', spouse: client.spouse || '', notes: client.notes || '',
+      _saved_sections: { medicare, health, retirement },
       license_number: client.drivers_license_number || '', license_expiration: client.drivers_license_expiration || '', license_state: client.drivers_license_state || '',
       product_medicare: p.includes('medicare'), product_life: p.includes('life'), product_retirement: p.includes('retirement'),
       part_a_date: medicare?.part_a_date || '', part_b_date: medicare?.part_b_date || '', medicaid_level: medicare?.medicaid_level || '', medicaid_number: medicare?.medicaid_number || '', sunfire_code: medicare?.sunfire_code || '', medicare_notes: medicare?.notes || '', _medicare_id: medicare?.client_id || null,
@@ -125,6 +126,10 @@ export const mhRepository = {
       email: clean(record.email), phone: clean(record.phone), address1: clean(record.address), city: clean(record.city), county: clean(record.county), state: clean(record.state), zip_code: clean(record.zip),
       drivers_license_number: null, drivers_license_expiration: clean(record.license_expiration), drivers_license_state: clean(record.license_state), spouse: clean(record.spouse), products, notes: clean(record.notes)
     };
+    // These belong to the same client row. Save them in the version-checked
+    // write instead of two additional sequential updates by the enhancers.
+    for (const key of ['height_feet','height_inches','weight_lbs','smoker','veteran','doctors_section_notes'])
+      if (key in record) clientPayload[key] = clean(record[key]);
 
     this.lastSavedClientId = null;
     this.lastSaveWasInsert = false;
@@ -145,27 +150,37 @@ export const mhRepository = {
     }
     this.lastSavedClientId = client.id;
 
-    if ('license_number' in record) await saveEncryptedLicense(client.id, record.license_number);
+    if ('license_number' in record && !options.skipUnchangedLicense &&
+      (record.id || String(record.license_number || '').trim())) await saveEncryptedLicense(client.id, record.license_number);
 
-    const { error: medErr } = await supabase.from('medicare_details').upsert({ client_id: client.id, part_a_date: clean(record.part_a_date), part_b_date: clean(record.part_b_date), medicaid_level: clean(record.medicaid_level), sunfire_code: clean(record.sunfire_code), notes: clean(record.medicare_notes) }, { onConflict: 'client_id' });
-    if (medErr) throw medErr;
+    const previous = record._saved_sections || {};
+    const medicarePayload = { client_id: client.id, part_a_date: clean(record.part_a_date), part_b_date: clean(record.part_b_date), medicaid_level: clean(record.medicaid_level), medicaid_number: clean(record.medicaid_number), sunfire_code: clean(record.sunfire_code), notes: clean(record.medicare_notes) };
+    if (!sameRecordFields(medicarePayload, previous.medicare)) {
+      const { error: medErr } = await supabase.from('medicare_details').upsert(medicarePayload, { onConflict: 'client_id' });
+      if (medErr) throw medErr;
+    }
 
     let health = null;
     let retirement = null;
-    if (record.health_carrier || record.health_plan_id || record.health_member_id || record.health_effective_date || record.health_premium) {
-      health = await saveOne('health_plans', client.id, record._health_id, { carrier: clean(record.health_carrier), plan_id: clean(record.health_plan_id), member_id: clean(record.health_member_id), effective_date: clean(record.health_effective_date), premium: money(record.health_premium), status: 'active' });
+    if (record.health_carrier || record.health_plan_id || record.health_member_id || record.health_effective_date || record.health_premium || record.health_plan_type) {
+      const payload = { carrier: clean(record.health_carrier), plan_id: clean(record.health_plan_id), member_id: clean(record.health_member_id), plan_type: clean(record.health_plan_type), effective_date: clean(record.health_effective_date), premium: money(record.health_premium), status: 'active' };
+      health = previous.health?.id === record._health_id && sameRecordFields(payload, previous.health)
+        ? previous.health : await saveOne('health_plans', client.id, record._health_id, payload);
     }
     if (record.life_carrier || record.life_product || record.life_policy_number || record.life_face_amount || record.life_premium) {
       await saveOne('life_policies', client.id, record._life_id, { carrier: clean(record.life_carrier), product: clean(record.life_product), policy_number: clean(record.life_policy_number), policy_type: clean(record.life_product), face_amount: money(record.life_face_amount), premium: money(record.life_premium), premium_mode: clean(record.life_frequency), effective_date: clean(record.life_effective_date), notes: clean(record.life_notes), status: 'active' });
     }
     if (record.retirement_carrier || record.retirement_product || record.retirement_contract || record.retirement_contribution || record.retirement_value) {
-      retirement = await saveOne('retirement_accounts', client.id, record._retirement_id, { carrier: clean(record.retirement_carrier), product: clean(record.retirement_product), contract_number: clean(record.retirement_contract), contribution_amount: money(record.retirement_contribution), account_value: money(record.retirement_value), effective_date: clean(record.retirement_effective_date), notes: clean(record.retirement_notes), status: 'active' });
+      const payload = { carrier: clean(record.retirement_carrier), product: clean(record.retirement_product), contract_number: clean(record.retirement_contract), contribution_amount: money(record.retirement_contribution), account_value: money(record.retirement_value), effective_date: clean(record.retirement_effective_date), notes: clean(record.retirement_notes), status: 'active' };
+      retirement = previous.retirement?.id === record._retirement_id && sameRecordFields(payload, previous.retirement)
+        ? previous.retirement : await saveOne('retirement_accounts', client.id, record._retirement_id, payload);
     }
 
     return {
       ...record,
       ...client,
       id: client.id,
+      _saved_sections: { medicare:medicarePayload, health:health || previous.health, retirement:retirement || previous.retirement },
       license_number: record.license_number ?? '',
       address: client.address1 || record.address || '',
       zip: client.zip_code || record.zip || '',

@@ -836,7 +836,10 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     let record = {};
     let syncOverviewClientActions = null;
     const d = dialogs.open({ title: 'Client Information', hint: id ? 'Edit this client without leaving your search results' : 'New client • all sections in one window', icon: icon('client', true), kind: 'client-dialog', clientId: id || null, isNewClient: !id, body: '<p class="subtle">Loading client information…</p>', footer: saveFooter('Save Client'), onSave: async form => {
-      const saved = await repository.saveClient({ ...record, ...serializable(form) }, { expectedVersion: record.updated_at || null });
+      const saved = await repository.saveClient({ ...record, ...serializable(form) }, {
+        expectedVersion: record.updated_at || null,
+        skipUnchangedLicense: form.dataset.auditExistingClient === 'true' && form.dataset.auditSensitiveDirty !== 'true'
+      });
       if (!saved?.id) throw new Error('The save was not confirmed by the database. Your changes remain open.');
       record = saved;
       // Keep the footer's Text Client / Call Data actions linked to the

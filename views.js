@@ -46,7 +46,7 @@ export function clientForm(connected, agents = []) {
   const medicaid = input('medicaid_number', 'Medicaid Number', { disabled: sensitive }) +
     select('medicaid_level', 'Medicaid Level', [['', 'Select…'], 'None', 'QMB', 'QMB+', 'SLMB', 'SLMB+', 'QI', 'QDWI', 'FBDE']);
   const sunfire = input('sunfire_code', 'Sunfire Code', { placeholder: 'Enter Sunfire Code' });
-  const health = input('health_carrier', 'Carrier / Original Medicare') + input('health_plan_id', 'Plan ID') + input('health_member_id', 'Member ID') + dateInput('health_effective_date', 'Effective Date') + input('health_premium', 'Monthly Premium', { type: 'number', extra: 'min="0" step="0.01"' });
+  const health = '<input type="hidden" name="health_plan_type" data-loaded-health-plan-type>' + input('health_carrier', 'Carrier / Original Medicare') + input('health_plan_id', 'Plan ID') + input('health_member_id', 'Member ID') + dateInput('health_effective_date', 'Effective Date') + input('health_premium', 'Monthly Premium', { type: 'number', extra: 'min="0" step="0.01"' });
   const oldPlan = '<div class="old-plan-details span-all"><div class="old-plan-heading"><strong>Old Plan Details</strong><small>Previous coverage information</small></div><div class="form-grid">' +
     select('old_plan_carrier', 'Insurance Company', [['','Select company…'],'Aetna','Humana','UnitedHealthcare','Cigna / HealthSpring','Devoted','Blue Cross Blue Shield','Wellcare','Original Medicare','Other']) +
     input('old_plan_id', 'Plan ID') + input('old_plan_member_id', 'Member ID') +

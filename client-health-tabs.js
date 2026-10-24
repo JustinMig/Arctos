@@ -1,6 +1,7 @@
 import { Dialogs } from './dialogs.js';
 import { esc, dateText } from './core.js';
 import { mhRepository, supabase } from './supabase-repository.js';
+import { sameRecordFields, sameRecordList } from './record-changes.js';
 
 const cache = new Map();
 const clean = v => v === '' || v === undefined || v === null ? null : v;
@@ -158,12 +159,19 @@ function parseRows(record, prefix, keys) {
   return [...indexes].sort((a,b)=>a-b).map(i => { const out = {}; keys.forEach(key => out[key] = record[`${prefix}_${i}_${key}`] ?? ''); return out; });
 }
 const meaningful = row => Object.entries(row).some(([k,v]) => k !== 'id' && k !== 'status' && String(v ?? '').trim() !== '');
-async function syncTable(table, clientId, rows, mapper) {
+async function syncTable(table, clientId, rows, mapper, previous) {
+  rows = rows.filter(meaningful);
+  if (sameRecordList(rows, previous, mapper)) return previous;
+  const byId = new Map((previous || []).map(row => [row.id, row]));
   const { data: existing, error: loadError } = await supabase.from(table).select('id').eq('client_id',clientId);
   if (loadError) throw loadError;
   const keep = [], savedRows = [];
   for (const row of rows) {
     if (!meaningful(row)) continue;
+    const before = byId.get(row.id);
+    if (before && sameRecordFields(mapper(row), mapper(before))) {
+      keep.push(row.id); savedRows.push(before); continue;
+    }
     const payload = { ...mapper(row), client_id:clientId, updated_at:new Date().toISOString() };
     if (row.id) {
       const { data, error } = await supabase.from(table).update(payload).eq('id',row.id).eq('client_id',clientId).select('*').maybeSingle();
@@ -203,12 +211,11 @@ mhRepository.saveClient = async function saveClientWithHealthTabs(record, ...arg
   const doctors = parseRows(record,'doctor',doctorKeys), medications = parseRows(record,'medication',medicationKeys), indemnity = parseRows(record,'indemnity',indemnityKeys);
   const saved = await baseSave(record,...args); if (!saved?.id) return saved;
   const notesValue = String(record.doctors_section_notes || '');
-  const notesResult = await supabase.from('clients').update({doctors_section_notes:notesValue}).eq('id',saved.id).select('id').single();
-  if (notesResult.error) throw notesResult.error;
+  const previous = cache.get(saved.id) || {};
   const [savedDoctors,savedMedications,savedIndemnity] = await Promise.all([
-    syncTable('client_doctors',saved.id,doctors,row=>({ doctor_name:String(row.doctor_name||'').trim(), specialty:clean(row.specialty), practice_name:clean(row.practice_name), phone:clean(row.phone), fax:clean(row.fax), address:clean(row.address), city:clean(row.city), state:clean(row.state), zip_code:clean(row.zip_code), notes:clean(row.notes) })),
-    syncTable('client_medications',saved.id,medications,row=>({ medication_name:String(row.medication_name||'').trim(), strength:clean(row.strength), dosage:clean(row.dosage), frequency:clean(row.frequency), prescribing_doctor:clean(row.prescribing_doctor), purpose:clean(row.purpose), notes:clean(row.notes), status:row.status||'active' })),
-    syncTable('hospital_indemnity_plans',saved.id,indemnity,row=>({ carrier:clean(row.carrier), plan_name:clean(row.plan_name), policy_number:clean(row.policy_number), member_id:clean(row.member_id), effective_date:clean(row.effective_date), premium:money(row.premium), admission_benefit:money(row.admission_benefit), daily_benefit:money(row.daily_benefit), benefit_days:row.benefit_days===''?null:Number(row.benefit_days), notes:clean(row.notes), status:row.status||'active' }))
+    syncTable('client_doctors',saved.id,doctors,row=>({ doctor_name:String(row.doctor_name||'').trim(), specialty:clean(row.specialty), practice_name:clean(row.practice_name), phone:clean(row.phone), fax:clean(row.fax), address:clean(row.address), city:clean(row.city), state:clean(row.state), zip_code:clean(row.zip_code), notes:clean(row.notes) }),previous.doctors),
+    syncTable('client_medications',saved.id,medications,row=>({ medication_name:String(row.medication_name||'').trim(), strength:clean(row.strength), dosage:clean(row.dosage), frequency:clean(row.frequency), prescribing_doctor:clean(row.prescribing_doctor), purpose:clean(row.purpose), notes:clean(row.notes), status:row.status||'active' }),previous.medications),
+    syncTable('hospital_indemnity_plans',saved.id,indemnity,row=>({ carrier:clean(row.carrier), plan_name:clean(row.plan_name), policy_number:clean(row.policy_number), member_id:clean(row.member_id), effective_date:clean(row.effective_date), premium:money(row.premium), admission_benefit:money(row.admission_benefit), daily_benefit:money(row.daily_benefit), benefit_days:row.benefit_days===''||row.benefit_days==null?null:Number(row.benefit_days), notes:clean(row.notes), status:row.status||'active' }),previous.hospital_indemnity)
   ]);
   const extra = { doctors:savedDoctors, medications:savedMedications, hospital_indemnity:savedIndemnity, doctors_section_notes:notesValue };
   cache.set(saved.id, extra);

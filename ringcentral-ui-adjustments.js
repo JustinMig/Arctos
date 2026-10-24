@@ -1,6 +1,7 @@
 import { communicationsRendered, releaseRecordings } from './communications-events.js';
 import { supabase } from './supabase-repository.js';
 import { smsAuthHeaders } from './client-texting.js';
+import { observeClientDialogs } from './client-dialog-observer.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
 
@@ -185,10 +186,5 @@ function attachFooterButton(dialog) {
   };
 }
 
-function scan() {
-  document.querySelectorAll('dialog.client-dialog').forEach(attachFooterButton);
-}
-
 installStyles();
-new MutationObserver(scan).observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['data-sms-client-id'] });
-window.setTimeout(scan, 0);
+observeClientDialogs(attachFooterButton, { attributes:['data-sms-client-id'] });

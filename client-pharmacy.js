@@ -1,5 +1,6 @@
 import { Dialogs } from './dialogs.js';
 import { mhRepository, supabase } from './supabase-repository.js';
+import { sameRecordFields } from './record-changes.js';
 
 const BUCKET = 'mh-client-documents';
 const CATEGORY = 'medication_document';
@@ -317,6 +318,9 @@ async function savePharmacy(clientId, pharmacyName, pharmacyLocation, pharmacyNa
   const name2 = String(pharmacyName2 || '').trim();
   const location2 = String(pharmacyLocation2 || '').trim();
   const notes = String(medicationNotes || '').trim();
+  const fields = { pharmacy_name:name||null, pharmacy_location:location||null,
+    pharmacy_name_2:name2||null, pharmacy_location_2:location2||null, medication_notes:notes||null };
+  if (pharmacyCache.has(clientId) && sameRecordFields(fields, pharmacyCache.get(clientId) || {})) return;
   if (!name && !location && !name2 && !location2 && !notes) {
     const { error } = await supabase.from('client_pharmacies').delete().eq('client_id', clientId);
     if (error) throw error;
@@ -356,9 +360,12 @@ async function flushQueued(dialog, clientId) {
 
 const baseGetClient = mhRepository.getClient.bind(mhRepository);
 mhRepository.getClient = async function getClientWithPharmacy(id) {
-  const record = await baseGetClient(id);
+  const [record, result] = await Promise.all([
+    baseGetClient(id),
+    supabase.from('client_pharmacies').select('*').eq('client_id', id).maybeSingle()
+  ]);
   if (!record) return record;
-  const { data, error } = await supabase.from('client_pharmacies').select('*').eq('client_id', id).maybeSingle();
+  const { data, error } = result;
   if (error) throw error;
   pharmacyCache.set(id, data || null);
   return { ...record, _pharmacy: data || null };
@@ -382,7 +389,7 @@ mhRepository.saveClient = async function saveClientWithPharmacy(record, ...args)
   await savePharmacy(saved.id, pharmacyName, pharmacyLocation, pharmacyName2, pharmacyLocation2, medicationNotes);
   const dialog = [...document.querySelectorAll('dialog.client-dialog')].reverse().find(item => item.isConnected && dialogStates.has(item));
   if (dialog) await flushQueued(dialog, saved.id);
-  return saved;
+  return { ...saved, _pharmacy:pharmacyCache.get(saved.id) || null };
 };
 
 const originalOpen = Dialogs.prototype.open;

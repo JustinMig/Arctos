@@ -14,7 +14,7 @@ test('text and call footer actions initialize at login, without visiting Message
   assert.doesNotMatch(startup,/\.then\(\(\) => import\('\.\/ringcentral-ui-adjustments\.js/);
   assert.match(call,/import \{ smsAuthHeaders \} from '\.\/client-texting\.js'/);
   assert.match(texts,/Dialogs\.prototype\.open = function/);
-  assert.match(call,/new MutationObserver\(scan\)\.observe\(document\.body/);
+  assert.match(call,/observeClientDialogs\(attachFooterButton/);
 });
 test('footer buttons use ID of loaded client instead of last focused search button',()=>{
   assert.match(dialogs,/if \(clientId\) node\.dataset\.clientId/);
@@ -28,5 +28,5 @@ test('new client save updates and enables text and call actions immediately',()=
   assert.match(workspace,/if \(titleNode && savedName\) titleNode\.textContent = savedName;\s*return saved;/);
   assert.match(texts,/result\?\.id \|\| controller\?\.node\?\.dataset\.clientId/);
   assert.match(texts,/controller\?\.__setSmsClientId\?\.\(id\)/);
-  assert.match(call,/attributeFilter:\['data-sms-client-id'\]/);
+  assert.match(call,/attributes:\['data-sms-client-id'\]/);
 });

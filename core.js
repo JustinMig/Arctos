@@ -89,9 +89,12 @@ export function hydrate(form, record) {
     else el.value = el.hasAttribute('data-date') ? dateText(record[el.name]) : String(record[el.name] ?? '');
   }
 }
+const wiredDateInputs = new WeakMap();
 export function wireDates(form) {
   form.querySelectorAll('[data-date]').forEach(input => {
+    if (wiredDateInputs.has(input)) { wiredDateInputs.get(input)(); return; }
     const validate = () => input.setCustomValidity(!input.value || dateISO(input.value) ? '' : 'Enter a valid date as MM/DD/YYYY.');
+    wiredDateInputs.set(input, validate);
     input.addEventListener('input', validate);
     input.addEventListener('blur', () => { const v = dateISO(input.value); if (v) input.value = dateText(v); validate(); });
     validate();

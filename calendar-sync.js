@@ -43,30 +43,32 @@ export function installMayerJustinCalendar() {
     if (calendarInFlight.has(key)) return calendarInFlight.get(key);
 
     const request = (async () => {
-      const payload = await calendarRequest('GET', {
+      const sharedRequest = calendarRequest('GET', {
         start: criteria.start,
         end: criteria.end,
         includeToday: criteria.includeToday ? '1' : '',
         includeReschedule: criteria.includeReschedule ? '1' : ''
       });
-      const sharedEvents = Array.isArray(payload.events) ? payload.events : [];
       // Campaign bookings live in Arctos's appointments table, not in the
       // upstream Mayer calendar. Show both sources in the same calendar.
       let localQuery = supabase.from('appointments').select('*').gte('event_date', criteria.start).lte('event_date', criteria.end);
-      const { data: localEvents, error: localError } = await localQuery.order('event_date').order('start_time');
-      if (localError) throw localError;
-      let extras = [];
+      const localRequest = localQuery.order('event_date').order('start_time');
+      let extraRequest = Promise.resolve({ data:[], error:null });
       if (criteria.includeToday || criteria.includeReschedule) {
         const centralDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
         const filters = [];
         if (criteria.includeToday) filters.push(`event_date.eq.${centralDate}`);
         if (criteria.includeReschedule) filters.push('status.eq.needs_reschedule');
         if (filters.length) {
-          const extraResult = await supabase.from('appointments').select('*').or(filters.join(','));
-          if (extraResult.error) throw extraResult.error;
-          extras = extraResult.data || [];
+          extraRequest = supabase.from('appointments').select('*').or(filters.join(','));
         }
       }
+      const [payload, localResult, extraResult] = await Promise.all([sharedRequest, localRequest, extraRequest]);
+      if (localResult.error) throw localResult.error;
+      if (extraResult.error) throw extraResult.error;
+      const sharedEvents = Array.isArray(payload.events) ? payload.events : [];
+      const localEvents = localResult.data || [];
+      const extras = extraResult.data || [];
       const seen = new Set(sharedEvents.map(event => event.id));
       const events = [...sharedEvents];
       for (const event of [...(localEvents || []), ...extras]) {

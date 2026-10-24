@@ -1,21 +1,10 @@
-import { mhRepository, supabase } from './supabase-repository.js';
+import { mhRepository } from './supabase-repository.js';
+import { clientSaveResult } from './record-changes.js';
 
 const CARRIERS = ['Aetna', 'Humana', 'Cigna/Healthspring', 'Devoted', 'United Health Care'];
 const PLAN_TYPES = ['Supplement', 'Medicare Advantage'];
 const planTypeByClient = new Map();
 const baseSaveClient = mhRepository.saveClient.bind(mhRepository);
-
-async function getLatestHealthPlan(clientId) {
-  const { data, error } = await supabase
-    .from('health_plans')
-    .select('*')
-    .eq('client_id', clientId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data || null;
-}
 
 mhRepository.saveClient = async function (record, ...args) {
   const originalId = record?.id || '';
@@ -24,54 +13,17 @@ mhRepository.saveClient = async function (record, ...args) {
     ? planTypeByClient.get(planKey)
     : (record?.health_plan_type || '');
 
-  const saved = await baseSaveClient(record, ...args);
+  // The core Medicare upsert and health-plan write now include these fields.
+  // Keep the confirmed save result instead of fetching the whole client again.
+  const saved = await baseSaveClient({ ...record, health_plan_type: selectedPlanType }, ...args);
   if (!saved?.id) return saved;
-
-  const medicaidNumber = String(record?.medicaid_number || '').trim() || null;
-  const { error: medicaidError } = await supabase
-    .from('medicare_details')
-    .update({ medicaid_number: medicaidNumber })
-    .eq('client_id', saved.id);
-  if (medicaidError) throw medicaidError;
-
-  const hasHealthData = !!(
-    record?.health_carrier || record?.health_plan_id || record?.health_member_id ||
-    record?.health_effective_date || record?.health_premium || selectedPlanType
-  );
-
-  if (hasHealthData) {
-    const latest = await getLatestHealthPlan(saved.id);
-    if (latest?.id) {
-      const { error } = await supabase
-        .from('health_plans')
-        .update({ plan_type: selectedPlanType || null })
-        .eq('id', latest.id)
-        .eq('client_id', saved.id);
-      if (error) throw error;
-    } else {
-      const premium = record?.health_premium === '' || record?.health_premium == null
-        ? null
-        : Number(record.health_premium);
-      const { error } = await supabase.from('health_plans').insert({
-        client_id: saved.id,
-        carrier: String(record?.health_carrier || '').trim() || null,
-        plan_id: String(record?.health_plan_id || '').trim() || null,
-        member_id: String(record?.health_member_id || '').trim() || null,
-        plan_type: selectedPlanType || null,
-        effective_date: record?.health_effective_date || null,
-        premium: Number.isFinite(premium) ? premium : null,
-        status: 'active'
-      });
-      if (error) throw error;
-    }
-  }
 
   if (!originalId) {
     planTypeByClient.delete('__new__');
     planTypeByClient.set(saved.id, selectedPlanType || '');
   }
 
-  return this.getClient(saved.id);
+  return { ...clientSaveResult(saved), license_number:'', health_plan_type: selectedPlanType };
 };
 
 function makeOptions(values, current = '') {
@@ -113,15 +65,10 @@ async function enhanceDialog(dialog) {
 
     const typeSelect = typeLabel.querySelector('[data-health-plan-type]');
     const key = clientId || '__new__';
-    let initial = '';
-    if (clientId) {
-      try {
-        const health = await getLatestHealthPlan(clientId);
-        initial = health?.plan_type || '';
-      } catch (error) {
-        console.warn('Unable to load health plan type', error);
-      }
-    }
+    const loadedType = dialog.querySelector('[data-loaded-health-plan-type]');
+    const initial = loadedType?.value || '';
+    loadedType?.remove();
+    typeSelect.name = 'health_plan_type';
     if (initial && !PLAN_TYPES.includes(initial)) {
       typeSelect.insertAdjacentHTML('beforeend', `<option value="${initial.replaceAll('&', '&amp;').replaceAll('"', '&quot;')}">${initial} (Existing)</option>`);
     }

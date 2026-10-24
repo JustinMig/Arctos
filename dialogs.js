@@ -36,8 +36,8 @@ export class Dialogs {
         wireDates(form);
         baseline = stable(snapshot(form));
         form.addEventListener('submit', e => { e.preventDefault(); controller.save(false); });
-        form.addEventListener('input', updateDirty);
-        form.addEventListener('change', updateDirty);
+        form.addEventListener('input', scheduleDirty);
+        form.addEventListener('change', scheduleDirty);
         updateDirty();
       },
       baseline() { if (form) baseline = stable(snapshot(form)); updateDirty(); },
@@ -102,6 +102,12 @@ export class Dialogs {
         target?.focus({ preventScroll: true });
       }
     };
+    let dirtyQueued = false;
+    function scheduleDirty() {
+      if (dirtyQueued) return;
+      dirtyQueued = true;
+      queueMicrotask(() => { dirtyQueued = false; if (!closed) updateDirty(); });
+    }
     function updateDirty() {
       const badge = node.querySelector('[data-dirty]');
       if (badge) badge.textContent = controller.isDirty() ? 'Unsaved changes' : 'No changes';
