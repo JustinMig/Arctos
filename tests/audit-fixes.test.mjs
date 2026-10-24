@@ -59,7 +59,7 @@ test('foreign clients and recordings cannot be sent or played through service AP
  try{
   const headers={Authorization:'Bearer SYNTHETIC_TEST_ONLY','Content-Type':'application/json'};
   const send=await import('../api/twilio-send.js');assert.equal((await send.POST(new Request('https://mig.example/api/twilio-send',{method:'POST',headers,body:JSON.stringify({clientId:c,body:'Never sent'})}))).status,404);
-  const bulk=await import('../api/twilio-bulk.js');assert.equal((await bulk.POST(new Request('https://mig.example/api/twilio-bulk',{method:'POST',headers,body:JSON.stringify({clientIds:[c],body:'Never sent'})}))).status,404);
+  const bulk=await import('../api/twilio-bulk.js');assert.equal((await bulk.POST(new Request('https://mig.example/api/twilio-bulk',{method:'POST',headers,body:JSON.stringify({clientIds:[c],body:'Never sent',consentConfirmed:true})}))).status,404);
   const audio=await import('../api/ringcentral-recording.js');assert.equal((await audio.GET(new Request('https://mig.example/api/ringcentral-recording?id=fake-recording',{headers}))).status,404);
   const calendar=await import('../api/calendar-events.js');assert.equal((await calendar.GET(new Request('https://mig.example/api/calendar-events',{headers}))).status,403);
   assert.ok(seen.every(u=>u.startsWith('https://bogusfmvdrlvxscopgaw.supabase.co/')));
@@ -74,7 +74,7 @@ test('communication actions use rendered immutable IDs and never query their own
 });
 test('public startup does not import workspace and feature modules until after authentication',async()=>{
  const [html,app,workspace]=await Promise.all(['index.html','app.js','workspace-start.js'].map(read));
- assert.equal((html.match(/<script/g)||[]).length,1);assert.equal((html.match(/rel="stylesheet"/g)||[]).length,1);
+ assert.equal((html.match(/<script/g)||[]).length,1);assert.equal((html.match(/rel="stylesheet"/g)||[]).length,2);
  assert.doesNotMatch(app,/^import .*workspace/m);assert.match(app,/import\('\.\/workspace-start\.js(?:\?[^']*)?'\)/);
  assert.match(workspace,/import \{ mhRepository, supabase \}/);
  assert.match(app,/if \(!candidate\) return invalidReset/);assert.match(app,/passwordSaved/);

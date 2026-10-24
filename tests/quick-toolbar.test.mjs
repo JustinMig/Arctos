@@ -12,7 +12,8 @@ test('five permanent shortcuts appear in top chrome and not in the More submenu'
  assert.match(toolbar,/data-add-client/);
  for(const key of ['appointments','notes','contacts','build']){
   assert.match(toolbar,new RegExp('data-tool="'+key+'"'));
-  assert.doesNotMatch(navigationMarkup('dashboard'),new RegExp('data-tool="'+key+'"'));
+  const more = navigationMarkup('dashboard').split('id="nav-children-more"')[1];
+  assert.doesNotMatch(more,new RegExp('data-tool="'+key+'"'));
  }
  assert.doesNotMatch(toolbar,/data-tool="commissions"/);
  assert.match(navigationMarkup('dashboard'),/data-tool="commissions"/);

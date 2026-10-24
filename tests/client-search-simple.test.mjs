@@ -34,12 +34,15 @@ test('sort controls appear with results, not on the untouched search page', () =
 });
 test('untouched page removes duplicate headings, instructions and empty results panel', () => {
   assert.equal(clientResultsMarkup({ rows: null }), '');
-  assert.doesNotMatch(clientSearchMarkup(state), /<h2>|Search first|saved creation date/);
+  const active = clientSearchMarkup(state).split('<section id="deceased-client-archive"')[0];
+  assert.doesNotMatch(active, /<h2>|Search first|saved creation date/);
 });
-test('product and deceased options, saved values and escaping are retained', () => {
-  const html = clientSearchMarkup({ ...state, query: '"><img src=x>', product: 'deceased' });
+test('product selections, separate deceased archive and escaping are retained', () => {
+  const html = clientSearchMarkup({ ...state, query: '"><img src=x>', product: 'medicare' });
   for (const item of ['Medicare', 'Life', 'Retirement', 'Deceased', 'All Products / Statuses']) assert.ok(html.includes(item));
-  assert.match(html, /value="deceased" selected/);
+  assert.match(html, /value="medicare" selected/);
+  assert.match(html, /id="deceased-client-archive"/);
+  assert.doesNotMatch(html, /<option value="deceased"/);
   assert.match(html, /&quot;&gt;&lt;img/);
   assert.doesNotMatch(html, /<img/);
 });

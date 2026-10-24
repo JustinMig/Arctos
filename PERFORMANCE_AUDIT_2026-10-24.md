@@ -60,7 +60,7 @@ References: [foreign-key indexes](https://supabase.com/docs/guides/database/data
 
 Recheck the focused workflows with `npm run test:performance`; build with `npm run build`; check every JavaScript file with `node scripts/check-syntax.mjs`.
 
-## Recommendations awaiting Justin's approval
+## Recommendations approved by Justin
 
 1. **Offline drafts and synchronization.** Retain an encrypted device draft when signal drops, show a clear Pending/Saved/Error state, and synchronize when service returns. Define device protection, conflict handling and how protected information is stored before implementing this workflow.
 2. **Atomic, retry-safe saving.** Consolidate the multi-part client save into an authorized server operation with transaction and idempotency handling. This addresses partial saves and interrupted-response retries, rather than merely reducing normal save latency. It is a larger backend change.
@@ -68,3 +68,14 @@ Recheck the focused workflows with `npm run test:performance`; build with `npm r
 4. **Separate maintenance review.** Repair the 21 existing test failures and review the database policy/index/security advisories with before/after query plans. Preserve role access and the intentional encrypted-data functions. These changes were not bundled into this performance release.
 
 No offline storage, changed refresh interval, database migration, authorization-policy change, index removal, record deletion or paid infrastructure upgrade is included in this release.
+
+## Approved follow-up progress
+
+The preceding release description is historical. Justin subsequently authorized all four recommendations.
+
+- Adaptive polling is live: calendar refresh is 60 seconds on detected slow/data-saving connections, 15 seconds otherwise, and paused offline. Scheduling availability checks remain unchanged.
+- Four missing foreign-key indexes and equivalent policy optimizations are live. The duplicate permissive policy was removed only after verifying matching access predicates. No records or indexes were deleted and no role access was expanded.
+- Test maintenance is complete: all 235 tests pass, including a new behavioral check for active-search versus deceased-archive isolation. Query mocks now implement the existing status exclusion; navigation, escaped labels, startup CSS and consent fixtures reflect the current production behavior. The foreign-client API test still requires rejection before any external send.
+- The workspace imports the canonical repository module, avoiding a second singleton URL in unbundled development. No markup or CSS changes were made in this follow-up.
+- Production build, JavaScript syntax checks and whitespace checks pass.
+- Offline recovery/synchronization and atomic retry-safe saves remain outstanding. Inspection confirms the current save chain spans separate database writes, encrypted-data functions and file uploads; it must not be described as transactional or automatically retried yet.

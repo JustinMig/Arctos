@@ -4,10 +4,12 @@ import { clientAgeBounds, makeClientSearch, clientSearchMarkup } from '../client
 
 const now = () => new Date('2026-09-11T17:00:00Z');
 function fakeDb(records = []) {
+  records = records.map(row => ({ status: 'active', ...row }));
   const calls = [], predicates = [];
   const q = {};
   for (const method of ['from', 'select', 'or', 'order']) q[method] = (...args) => { calls.push([method, ...args]); return q; };
   q.eq = (key, value) => { calls.push(['eq', key, value]); predicates.push(r => r[key] === value); return q; };
+  q.neq = (key, value) => { calls.push(['neq', key, value]); predicates.push(r => r[key] != null && r[key] !== value); return q; };
   q.contains = (key, values) => { calls.push(['contains', key, values]); predicates.push(r => values.every(v => (r[key] || []).includes(v))); return q; };
   for (const method of ['gte', 'lte']) q[method] = (key, value) => {
     calls.push([method, key, value]);
@@ -71,6 +73,19 @@ test('65+ includes clients turning 65 today and all older DOBs, not tomorrow or 
   assert.deepEqual(result.rows.map(r => r.id), ['older', 'last-year', 'jan1', 'birthday-today']);
   assert.ok(!f.calls.some(c => c[0] === 'contains' || c[0] === 'gte'));
 });
+test('ordinary and age searches exclude deceased clients while the archive returns them', async () => {
+  const rows = [
+    { id: 'active', status: 'active', date_of_birth: '1950-01-01' },
+    { id: 'deceased', status: 'deceased', date_of_birth: '1950-01-01' },
+    { id: 'null-status', status: null, date_of_birth: '1950-01-01' }
+  ];
+  for (const product of ['', '65plus']) {
+    const result = await makeClientSearch(fakeDb(rows).db, { now })({ product });
+    assert.deepEqual(result.rows.map(row => row.id), ['active']);
+  }
+  const archive = await makeClientSearch(fakeDb(rows).db, { now })({ product: 'deceased' });
+  assert.deepEqual(archive.rows.map(row => row.id), ['deceased']);
+});
 test('age filtering keeps query, current-user scope, sorting and pagination', async () => {
   const f = fakeDb();
   await makeClientSearch(f.db, { now })({ product: 't65', query: 'Lee', agent: 'agent-a', sortBy: 'county', sortDirection: 'desc', cursor: '50' });
@@ -111,7 +126,8 @@ test('both age options fit the existing dropdown without adding another search b
   assert.match(form, /<option value="t65" selected>T65<\/option>/);
   assert.match(form, /<option value="65plus">65\+<\/option>/);
   assert.doesNotMatch(form, /birthYear|Birth Year|YYYY|data-turn65/);
-  assert.match(html, /value="deceased"/);
+  assert.match(html, /id="deceased-client-archive"/);
+  assert.doesNotMatch(form, /value="deceased"/);
   assert.match(html, /value="medicare"/);
 });
 test('65+ selection and the existing state/county/date sorting survive rendering', () => {

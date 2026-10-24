@@ -4,7 +4,7 @@ import { makeClientSearch, clientSearchOrders, normalizeClientSort, clientAddedD
 function fakeDb(data = [], error = null) {
   const calls = [];
   const q = {};
-  for (const method of ['from','select','or','eq','contains','gte','lte','order']) q[method] = (...args) => { calls.push([method,...args]); return q; };
+  for (const method of ['from','select','or','eq','neq','contains','gte','lte','order']) q[method] = (...args) => { calls.push([method,...args]); return q; };
   q.range = async (...args) => { calls.push(['range',...args]); return { data, error }; };
   return { db:q, calls };
 }
@@ -54,6 +54,7 @@ test('search paginates on the server with a 50-row maximum and all detail column
   assert.equal(out.rows.length,50); assert.equal(out.nextCursor,'50');
   assert.deepEqual(f.calls.at(-1),['range',0,50]);
   assert.equal(f.calls[0][1],'client_search_results');
+  assert.ok(f.calls.some(x=>x[0]==='neq'&&x[1]==='status'&&x[2]==='deceased'));
   const columns=f.calls.find(x=>x[0]==='select')[1];
   for(const c of ['county','state','status','created_at','products','phone']) assert.ok(columns.split(',').includes(c));
   assert.equal(f.calls.filter(x=>x[0]==='order')[0][1],'county_sort');

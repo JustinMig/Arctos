@@ -16,7 +16,7 @@ test('client sections are nested in the information dialog', () => {
 test('client records expose only four main tabs while retaining all eight original data panels', () => {
   const markup = clientForm(true);
   for(const label of ['Overview','Coverage','Medical','Notes & Files']){
-    assert.ok(markup.includes('>'+label+'</button>'),label+' main tab exists');
+    assert.ok(markup.includes('>'+esc(label)+'</button>'),label+' main tab exists');
   }
   assert.equal((markup.match(/data-client-group-tab="/g)||[]).length,4);
   assert.equal((markup.match(/data-client-group-panel="/g)||[]).length,4);
@@ -30,7 +30,8 @@ test('client records expose only four main tabs while retaining all eight origin
   assert.match(markup,/data-client-category="retirement"/);
   assert.match(markup,/data-client-category="doctors"/);
   assert.match(markup,/data-client-category="medications"/);
-  assert.match(markup,/data-client-jump="notes"/);
+  assert.match(markup,/data-client-glance-note-section/);
+  assert.match(markup,/data-client-group-tab="files"/);
 });
 
 test('Documents is merged into Notes Extras', () => {
@@ -100,7 +101,7 @@ test('Arctos groups the sidebar into five primary destinations plus More while p
   assert.match(markup, /data-nav-toggle="work"/);
   assert.match(markup, /data-nav-toggle="more"/);
   assert.doesNotMatch(markup, /href="#\/medicare-intake"/);
-  assert.match(markup, /href="#\/ma-plans"/);
+  assert.doesNotMatch(markup, /href="#\/ma-plans"/);
   assert.match(markup, /href="#\/campaigns"/);
   assert.match(markup, /href="#\/work"/);
   assert.match(markup, /href="#\/carriers"/);
@@ -110,7 +111,7 @@ test('Arctos groups the sidebar into five primary destinations plus More while p
     assert.match(markup, new RegExp('data-tool="' + tool + '"'));
   }
   assert.doesNotMatch(markup, /href="#\/settings"/);
-  const plans = shell('ma-plans', true, '');
+  const plans = shell('athena-medicare', true, '');
   assert.match(plans, /class="nav-primary active" href="#\/athena-medicare"/);
   assert.match(plans, /id="nav-children-medicare"><a/);
   const carriers = shell('carriers', true, '');
@@ -121,7 +122,7 @@ test('Arctos groups the sidebar into five primary destinations plus More while p
 test('Settings is hidden from CRM navigation without removing other pages', () => {
   const markup = shell('dashboard', true, '<div>Dashboard</div>');
   assert.doesNotMatch(markup, /<a href="#\/settings"/);
-  for (const route of ['dashboard', 'clients', 'athena-medicare', 'ma-plans', 'campaigns', 'communications']) {
+  for (const route of ['dashboard', 'clients', 'athena-medicare', 'campaigns', 'communications']) {
     assert.ok(markup.includes('href="#/' + route + '"'), route + ' should stay visible');
   }
   // Keep the old route available to existing direct links; this is a UI-only hide.
