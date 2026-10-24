@@ -52,6 +52,17 @@ test('protected edits still use encrypted endpoints, and failed writes remain re
   assert.equal(f.db.client_doctors[0].phone,'555-RETRY');assert.equal(f.vault.sensitive.ssn,'UPDATED-SSN');assert.equal(f.vault.banking.account_number,'123456789');
  }finally{f.close();}
 });
+test('a medical row removed in another session cannot silently pass as saved',async()=>{
+ const f=await clientFixture();try{
+  f.fill('doctor_0_phone','UNSAVED-EDIT');
+  f.db.client_doctors.splice(0,1);
+  const remaining=structuredClone(f.db.client_doctors);
+  await assert.rejects(f.save(),/medical record changed or is no longer available/);
+  assert.equal(f.form.elements.namedItem('doctor_0_phone').value,'UNSAVED-EDIT');
+  assert.deepEqual(f.db.client_doctors,remaining);
+  assert.equal(f.requests.filter(r=>r.table==='client_doctors'&&r.action==='delete').length,0);
+ }finally{f.close();}
+});
 test('successive saves retain new row IDs, remove deleted cards, and keep protected values out of returned client events',async()=>{
  const f=await clientFixture();try{
   f.form.querySelector('[data-add-health-record=doctors]').click();f.fill('doctor_2_doctor_name','New Synthetic Doctor');

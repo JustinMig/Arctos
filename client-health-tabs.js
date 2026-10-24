@@ -176,7 +176,8 @@ async function syncTable(table, clientId, rows, mapper, previous) {
     if (row.id) {
       const { data, error } = await supabase.from(table).update(payload).eq('id',row.id).eq('client_id',clientId).select('*').maybeSingle();
       if (error) throw error;
-      if (data?.id) { keep.push(data.id); savedRows.push(data); }
+      if (!data?.id) throw new Error('A medical record changed or is no longer available. Your edits remain open. Reopen the client to review the latest information before retrying.');
+      keep.push(data.id); savedRows.push(data);
     } else {
       const { data, error } = await supabase.from(table).insert(payload).select('*').single();
       if (error) throw error;
