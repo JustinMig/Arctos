@@ -1,4 +1,5 @@
 import { observeClientDialogs } from './client-dialog-observer.js';
+import { openAppleFile } from './external-file-opening.js';
 import {mhRepository,supabase} from './supabase-repository.js';
 import {FILE_GROUPS,fileGroup,fileCategoryLabel,fileIndex,fileGroupCounts} from './client-files-hub-model.js';
 
@@ -56,6 +57,7 @@ function markup(){
   '</section>';
 }
 function openFileModal(record,url){
+ if(openAppleFile({url,fileName:record.file_name||'Document',mimeType:record.mime_type||''}))return;
  const mime=String(record.mime_type||'').toLowerCase();
  const isImage=['image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(mime);
  const isPdf=mime==='application/pdf';

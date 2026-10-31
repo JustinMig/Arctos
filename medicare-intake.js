@@ -1,3 +1,4 @@
+import { openAppleFile } from './external-file-opening.js';
 import { supabase } from './supabase-client.js';
 import { esc, dateISO, dateText } from './core.js';
 
@@ -587,7 +588,7 @@ export function createMedicareIntakeFeature() {
     if (target.matches('[data-mi-view]')) {
       const f = uploaded.find(x => x.id === target.dataset.miView);
       if (f) void supabase.storage.from(BUCKET).createSignedUrl(f.storage_path,90)
-        .then(({data,error}) => {if(error) throw error;window.open(data.signedUrl,'_blank','noopener,noreferrer');})
+        .then(({data,error}) => {if(error) throw error;if(openAppleFile({url:data.signedUrl,fileName:f.file_name||'Document',mimeType:f.mime_type||''}))return;window.open(data.signedUrl,'_blank','noopener,noreferrer');})
         .catch(err => setStatus('Could not open the photo: ' + err.message,true));
       return;
     }

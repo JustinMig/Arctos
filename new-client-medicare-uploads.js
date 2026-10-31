@@ -1,3 +1,4 @@
+import { openAppleFile } from './external-file-opening.js';
 import { mhRepository, supabase } from './supabase-repository.js';
 
 const BUCKET = 'mh-client-documents';
@@ -149,6 +150,7 @@ function bindFileBox(dialog, group, { key, category, label, description, markerA
     const item = state.files.get(key);
     if (!item?.file) return;
     const url = URL.createObjectURL(item.file);
+    if(openAppleFile({url,fileName:item.file.name,mimeType:item.file.type,revokeOnClose:true}))return;
     window.open(url, '_blank', 'noopener,noreferrer');
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   });

@@ -1,4 +1,5 @@
 import { supabase } from './supabase-repository.js';
+import { setBrowserLink } from './external-file-opening.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const route = () => location.hash.replace(/^#\/?/, '').split('?')[0] || 'dashboard';
@@ -150,6 +151,7 @@ export function installCarrierVault(root) {
             <button type="button" class="btn danger" data-delete>Delete</button>
             <div class="carrier-dialog-actions">
               <a class="btn secondary${href ? '' : ' disabled'}" data-dialog-site href="${esc(href || '#')}" target="_blank" rel="noopener noreferrer" aria-disabled="${String(!href)}">Go to Site ↗</a>
+              <a class="btn secondary" data-dialog-browser hidden>Open in Browser ↗</a>
               <button type="button" class="btn secondary" data-close>Close</button>
               <button type="submit" class="btn primary">Save Changes</button>
             </div>
@@ -162,6 +164,7 @@ export function installCarrierVault(root) {
       const submit = form.querySelector('button[type="submit"]');
       const deleteButton = dialog.querySelector('[data-delete]');
       const siteLink = dialog.querySelector('[data-dialog-site]');
+      const browserLink = dialog.querySelector('[data-dialog-browser]');
 
       const setEditMessage = (text = '', error = false) => {
         message.textContent = text;
@@ -169,9 +172,12 @@ export function installCarrierVault(root) {
       };
       const updateSiteLink = () => {
         const nextHref = normalizeUrl(form.elements.site_url.value);
-        siteLink.href = nextHref || '#';
-        siteLink.classList.toggle('disabled', !nextHref);
-        siteLink.setAttribute('aria-disabled', String(!nextHref));
+        const destination = setBrowserLink(siteLink, nextHref, { preferSafari: true });
+        siteLink.textContent = destination?.safari ? 'Open in Safari ↗' : 'Go to Site ↗';
+        setBrowserLink(browserLink, nextHref);
+        browserLink.hidden = !destination?.safari;
+        siteLink.classList.toggle('disabled', !destination);
+        siteLink.setAttribute('aria-disabled', String(!destination));
       };
       const close = () => dialog.close();
 
@@ -179,7 +185,9 @@ export function installCarrierVault(root) {
       dialog.addEventListener('cancel', e => { e.preventDefault(); close(); });
       dialog.addEventListener('close', () => { dialog.remove(); select.value = ''; }, { once: true });
       form.elements.site_url.addEventListener('input', updateSiteLink);
-      siteLink.addEventListener('click', e => { if (!normalizeUrl(form.elements.site_url.value)) e.preventDefault(); });
+      siteLink.addEventListener('click', e => { if (siteLink.getAttribute('aria-disabled') === 'true') e.preventDefault(); });
+      browserLink.addEventListener('click', e => { if (siteLink.getAttribute('aria-disabled') === 'true') e.preventDefault(); });
+      updateSiteLink();
 
       dialog.querySelector('[data-edit-show-password]').addEventListener('click', e => {
         const input = form.elements.login_password;

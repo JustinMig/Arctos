@@ -154,6 +154,30 @@
   font-size: 18px;
 }
 
+.mh-file-external-dialog {
+  width: min(640px, calc(100vw - 24px));
+  height: min(440px, calc(100dvh - 24px));
+}
+
+.mh-file-browser-open {
+  display: grid;
+  justify-items: stretch;
+  gap: 14px;
+  width: min(100%, 460px);
+  padding: 24px;
+  box-sizing: border-box;
+  color: #334155;
+  text-align: center;
+}
+
+.mh-file-browser-open strong { color: #102a43; font-size: 20px; }
+.mh-file-browser-open p { margin: 0; line-height: 1.5; }
+.mh-file-browser-open .btn { min-height: 48px; white-space: normal; }
+.mh-file-browser-open small { line-height: 1.5; }
+.mh-file-browser-open [hidden] { display: none; }
+.mh-file-external-dialog .mh-file-preview-body { display: block; }
+.mh-file-browser-open { margin: auto; }
+
 @media (max-width: 700px) {
   .multi-file-row {
     align-items: stretch;

@@ -1,4 +1,5 @@
 import { mhRepository, supabase } from './supabase-repository.js';
+import { openAppleFile } from './external-file-opening.js';
 
 const BUCKET = 'mh-client-documents';
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -33,6 +34,7 @@ async function downloadInsideSite(url, fileName) {
 }
 
 function openPreview({ url, fileName = 'Document', mimeType = '', revokeOnClose = false }) {
+  if (openAppleFile({ url, fileName, mimeType, revokeOnClose })) return;
   const modal = document.createElement('dialog');
   modal.className = 'mh-file-preview-dialog';
   const image = String(mimeType).startsWith('image/');
@@ -183,7 +185,7 @@ function takeoverExistingCardHost(host) {
     const record = records.find(item => item.id === row.dataset.multiId);
     if (!record) return;
     if (event.target.closest('[data-multi-view]')) {
-      try { setStatus('Opening secure preview…'); await previewStored(record); setStatus('Preview opened inside the CRM.'); }
+      try { setStatus('Opening file…'); await previewStored(record); setStatus('File ready to view.'); }
       catch (error) { setStatus(error?.message || 'Unable to preview this file.',true); }
     }
     if (event.target.closest('[data-multi-remove]')) {

@@ -1,5 +1,6 @@
 import { Dialogs } from './dialogs.js';
 import { mhRepository, supabase } from './supabase-repository.js';
+import { openAppleFile } from './external-file-opening.js';
 import { sameRecordFields } from './record-changes.js';
 
 const BUCKET = 'mh-client-documents';
@@ -124,6 +125,7 @@ async function downloadFile(url, fileName) {
 }
 
 function previewFile({ url, fileName, mimeType, revoke = false }) {
+  if (openAppleFile({ url, fileName, mimeType, revokeOnClose: revoke })) return;
   const mime = String(mimeType || '');
   const image = mime.startsWith('image/');
   const inline = image || mime === 'application/pdf' || mime.startsWith('text/');

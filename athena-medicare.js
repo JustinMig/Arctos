@@ -1,3 +1,4 @@
+import { openAppleFile } from './external-file-opening.js';
 
 import { supabase } from './supabase-client.js';
 import { esc, dateISO, dateText } from './core.js';
@@ -946,6 +947,7 @@ export function createAthenaMedicareFeature() {
     if(!found)return;
     const {data,error}=await supabase.storage.from(BUCKET).createSignedUrl(found.storage_path,90);
     if(error){say('Could not open attachment: '+error.message,true);return;}
+    if(openAppleFile({url:data.signedUrl,fileName:found.file_name||'Attachment',mimeType:found.mime_type||''}))return;
     window.open(data.signedUrl,'_blank','noopener,noreferrer');
   }
   function onClick(event){

@@ -1,3 +1,4 @@
+import { openAppleFile } from './external-file-opening.js';
 import { observeClientDialogs } from './client-dialog-observer.js';
 import { mhRepository, supabase } from './supabase-repository.js';
 
@@ -57,6 +58,7 @@ async function removeOne(record){
 async function signedUrl(record){const {data,error}=await supabase.storage.from(BUCKET).createSignedUrl(record.storage_path,300);if(error)throw error;if(!data?.signedUrl)throw new Error('Unable to create a secure document link.');return data.signedUrl;}
 async function downloadFile(url,fileName){const response=await fetch(url);if(!response.ok)throw new Error('Unable to download this document.');const blob=await response.blob();const objectUrl=URL.createObjectURL(blob);const link=document.createElement('a');link.href=objectUrl;link.download=fileName||'document';link.hidden=true;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);}
 function preview(url,record,revoke=false){
+  if(openAppleFile({url,fileName:record.file_name||'Document',mimeType:record.mime_type||'',revokeOnClose:revoke}))return;
   const mime=String(record.mime_type||'');const image=mime.startsWith('image/');const inline=image||mime==='application/pdf'||mime.startsWith('text/');
   const modal=document.createElement('dialog');modal.className='mh-file-preview-dialog';
   modal.innerHTML=`<div class="mh-file-preview-frame"><header class="mh-file-preview-head"><div><h2>${esc(record.file_name||'Document')}</h2><p>Notes / Extras • secure in-site preview</p></div><div class="mh-file-preview-actions"><button type="button" class="btn secondary" data-extras-download>Download</button><button type="button" class="modal-close" data-extras-close aria-label="Close preview">×</button></div></header><div class="mh-file-preview-body">${image?`<img src="${esc(url)}" alt="${esc(record.file_name||'Document')}">`:inline?`<iframe src="${esc(url)}" title="${esc(record.file_name||'Document')}"></iframe>`:`<div class="mh-file-preview-unavailable"><strong>Preview is not available for this file type.</strong><span>You can download the file without leaving the CRM.</span></div>`}</div></div>`;

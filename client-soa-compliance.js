@@ -1,3 +1,4 @@
+import { openAppleFile } from './external-file-opening.js';
 import { mhRepository, supabase } from './supabase-repository.js';
 
 const BUCKET = 'mh-client-documents';
@@ -154,6 +155,7 @@ async function openStored(record) {
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(record.storage_path,90);
   if (error) throw error;
   if (!data?.signedUrl) throw new Error('Unable to create a secure SOA link.');
+  if(openAppleFile({url:data.signedUrl,fileName:record.file_name||'Document',mimeType:record.mime_type||''}))return;
   window.open(data.signedUrl,'_blank','noopener,noreferrer');
 }
 

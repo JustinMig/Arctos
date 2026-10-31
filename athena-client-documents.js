@@ -1,3 +1,4 @@
+import { openAppleFile } from './external-file-opening.js';
 import {supabase} from './supabase-repository.js';
 const BUCKET='mh-client-documents';
 const TYPES=[
@@ -40,7 +41,7 @@ export function bindAthenaDocuments(host,getClientId,ensureClient){
   const button=e.target.closest('[data-at-doc-open]');if(!button)return;
   const r=records.find(x=>x.id===button.dataset.atDocOpen);if(!r)return;
   const {data,error}=await supabase.storage.from(BUCKET).createSignedUrl(r.storage_path,90);
-  if(error){say('Could not open document: '+error.message);return;}window.open(data.signedUrl,'_blank','noopener,noreferrer');
+  if(error){say('Could not open document: '+error.message);return;}if(openAppleFile({url:data.signedUrl,fileName:r.file_name||'Document'}))return;window.open(data.signedUrl,'_blank','noopener,noreferrer');
  });
  panel.querySelector('[data-at-doc-upload]').addEventListener('click',async()=>{
   if(busy)return;
