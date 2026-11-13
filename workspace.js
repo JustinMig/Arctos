@@ -5,6 +5,8 @@ import { Dialogs } from './dialogs.js';
 import { calendarRefreshInterval } from './connection-policy.js';
 import { installClientRecovery } from './client-draft-recovery.js';
 import { ageFromBirthDate } from './client-age-utils.js?v=2026-10-23';
+import { medicareReviewYear, loadMedicareReviewClients } from './medicare-review-cycle.js';
+import { bindClientReviewCheckoff } from './client-review-checkoff.js';
 import { supabase } from './supabase-repository.js';
 import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, dateInput, select, textArea, clientForm, calendarMarkup, dailyDashboardMarkup } from './views.js?v=client-campaign-fix-1';
 
@@ -80,6 +82,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     search: { query: '', product: '', agent: '', sortBy: 'name', sortDirection: 'asc', applied: null, loading: false, rows: null, error: '', message: '', token: 0, cursor: null, nextCursor: null },
     archive: { open:false, rows:null, loading:false, error:'', message:'', nextCursor:null, token:0 },
     birthdays: { open:false, rows:[], loading:false, error:'', token:0, selectMode:false, month:'' },
+    reviews: { open:false, rows:[], loading:false, error:'', token:0, year:medicareReviewYear() },
     massText: { mode:false, selected:new Map() },
     destroyed: false
   };
@@ -140,6 +143,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       bindSearch();
       bindDeceasedArchive();
       bindBirthdayArchive();
+      bindMedicareReviewArchive();
       // Start client enhancements while the user is searching, before they open the editor.
       if (ensureClientFeatures) void ensureClientFeatures().catch(error => console.error('Client features unavailable:', error));
     }
@@ -382,6 +386,67 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       if(send)send.disabled=!state.massText.selected.size;
     });
   }
+  function bindMedicareReviewArchive() {
+    const searchArea=root.querySelector('#client-active-search');
+    const close=root.querySelector('[data-close-medicare-reviews]');
+    if(!searchArea||!close)return;
+    state.reviews.open=false;state.reviews.token++;
+    const show=open=>{
+      state.reviews.open=open;
+      searchArea.hidden=open;
+      const list=root.querySelector('#client-medicare-review-list');
+      if(list)list.hidden=!open;
+      const counter=root.querySelector('[data-open-medicare-reviews]');
+      counter?.setAttribute('aria-expanded',String(open));
+      counter?.classList.toggle('is-selected',open);
+      if(open)void loadMedicareReviews();
+      else state.reviews.token++;
+    };
+    searchArea.addEventListener('click',event=>{
+      if(event.target.closest('[data-open-medicare-reviews]'))show(true);
+    });
+    close.addEventListener('click',()=>{
+      show(false);root.querySelector('[data-open-medicare-reviews]')?.focus();
+    });
+  }
+  async function loadMedicareReviews() {
+    const r=state.reviews,token=++r.token,year=medicareReviewYear();
+    r.year=year;r.loading=true;r.error='';r.rows=[];
+    drawMedicareReviews();
+    try {
+      const rows=await loadMedicareReviewClients(supabase);
+      if(state.destroyed||state.route!=='clients'||!r.open||token!==r.token)return;
+      // Discard a response started before the September boundary.
+      if(year!==medicareReviewYear()){void loadMedicareReviews();return;}
+      r.rows=rows;
+    } catch(error) {
+      if(token===r.token)r.error=error?.message||'Medicare review clients could not load.';
+    } finally {
+      if(token===r.token){r.loading=false;drawMedicareReviews();}
+    }
+  }
+  function drawMedicareReviews() {
+    const r=state.reviews,host=root.querySelector('#client-medicare-review-results');
+    if(!host||!r.open)return;
+    const heading=root.querySelector('[data-medicare-review-heading]');
+    if(heading)heading.textContent=r.year+' Medicare Reviews';
+    host.setAttribute('aria-busy',String(r.loading));
+    if(r.loading){host.innerHTML='<p class="result-status">Loading reviewed clients…</p>';return;}
+    if(r.error){
+      host.innerHTML=`<p class="notice error" role="alert">${esc(r.error)}</p><button type="button" class="btn secondary" data-retry-medicare-reviews>Try Again</button>`;
+      host.querySelector('[data-retry-medicare-reviews]').onclick=()=>void loadMedicareReviews();return;
+    }
+    if(!r.rows.length){host.innerHTML=`<p class="result-status">No clients have the ${r.year} Medicare review checkbox checked.</p>`;return;}
+    host.innerHTML=`<p class="result-status">${r.rows.length} client${r.rows.length===1?'':'s'} with the ${r.year} Medicare review checkbox checked. Select a name to open their record.</p><div class="client-birthday-list">${r.rows.map(c=>{
+      const name=[c.first_name,c.last_name].filter(Boolean).join(' ')||'Client';
+      return `<div class="client-birthday-row"><button type="button" class="client-birthday-client" data-client-id="${esc(c.id)}"><span class="birthday-day" aria-hidden="true">✓</span><span class="birthday-client-name"><strong>${esc(name)}</strong><small>${esc(c.phone||'No phone saved')}</small></span><span class="birthday-arrow" aria-hidden="true">›</span></button></div>`;
+    }).join('')}</div>`;
+    host.querySelectorAll('[data-client-id]').forEach(node=>node.onclick=()=>openClient(node.dataset.clientId));
+  }
+  function reviewCheckoffChanged() {
+    window.dispatchEvent(new CustomEvent('mig:client-review-changed'));
+    if(state.route==='clients'&&state.reviews.open)void loadMedicareReviews();
+  }
   // Mass Text selection matches the Campaigns checkbox workflow and persists
   // across searches and pages. The server revalidates every selected client.
   function enhanceMassTextResults(host,rows=[]){
@@ -594,6 +659,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     }
     if (state.archive.open) void loadDeceasedClients(false);
     if (state.birthdays.open) void loadBirthdays();
+    if (state.reviews.open) void loadMedicareReviews();
   }
   function wireTabs(node) {
     const form=node.querySelector('form.client-form');
@@ -923,35 +989,10 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
           if (glanceNote.value !== clientNote.value) glanceNote.value = clientNote.value;
         });
       }
-      // Show Athena-completed reviews automatically; permit a separate manual checkoff.
-      const reviewCheck=form.querySelector('[data-client-review-manual]');
-      const reviewStatus=form.querySelector('[data-client-review-status]');
-      const reviewYear=new Date().getFullYear();
-      if(loaded.id && reviewCheck && reviewStatus){
-        void (async()=>{
-          const [automatic,manual]=await Promise.all([
-            supabase.from('athena_medicare_reviews').select('review_date,updated_at').eq('client_id',loaded.id).eq('workflow_status','completed').order('updated_at',{ascending:false}).limit(20),
-            supabase.from('client_review_manual').select('completed').eq('client_id',loaded.id).eq('review_year',reviewYear).maybeSingle()
-          ]);
-          if(!form.isConnected)return;
-          reviewCheck.checked=manual.data?.completed===true;
-          const dates=(automatic.data||[]).map(x=>x.review_date||x.updated_at?.slice(0,10)).filter(Boolean);
-          const latest=dates[0];
-          reviewStatus.textContent=(latest?'✓ Athena review complete: '+latest+' · ':'')+(reviewCheck.checked?'✓ Marked complete manually':(!latest?'No completed reviews recorded':''));
-          if(automatic.error||manual.error)reviewStatus.textContent='Could not load all review records.';
-        })().catch(error=>{if(form.isConnected)reviewStatus.textContent=error.message||'Could not load review status.';});
-        reviewCheck.addEventListener('change',async()=>{
-          reviewCheck.disabled=true;reviewStatus.textContent='Saving review checkoff…';
-          const {data:{user},error:authError}=await supabase.auth.getUser();
-          const result=authError?{error:authError}:await supabase.from('client_review_manual').upsert({
-            client_id:loaded.id,review_year:reviewYear,completed:reviewCheck.checked,
-            completed_at:reviewCheck.checked?new Date().toISOString():null,updated_by:user?.id
-          },{onConflict:'client_id,review_year'});
-          reviewCheck.disabled=false;
-          if(result.error){reviewCheck.checked=!reviewCheck.checked;reviewStatus.textContent='Could not save: '+result.error.message;}
-          else reviewStatus.textContent=reviewCheck.checked?'✓ '+reviewYear+' review marked complete manually':'Manual '+reviewYear+' checkoff cleared.';
-        });
-      }else if(reviewCheck){reviewCheck.disabled=true;if(reviewStatus)reviewStatus.textContent='Save the client before marking reviews.';}
+      const stopReviewCheckoff=bindClientReviewCheckoff({
+        form,clientId:loaded.id,database:supabase,onChange:reviewCheckoffChanged
+      });
+      d.node.addEventListener('close',stopReviewCheckoff,{once:true});
       // A one-click Medicare review from an existing client. Preserve the
       // unsaved-change confirmation before leaving, then hand off only the
       // client UUID (never personal data) to Athena for authorized lookup.
@@ -1862,6 +1903,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   };
   const birthdayMonthPoll=setInterval(refreshBirthdayMonth,60_000);
   document.addEventListener('visibilitychange',refreshBirthdayMonth);
+  const refreshReviewCycle=()=>{
+    if(state.destroyed||state.route!=='clients'||!state.reviews.open)return;
+    if(state.reviews.year!==medicareReviewYear())void loadMedicareReviews();
+  };
+  const reviewCyclePoll=setInterval(refreshReviewCycle,60_000);
+  document.addEventListener('visibilitychange',refreshReviewCycle);
   changeRoute();
   return { destroy() {
     state.destroyed = true;
@@ -1875,6 +1922,8 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     window.removeEventListener('keydown', escapeMenu);
     clearInterval(calendarPoll);
     clearInterval(birthdayMonthPoll);
+    clearInterval(reviewCyclePoll);
+    document.removeEventListener('visibilitychange',refreshReviewCycle);
     document.removeEventListener('visibilitychange',refreshBirthdayMonth);
     window.removeEventListener('mig:calendar-refresh-request', refreshVisibleCalendar);
     window.removeEventListener('mig:calendar-refreshed', applyCalendarRefresh);

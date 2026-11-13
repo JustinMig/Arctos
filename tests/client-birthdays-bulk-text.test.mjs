@@ -6,12 +6,12 @@ const ws=read('workspace.js'),summary=read('client-summary-commissions.js');
 const search=read('client-search.js'),bulk=read('api/twilio-bulk.js');
 const style=read('client-summary-commissions.css');
 
-test('Birthdays are a fifth clickable card directly beside Deceased Clients',()=>{
+test('Birthdays remain the fifth clickable card directly beside Deceased Clients',()=>{
  assert.match(summary,/statCard\('deceased','Deceased Clients'\),statCard\('birthdays','Birthdays'\)/);
  assert.match(summary,/data-open-birthdays/);
  assert.match(summary,/client_birthdays_this_month/);
  assert.match(summary,/timeZone:'America\/Chicago'/);
- assert.match(style,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+ assert.match(style,/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
 });
 test('Birthday list is live current-month and excludes deceased clients',()=>{
  assert.match(search,/id="client-birthday-list"/);

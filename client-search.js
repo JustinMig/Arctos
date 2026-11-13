@@ -115,6 +115,13 @@ export function clientSearchMarkup(s) {
     </header>
     <div class="client-birthday-tools"><button type="button" class="btn secondary" data-birthday-select>Choose Birthday Clients for Text</button><button type="button" class="btn primary" data-birthday-send hidden>Mass Text Selected (<span data-birthday-selected>0</span>)</button></div>
     <div id="client-birthday-results" aria-live="polite"></div>
+  </section>
+  <section id="client-medicare-review-list" class="client-birthday-archive client-medicare-review-archive" aria-label="Completed Medicare reviews" hidden>
+    <header class="client-deceased-head"><div><h2 data-medicare-review-heading>Medicare Reviews</h2>
+      <p>Clients with the Medicare review checkbox checked on their Overview. The list and checkboxes start fresh each September 1.</p></div>
+      <button type="button" class="btn secondary" data-close-medicare-reviews>← Back to Client Search</button>
+    </header>
+    <div id="client-medicare-review-results" aria-live="polite"></div>
   </section>`;
 }
 export function clientSortDirectionOptions(sortBy, sortDirection) {

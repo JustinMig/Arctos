@@ -47,8 +47,12 @@
   .client-summary-grid .client-summary-card strong{font-size:.92rem}
 }
 
-/* Five small client counters; birthday list sits directly after Deceased. */
-.client-summary-grid{grid-template-columns:repeat(5,minmax(0,1fr));max-width:1040px}
+/* Six compact client counters; completed reviews sit beside Birthdays. */
+.client-summary-grid{grid-template-columns:repeat(6,minmax(0,1fr));max-width:1160px}
+.client-summary-grid .client-summary-card.is-reviews{cursor:pointer;font:inherit;background:#edf5f1;border-color:#c2d9cd;color:#26513c}
+.client-summary-grid .client-summary-card.is-reviews .client-summary-icon{background:#d7e9df;color:#487b60}
+.client-summary-grid .client-summary-card.is-reviews:hover{background:#e1eee7;border-color:#739c85}
+.client-summary-grid .client-summary-card.is-reviews:focus-visible{outline:3px solid #6791ad;outline-offset:2px}
 .client-summary-grid .client-summary-card.is-birthdays{
  cursor:pointer;font:inherit;background:#fff6e9;border:1px solid #ecd8b2;color:#665037;
 }
