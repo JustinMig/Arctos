@@ -18,7 +18,7 @@ test('Personal and Contact intake uses the requested distinct groups', () => {
 test('requested fields are assigned to their matching groups', () => {
   for (const field of [
     'first_name','last_name','date_of_birth','gender','email','phone',
-    'address','city','county','state','zip','ssn','assigned_agent_id','spouse'
+    'address','city','county','state','zip','ssn','state_born_in','assigned_agent_id','spouse'
   ]) assert.match(source, new RegExp(`['\"]${field}['\"]`));
 });
 
@@ -33,8 +33,8 @@ test('unknown injected client fields are preserved instead of discarded', () => 
   assert.match(source, /leftovers/);
 });
 
-test('Social Security stays with DOB/Gender while Driver License identification remains separate', () => {
-  assert.match(source, /title:\s*'Date of Birth & Gender',\s*fields:\s*\['date_of_birth',\s*'gender',\s*'ssn'\]/);
+test('Social Security and state of birth stay with DOB/Gender while Driver License remains separate', () => {
+  assert.match(source, /title:\s*'Date of Birth & Gender',\s*fields:\s*\['date_of_birth',\s*'gender',\s*'ssn',\s*'state_born_in'\]/);
   assert.match(source, /ssnField\.classList\.add\('span-all'\)/);
   assert.match(source, /Driver’s License Identification/);
 });
