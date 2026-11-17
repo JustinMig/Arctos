@@ -3,7 +3,7 @@ import { supabase } from './supabase-client.js';
 
 const GROUPS = [
   { key: 'name', title: 'Client Name', fields: ['first_name', 'last_name'] },
-  { key: 'demographics', title: 'Date of Birth & Gender', fields: ['date_of_birth', 'gender', 'ssn'] },
+  { key: 'demographics', title: 'Date of Birth & Gender', fields: ['date_of_birth', 'gender', 'ssn', 'state_born_in'] },
   { key: 'contact', title: 'Email & Phone', fields: ['email', 'phone'] },
   // Desktop row: City → State → ZIP → County. Street address remains above it.
   { key: 'address', title: 'Address', fields: ['address', 'city', 'state', 'zip', 'county'] },
@@ -226,6 +226,8 @@ function organizePersonalContact(form) {
   if (demographics && ssnField) {
     ssnField.classList.add('span-all');
     demographics.append(ssnField);
+    const birthplaceField = fieldFor(form, 'state_born_in');
+    if (birthplaceField) demographics.append(birthplaceField);
   }
 
   const identification = informationPanel.querySelectorAll('details.field-group')[1];

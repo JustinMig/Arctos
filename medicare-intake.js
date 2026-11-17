@@ -1,6 +1,7 @@
 import { openAppleFile } from './external-file-opening.js';
 import { supabase } from './supabase-client.js';
 import { esc, dateISO, dateText } from './core.js';
+import { STATE_BORN_IN_OPTIONS } from './us-states.js';
 
 // Saved form JSON intentionally excludes SSNs, Medicare/Medicaid IDs and payment credentials.
 // Those are read and written exclusively via the CRM's existing encrypted Edge Functions.
@@ -9,7 +10,7 @@ const CATEGORY = 'medicare_intake_pharmacy';
 const LIMIT = 25 * 1024 * 1024;
 const ACCEPTED = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf']);
 const SIMPLE = [
-  'first_name','last_name','dob','phone','address','city','state','zip','county','gender','veteran',
+  'first_name','last_name','dob','phone','address','city','state','zip','county','gender','veteran','state_born_in',
   'current_plan','current_year','current_member','part_a','part_b','has_medicaid','medicaid_level',
   'soa_signed','soa_reason','new_plan','new_plan_id','new_start','dental','vision','otc','pcp_copay',
   'specialist_copay','hearing','transportation','food_utilities','hospital_cost_day','hospital_days',
@@ -93,7 +94,8 @@ function formHTML(savedIntake = null) {
       input('address','Street Address',true) + input('city','City') + input('state','State',false,'maxlength="2" placeholder="MS"') +
       input('zip','ZIP Code',false,'inputmode="numeric" maxlength="10"') + input('county','County') +
       choice('gender','Sex',[['male','Male'],['female','Female']]) + yesNo('veteran','Veteran') +
-      secret('ssn','Social Security Number','inputmode="numeric" maxlength="11" placeholder="XXX-XX-XXXX"')) +
+      secret('ssn','Social Security Number','inputmode="numeric" maxlength="11" placeholder="XXX-XX-XXXX"') +
+      choice('state_born_in','State Born In',STATE_BORN_IN_OPTIONS.slice(1),true)) +
     block(2,'Current Medicare Plan',input('current_plan','Current Plan Name',true) +
       input('current_year','Plan Year',false,'inputmode="numeric" maxlength="4"') + input('current_member','Member ID')) +
     block(3,'Medicare Information',secret('medicare_number','Medicare Number','maxlength="25"') +
@@ -346,7 +348,8 @@ export function createMedicareIntakeFeature() {
         first_name:value.first_name,last_name:value.last_name,phone:value.phone || null,
         date_of_birth:value.dob || null, address1:value.address || null,city:value.city || null,
         state:value.state || null,zip_code:value.zip || null,county:value.county || null,
-        gender:value.gender || null, veteran: value.veteran ? value.veteran === 'yes' : null
+        gender:value.gender || null, state_born_in:value.state_born_in || null,
+        veteran: value.veteran ? value.veteran === 'yes' : null
       };
       let createdClient = false;
       if (!row?.client_id && isSkipped(1) && linkedClient) {

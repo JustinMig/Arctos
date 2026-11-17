@@ -1,4 +1,5 @@
 import { NAV, CLIENT_TABS, esc, isoDate, monthDays, todayKey, longDate, timeLabel } from './core.js';
+import { STATE_BORN_IN_OPTIONS } from './us-states.js';
 
 const paths = {
   appointments: '<rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M8 3.5v4M16 3.5v4M4 9.5h16M8 13h3M13 13h3M8 16.5h3M13 16.5h3"/>',
@@ -41,6 +42,7 @@ export function clientForm(connected, agents = []) {
     `<fieldset class="product-choices span-all"><legend>Products</legend>${['medicare', 'life', 'retirement'].map(p => `<label><input type="checkbox" name="product_${p}"> ${p[0].toUpperCase() + p.slice(1)}</label>`).join('')}</fieldset>`;
   const identity = (!connected ? '<p class="subtle span-all">Sensitive identifiers stay disabled until authentication and secure storage are connected.</p>' : '') +
     input('ssn', 'Social Security Number', { type: 'password', disabled: sensitive, extra: 'autocomplete="new-password"' }) +
+    select('state_born_in', 'State Born In', STATE_BORN_IN_OPTIONS) +
     input('license_number', 'Driver’s License Number', { disabled: sensitive }) + dateInput('license_expiration', 'License Expiration') + input('license_state', 'License State');
   const medicare = input('medicare_number', 'Medicare Number', { disabled: sensitive }) + dateInput('part_a_date', 'Part A Date') + dateInput('part_b_date', 'Part B Date');
   const medicaid = input('medicaid_number', 'Medicaid Number', { disabled: sensitive }) +
