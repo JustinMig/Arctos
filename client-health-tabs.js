@@ -98,9 +98,12 @@ function panelMarkup(kind, rows, sectionNotes = '') {
   };
   const c = configs[kind], list = rows || [];
   const addButton = `<button type="button" class="btn primary" data-add-health-record="${kind}">${c.add}</button>`;
-  const topButton = kind === 'medications' ? '' : addButton;
-  const bottomButton = kind === 'medications' ? `<div class="health-tab-bottom-actions">${addButton}</div>` : '';
-  const emptyCopy = kind === 'medications'
+  const addAtBottom = kind === 'doctors' || kind === 'medications';
+  const topButton = addAtBottom ? '' : addButton;
+  const bottomButton = addAtBottom ? `<div class="health-tab-bottom-actions">${addButton}</div>` : '';
+  const emptyCopy = kind === 'doctors'
+    ? 'No doctors saved yet. Use the Add Doctor button below.'
+    : kind === 'medications'
     ? 'No medications saved yet. Use the Add Medication button below.'
     : `No ${kind === 'hospital_indemnity' ? 'hospital indemnity plans' : kind} saved yet. Use the Add button above.`;
   return `<div class="health-tab-toolbar"><div><h3>${c.title}</h3><p>${c.copy}</p></div>${topButton}</div>
@@ -136,7 +139,7 @@ function bind(form) {
       const markup = kind === 'doctors' ? doctorMarkup({}, index) : kind === 'medications' ? medicationMarkup({}, index) : indemnityMarkup({}, index);
       list.insertAdjacentHTML('beforeend', markup);
       const newCard = list.lastElementChild; newCard.open = true; refreshEmpty(panel, kind);
-      form.dispatchEvent(new Event('input',{bubbles:true})); newCard.querySelector('input,select,textarea')?.focus(); return;
+      form.dispatchEvent(new Event('input',{bubbles:true})); newCard.querySelector('input:not([type="hidden"]),select,textarea')?.focus(); return;
     }
     const remove = event.target.closest?.('[data-remove-health-record]');
     if (remove) {
