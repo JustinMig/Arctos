@@ -311,6 +311,12 @@ label.btn:has(> input[data-multi-camera]) {
 }
 
 /* Height & Weight: show additional product / age selector only when relevant. */
+.workspace-dialog.build-dialog .build-age-calculator{margin-bottom:14px}
+.workspace-dialog.build-dialog .build-age-calculator .field{font-size:1rem}
+.workspace-dialog.build-dialog .build-age-result{display:grid;align-content:start;gap:6px;min-width:0}
+.workspace-dialog.build-dialog .build-age-result>span{font-size:1rem;font-weight:700;color:#405568}
+.workspace-dialog.build-dialog .build-age-result output{display:block;min-height:44px;padding:10px 11px;border:1px solid #9bafbd;border-radius:10px;background:#f1f6f9;color:#172f40;font-size:1rem;font-weight:800}
+.workspace-dialog.build-dialog [data-build-age-message]{margin:10px 0 0;font-size:.875rem}
 .workspace-dialog.build-dialog .form-grid > label.field[hidden]{display:none!important}
 .workspace-dialog.build-dialog [data-build-result] .contact-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px}
 .workspace-dialog.build-dialog [data-build-result] .contact-grid section{border:1px solid #9bafbd;border-radius:9px;background:#f8fbfd;padding:11px;color:#1b3243}

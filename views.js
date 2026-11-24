@@ -13,7 +13,7 @@ export const TOOLS = Object.freeze([
   ['appointments', 'Appointments', 'Appt', 'Set an appointment'],
   ['notes', 'Notes', 'Notes', 'Open dashboard notes'],
   ['contacts', 'Contacts', 'Contacts', 'Find company contacts'],
-  ['build', 'Height & Weight', 'H&W', 'Open height and weight underwriting lookup'],
+  ['build', 'H&W - Age', 'H&W - Age', 'Open height and weight lookup and age calculator'],
   ['commissions', 'Commissions', 'Comm', 'Open life and Medicare commissions']
 ]);
 export const icon = (key, large = false) => `<span class="tool-icon tool-${key}${large ? ' large' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true">${paths[key] || paths.client}</svg></span>`;

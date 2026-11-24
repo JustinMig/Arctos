@@ -1,4 +1,4 @@
-import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, isoDate, monthDays, longDate, timeLabel, sortAppointmentsByStartTime, hydrate, serializable } from './core.js';
+import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, dateISO, isoDate, monthDays, longDate, timeLabel, sortAppointmentsByStartTime, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js?v=birthday-bulk-text-1';
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
@@ -1691,8 +1691,16 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     void searchDirectory();
   }
   function openBuild() {
-    const d = dialogs.open({ title: 'Height & Weight', hint: 'Product-specific carrier underwriting lookup', icon: icon('build', true), kind: 'build-dialog',
-      body: `<div class="panel-card"><div class="panel-heading"><div><h3>Height &amp; Weight Underwriting Lookup</h3><p class="subtle">Select the carrier, then its product and applicable age group where needed. All weight values are pounds.</p></div><button type="button" class="btn secondary" data-build-reset>Reset</button></div>
+    const d = dialogs.open({ title: 'H&W - Age', hint: 'Height and weight lookup and date-of-birth age calculator', icon: icon('build', true), kind: 'build-dialog',
+      body: `<section class="panel-card build-age-calculator" aria-label="Age calculator">
+        <div class="panel-heading"><h3>Age Calculator</h3><button type="button" class="btn secondary" data-build-age-clear>Clear</button></div>
+        <div class="form-grid">
+          ${dateInput('age_date_of_birth','Date of Birth')}
+          <div class="build-age-result"><span>Current Age</span><output data-build-age-result aria-label="Current age" aria-live="polite" aria-atomic="true">—</output></div>
+        </div>
+        <p class="subtle" data-build-age-message>Enter a date of birth to calculate age automatically.</p>
+      </section>
+      <div class="panel-card"><div class="panel-heading"><div><h3>Height &amp; Weight Underwriting Lookup</h3><p class="subtle">Select the carrier, then its product and applicable age group where needed. All weight values are pounds.</p></div><button type="button" class="btn secondary" data-build-reset>Reset</button></div>
         <div class="form-grid">
           ${select('company','Company',[['','Loading charts…']],true)}
           ${select('plan','American Amicable Product',[['','Choose American Amicable first']],true)}
@@ -1701,6 +1709,29 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         </div>
         <div data-build-result aria-live="polite">${empty('Loading underwriting chart references…')}</div>
         <p class="subtle">Reference only. Product-specific guides may vary by state or underwriting revision. Weight limits alone never guarantee approval; confirm eligibility with the carrier.</p></div>` });
+    const ageDob=d.node.querySelector('[name="age_date_of_birth"]'),
+      ageResult=d.node.querySelector('[data-build-age-result]'),
+      ageMessage=d.node.querySelector('[data-build-age-message]');
+    const updateAge=()=>{
+      const value=ageDob.value.trim();
+      const age=ageFromBirthDate(dateISO(value)||value);
+      const invalid=!!value&&age===null;
+      ageResult.textContent=age===null?'—':`${age} ${age===1?'year':'years'} old`;
+      ageMessage.textContent=invalid?'Enter a valid date of birth that is today or earlier.':
+        age===null?'Enter a date of birth to calculate age automatically.':
+        `Age as of ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}.`;
+      ageDob.setCustomValidity(invalid?ageMessage.textContent:'');
+      ageDob.setAttribute('aria-invalid',String(invalid));
+    };
+    ageDob.addEventListener('input',updateAge);
+    ageDob.addEventListener('change',updateAge);
+    ageDob.addEventListener('blur',()=>{
+      const value=ageDob.value.trim();
+      const normalized=dateISO(value)||(parseISO(value)?value:null);
+      if(normalized)ageDob.value=dateText(normalized);
+      updateAge();
+    });
+    d.node.querySelector('[data-build-age-clear]').onclick=()=>{ageDob.value='';updateAge();ageDob.focus();};
     const company=d.node.querySelector('[name="company"]'),
       plan=d.node.querySelector('[name="plan"]'),
       ageGroup=d.node.querySelector('[name="ageGroup"]'),
