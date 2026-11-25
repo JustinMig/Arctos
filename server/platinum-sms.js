@@ -249,21 +249,33 @@ export async function syncRecentMessages(userId, user) {
   return { synced: await upsertTwilioMessages(records), skipped };
 }
 
-export async function sendClientSms(client, userId, messageBody) {
+export async function sendClientSms(client, userId, messageBody, {attachment=null,mediaUrl='',operationId=''}={}) {
   if (client?.assigned_agent_id !== ISAIAH_AGENT_ID) throw Object.assign(new Error('Client not found.'), { status: 404 });
   if (String(client.status || '').toLowerCase() === 'deceased') throw Object.assign(new Error('Deceased clients cannot be texted.'), { status: 400 });
   const stopped = await adminRest('/rest/v1/rpc/bulk_sms_opted_out_clients', { method: 'POST', body: { p_ids: [client.id] } });
   if (stopped?.some(row => row.client_id === client.id)) throw Object.assign(new Error('This client has opted out of texts.'), { status: 400 });
-  const body = String(messageBody || '').trim();
-  if (!body) throw new Error('Enter a message.');
-  if (body.length > 1500) throw new Error('Message is too long.');
+  const caption = String(messageBody || '').trim();
+  const body = attachment?.kind==='file' ? [caption,attachment.url].filter(Boolean).join('\n') : caption;
+  if (!body && !mediaUrl) throw new Error('Enter a message or attach a photo.');
+  if (caption.length > 1500) throw new Error('Message is too long.');
   const to = normalizeUsPhone(client?.phone || '');
   if (!to) throw new Error('This client does not have a valid U.S. mobile number.');
   const { accountSid, messagingServiceSid, officeNumber } = twilioConfig();
   const now = new Date().toISOString();
+  if(operationId){
+    if(!UUID.test(operationId))throw Object.assign(new Error('Invalid message identifier.'),{status:400});
+    const existing=await adminRest('/rest/v1/client_sms_messages?id=eq.'+operationId+'&select=id,client_id,user_id,body,text_attachment,status,twilio_message_sid&limit=1');
+    const prior=existing?.[0];
+    if(prior){
+      if(prior.client_id!==client.id || prior.body!==body || (prior.text_attachment?.id||'')!==(attachment?.id||''))throw Object.assign(new Error('Message identifier is already in use.'),{status:409});
+      return {id:prior.id,status:prior.status,sid:prior.twilio_message_sid,alreadySaved:true};
+    }
+  }
   const inserted = await adminRest('/rest/v1/client_sms_messages', {
     method: 'POST',
     body: {
+      ...(operationId?{id:operationId}:{}),
+      text_attachment:attachment,
       client_id: client.id,
       user_id: userId,
       direction: 'outbound',
@@ -284,7 +296,8 @@ export async function sendClientSms(client, userId, messageBody) {
   try {
     const form = new URLSearchParams();
     form.set('To', to);
-    form.set('Body', body);
+    if(body)form.set('Body', body);
+    if(mediaUrl)form.set('MediaUrl',mediaUrl);
     form.set('MessagingServiceSid', messagingServiceSid);
     form.set('From', officeNumber);
     form.set('StatusCallback', 'https://mh.mayerig.com/api/platinum-twilio-status');

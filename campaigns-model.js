@@ -1,6 +1,6 @@
 /** Campaigns have one Contact stage. Outcomes are not sequential workflow steps. */
 export const CONTACT_OUTCOMES = Object.freeze([
-  ['no_answer', 'No Answer'], ['voicemail', 'Voicemail Left'], ['declined', 'Declined'],
+  ['no_answer', 'No Answer'], ['busy', 'Busy'], ['voicemail', 'Voicemail Left'], ['declined', 'Not Interested'],
   ['appointment', 'Appointment'], ['follow_up', 'Follow Up / More Info Needed'],
   ['face_to_face', 'Face to Face Meeting'], ['completed', 'Completed']
 ]);

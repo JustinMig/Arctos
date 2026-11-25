@@ -1,3 +1,4 @@
+import {openMassText} from './mass-text.js';
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, dateISO, isoDate, monthDays, longDate, timeLabel, sortAppointmentsByStartTime, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js?v=birthday-bulk-text-1';
 import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
@@ -379,7 +380,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     host.querySelectorAll('[data-birthday-text-id]').forEach(node=>node.onchange=()=>{
       const c=b.rows.find(r=>r.id===node.dataset.birthdayTextId);
       if(!c)return;
-      if(node.checked&&state.massText.selected.size>=250){node.checked=false;return;}
+
       if(node.checked)state.massText.selected.set(c.id,c);
       else state.massText.selected.delete(c.id);
       if(selected)selected.textContent=String(state.massText.selected.size);
@@ -486,14 +487,14 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       checkbox.setAttribute('aria-label','Select '+[c.first_name,c.last_name].filter(Boolean).join(' ')+' for texting');
       label.append(checkbox);button.before(wrap);wrap.append(label,button);checkboxes.push({checkbox,c});
       checkbox.onchange=()=>{
-        if(checkbox.checked&&selected.size>=250){checkbox.checked=false;return;}
+
         if(checkbox.checked)selected.set(c.id,c);else selected.delete(c.id);
         update();
       };
     });
     bar.querySelector('[data-sms-select-all]').onclick=()=>{
       for(const {checkbox,c} of checkboxes){
-        if(checkbox.disabled||selected.size>=250)continue;
+        if(checkbox.disabled)continue;
         selected.set(c.id,c);checkbox.checked=true;
       }
       update();
@@ -507,53 +508,9 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     };
   }
   function openMassTextComposer(){
-    const people=[...state.massText.selected.values()].filter(c=>
-      String(c.status||'').toLowerCase()!=='deceased' &&
-      /^1?\d{10}$/.test(String(c.phone||'').replace(/\D/g,''))
-    );
-    if(!people.length){alert('Select clients with valid phone numbers first.');return;}
-    const ids=people.map(c=>c.id);
-    let finished=false;
-    const d=dialogs.open({
-      title:'Mass Text Clients',hint:people.length+' selected client'+(people.length===1?'':'s'),
-      kind:'mass-text-dialog',
-      body:`<form class="mass-text-form">
-        <p class="subtle">Text selected clients individually from your office Twilio number. Each message is saved in that client’s conversation.</p>
-        <div class="mass-text-recipients"><strong>Recipients (${people.length})</strong>
-          <div>${people.slice(0,30).map(c=>`<span>${esc([c.first_name,c.last_name].filter(Boolean).join(' ')||'Client')}</span>`).join('')}
-          ${people.length>30?`<span>+ ${people.length-30} more</span>`:''}</div></div>
-        <label class="field"><span>Message (up to 1500 characters)</span>
-          <textarea name="body" rows="5" maxlength="1500" required placeholder="Type your message…"></textarea></label>
-        <label class="mass-text-consent"><input type="checkbox" name="consent" required>
-          <span>I confirm these recipients have given permission to receive this message, it complies with applicable text-message rules, and opt-out requests will be honored.</span></label>
-        <p class="subtle">Use business identification and opt-out instructions for promotional texts. Sending is not automatic; review and confirm first.</p>
-        <p data-mass-text-status role="status" aria-live="polite"></p>
-      </form>`,
-      footer:saveFooter('Send Mass Text').replace('data-save="stay"','data-save="close"'),
-      onSave:async form=>{
-        if(finished)throw Error('This bulk text was already submitted. Refresh the client list to send another.');
-        const message=String(form.elements.namedItem('body')?.value||'').trim();
-        if(!message)throw Error('Enter a text message.');
-        if(!form.elements.namedItem('consent').checked)throw Error('Confirm recipient permission before sending.');
-        if(!confirm('Send this text to up to '+ids.length+' selected clients? This will send real SMS messages.'))throw Error('Sending cancelled.');
-        // Once dispatched, never retry accidentally from the modal.
-        finished=true;
-        const {smsAuthHeaders}=await import('./sms-sync.js');
-        const response=await fetch('/api/twilio-bulk',{
-          method:'POST',headers:{...(await smsAuthHeaders()),'Content-Type':'application/json'},
-          body:JSON.stringify({clientIds:ids,body:message,consentConfirmed:true})
-        });
-        const report=await response.json().catch(()=>({}));
-        if(!response.ok){finished=false;throw Error(report.error||'Mass text failed.');}
-        state.massText.selected.clear();
-        state.massText.mode=false;
-        if(state.birthdays.open){state.birthdays.selectMode=false;drawBirthdays();}
-        else drawResults();
-        alert(`Mass text results: ${Number(report.sent||0)} sent, ${Number(report.failed||0)} failed or excluded.`+
-          (report.failures?.length?'\n'+report.failures.slice(0,12).join('\n'):''));
-      }
-    });
-    d.attachForm(d.node.querySelector('form.mass-text-form'));
+    const people=[...state.massText.selected.values()];
+    if(!people.length){alert('Select clients first.');return;}
+    void openMassText({clients:people,agentId:state.search.agent});
   }
 
   function bindSearch() {
@@ -576,6 +533,20 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       if (state.search.applied) form.requestSubmit();
     };
     form.onsubmit = e => { e.preventDefault(); searchClients(false); };
+    form.elements.namedItem('agent').onchange=()=>{
+      state.massText.selected.clear();
+      state.search.agent=form.elements.namedItem('agent').value;
+      void searchClients(false);
+    };
+    form.querySelector('[data-show-all]')?.addEventListener('click',async e=>{
+      const button=e.currentTarget;button.disabled=true;
+      try{
+        state.search.query='';form.elements.query.value='';
+        state.search.agent=form.elements.namedItem('agent').value;
+        await searchClients(false);
+        while(state.search.nextCursor&&!state.search.error&&!state.destroyed)await searchClients(true);
+      }finally{button.disabled=false;}
+    });
     form.querySelector('[data-reset-search]').onclick = () => {
       state.search.token++;
       Object.assign(state.search, { query: '', product: '', agent: '', sortBy: 'name', sortDirection: 'asc', applied: null, loading: false, rows: null, error: '', message: '', cursor: null, nextCursor: null });

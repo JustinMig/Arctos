@@ -1,3 +1,4 @@
+import './text-attachments.js';
 import { smsAuthHeaders, syncSms } from './sms-sync.js';
 export { smsAuthHeaders } from './sms-sync.js';
 import { communicationsRendered, communicationsChanged } from './communications-events.js';
@@ -20,7 +21,7 @@ async function clientSummary(clientId) {
 async function clientMessages(clientId) {
   const { data, error } = await supabase
     .from('client_sms_messages')
-    .select('id,client_id,direction,body,status,error_code,error_message,read_at,occurred_at,created_at')
+    .select('id,client_id,direction,body,text_attachment,status,error_code,error_message,read_at,occurred_at,created_at')
     .eq('client_id', clientId)
     .order('occurred_at', { ascending: false }).order('id', { ascending: false })
     .limit(500);
@@ -46,7 +47,7 @@ function renderMessages(host, messages) {
     const status = incoming ? 'Received' : (message.status || 'Sent');
     const error = message.error_code ? ` · Error ${esc(message.error_code)}` : '';
     return `<article class="sms-bubble ${incoming ? 'inbound' : 'outbound'}" data-message-id="${esc(message.id)}" data-client-id="${esc(message.client_id)}">
-      <div>${esc(message.body).replace(/\n/g, '<br>')}</div>
+      <div>${esc(message.body).replace(/\n/g, '<br>')}</div><div>${window.CrmTextAttachments.history(message.text_attachment)}</div>
       <small>${esc(timeText(message.occurred_at || message.created_at))} · ${esc(status)}${error}</small>
     </article>`;
   }).join('') : '<div class="sms-empty">No messages yet. Send the first text below.</div>';
@@ -72,6 +73,10 @@ export async function openClientThread(clientId) {
   dialog.showModal();
   communicationsRendered(dialog);
 
+  const attachment=window.CrmTextAttachments.picker(dialog.querySelector('.sms-compose'),{scope:'arctos',headers:smsAuthHeaders});
+  let operation='';
+  attachment.root.addEventListener('change',()=>operation='');
+  attachment.root.querySelector('button').addEventListener('click',()=>operation='');
   const thread = dialog.querySelector('[data-sms-thread]');
   const phoneLine = dialog.querySelector('[data-sms-client-phone]');
   const body = dialog.querySelector('[data-sms-body]');
@@ -123,20 +128,25 @@ export async function openClientThread(clientId) {
 
   async function send() {
     const text = body.value.trim();
-    if (!text || busy) return;
+    if ((!text && !attachment.hasFile()) || busy) return;
     busy = true;
     sendButton.disabled = true;
     showError('');
     sendButton.textContent = 'Sending…';
     try {
+      attachment.disable(true);
+      const attachmentId=await attachment.upload();
+      operation ||= crypto.randomUUID();
       const headers = { ...(await smsAuthHeaders()), 'Content-Type': 'application/json' };
       const response = await fetch('/api/twilio-send', {
         method: 'POST', headers,
-        body: JSON.stringify({ clientId, body: text })
+        body: JSON.stringify({ clientId, body: text,attachmentId,operationId:operation })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'Unable to send text.');
+      if(['failed','undelivered'].includes(payload.status))throw Error('The message failed. Edit the message before sending a new attempt.');
       body.value = '';
+      attachment.clear();operation='';
       count.textContent = '0/1500';
       busy = false;
       await load();
@@ -146,19 +156,20 @@ export async function openClientThread(clientId) {
     } finally {
       busy = false;
       sendButton.disabled = !client?.phone;
+      attachment.disable(false);
       sendButton.textContent = 'Send Text';
     }
   }
 
-  body.addEventListener('input', () => count.textContent = `${body.value.length}/1500`);
+  body.addEventListener('input', () => {operation='';count.textContent = `${body.value.length}/1500`;});
   body.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void send(); }
   });
   sendButton.onclick = () => void send();
   dialog.querySelector('[data-sms-refresh]').onclick = () => { showError(''); void load(); void syncInBackground(true); };
-  dialog.querySelector('[data-sms-close]').onclick = () => dialog.close();
-  dialog.addEventListener('cancel', event => { event.preventDefault(); dialog.close(); });
-  dialog.addEventListener('close', () => { closed = true; if (timer) window.clearInterval(timer); dialog.remove(); updateGlobalUnread().catch(() => {}); });
+  dialog.querySelector('[data-sms-close]').onclick = () => {if(!busy)dialog.close();};
+  dialog.addEventListener('cancel', event => { event.preventDefault(); if(!busy)dialog.close(); });
+  dialog.addEventListener('close', () => { closed = true; attachment.clear(); if (timer) window.clearInterval(timer); dialog.remove(); updateGlobalUnread().catch(() => {}); });
 
   await load();
   if (!closed) void syncInBackground();

@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 import { clientSearchMarkup, clientResultsMarkup } from '../client-search.js';
 const state = { query: '', product: '', agent: 'agent-a', sortBy: 'name', sortDirection: 'asc', applied: null };
 
-test('main search contains only Search Clients and Product / Status criteria', () => {
+test('main search contains Search Clients, Product / Status and Agent criteria', () => {
   const html = clientSearchMarkup(state);
   const form = html.match(/<form id="client-search"[\s\S]*?<\/form>/)[0];
-  assert.equal((form.match(/<label /g) || []).length, 2);
+  assert.equal((form.match(/<label /g) || []).length, 3);
   assert.match(form, /<span>Search Clients<\/span>/);
   assert.match(form, /<span>Product \/ Status<\/span>/);
   assert.match(form, /type="submit"/);
@@ -19,11 +19,13 @@ test('legacy birth-year state is not rendered as a visible or hidden filter', ()
   const workspace = readFileSync(new URL('../workspace.js', import.meta.url), 'utf8');
   assert.doesNotMatch(workspace, /birthYear|data-turn65/);
 });
-test('current-user scoping survives without an extra agent dropdown', () => {
-  const html = clientSearchMarkup(state);
-  assert.match(html, /type="hidden" name="agent" value="agent-a"/);
-  assert.doesNotMatch(html, /<select name="agent"/);
+test('agent picker preserves the selected agent and offers Show All', () => {
+  const html = clientSearchMarkup(state,[{id:'agent-a',full_name:'Test Agent'}]);
+  assert.match(html, /<select name="agent"/);
+  assert.match(html, /value="agent-a" selected>Test Agent/);
+  assert.match(html, /data-show-all>Show All Clients/);
 });
+
 test('sort controls appear with results, not on the untouched search page', () => {
   assert.match(clientSearchMarkup(state), /data-client-result-toolbar hidden/);
   const html = clientSearchMarkup({ ...state, applied: { query: 'Test' } });

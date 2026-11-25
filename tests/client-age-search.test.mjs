@@ -122,7 +122,7 @@ test('product/status searches are unchanged and age search does not change statu
 test('both age options fit the existing dropdown without adding another search box', () => {
   const html = clientSearchMarkup({ query: '', agent: 'agent-a', product: 't65' });
   const form = html.match(/<form id="client-search"[\s\S]*?<\/form>/)[0];
-  assert.equal((form.match(/<label /g) || []).length, 2);
+  assert.equal((form.match(/<label /g) || []).length, 3);
   assert.match(form, /<option value="t65" selected>T65<\/option>/);
   assert.match(form, /<option value="65plus">65\+<\/option>/);
   assert.doesNotMatch(form, /birthYear|Birth Year|YYYY|data-turn65/);
@@ -134,5 +134,5 @@ test('65+ selection and the existing state/county/date sorting survive rendering
   const html = clientSearchMarkup({ query: 'Test', product: '65plus', agent: 'agent-a', sortBy: 'state', sortDirection: 'asc', applied: { product: '65plus' } });
   assert.match(html, /value="65plus" selected>65\+/);
   for (const text of ['Client Name','State','County','Date Added']) assert.ok(html.includes(text));
-  assert.match(html, /type="hidden" name="agent" value="agent-a"/);
+  assert.match(html, /<select name="agent"/);
 });

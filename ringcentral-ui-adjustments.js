@@ -1,3 +1,4 @@
+import {callLink} from './phone-dialer.js';
 import { communicationsRendered, releaseRecordings } from './communications-events.js';
 import { supabase } from './supabase-repository.js';
 import { smsAuthHeaders } from './client-texting.js';
@@ -132,10 +133,15 @@ function openClientCallDialog(clientId, clientDialog) {
   const dialog = document.createElement('dialog');
   dialog.className = 'mh-call-data-dialog';
   dialog.dataset.clientId = clientId;
-  dialog.innerHTML = `<div class="mh-call-data-frame"><header class="mh-call-data-head"><div><span class="eyebrow">RingCentral</span><h2>${esc(name)} — Call Data</h2><p>Read-only call history and recordings. Calling is not enabled in Arctos.</p></div><div class="mh-call-data-actions"><button type="button" class="btn secondary" data-client-call-refresh>Refresh</button><button type="button" class="btn secondary" data-client-call-close>Close</button></div></header><div class="mh-call-data-status" data-client-call-dialog-status>Loading call history…</div><div class="mh-call-data-list" data-client-call-dialog-list></div></div>`;
+  dialog.innerHTML = `<div class="mh-call-data-frame"><header class="mh-call-data-head"><div><span class="eyebrow">RingCentral</span><h2>${esc(name)} — Call Data</h2><p>Call through RingCentral and review call history, voicemail and recordings.</p></div><div class="mh-call-data-actions"><button type="button" class="btn secondary" data-client-call-refresh>Refresh</button><button type="button" class="btn secondary" data-client-call-close>Close</button></div></header><div class="mh-call-data-status" data-client-call-dialog-status>Loading call history…</div><div class="mh-call-data-list" data-client-call-dialog-list></div></div>`;
   document.body.append(dialog);
   dialog.showModal();
   communicationsRendered(dialog);
+  supabase.from('clients').select('phone').eq('id',clientId).maybeSingle().then(({data,error})=>{
+    if(error||!dialog.isConnected)return;
+    const link=callLink(data?.phone);
+    if(link)dialog.querySelector('.mh-call-data-actions').prepend(link);
+  });
   dialog.querySelector('[data-client-call-close]').onclick = () => dialog.close();
   dialog.addEventListener('cancel', event => { event.preventDefault(); dialog.close(); });
   dialog.addEventListener('close', () => { releaseRecordings(dialog); dialog.remove(); });

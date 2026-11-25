@@ -35,9 +35,11 @@ test('Client Records offers campaign-like checkbox SMS selection across searches
  assert.match(ws,/function openMassTextComposer\(\)/);
 });
 test('Mass SMS is user-confirmed and server-gated against deceased, STOP, duplicate and unlicensed numbers',()=>{
- assert.match(ws,/consentConfirmed:true/);
- assert.match(ws,/\bconfirm\('Send this text/);
- assert.match(ws,/api\/twilio-bulk/);
+ const mass=readFileSync(new URL('../mass-text.js',import.meta.url),'utf8');
+ assert.match(mass,/name="consent" required/);
+ assert.match(mass,/api\/twilio-send/);
+ assert.match(mass,/operationId:operation/);
+ assert.match(mass,/seen\.has\(phone\)/);
  assert.match(bulk,/if\(!payload\.consentConfirmed\)/);
  assert.match(bulk,/bulk_sms_opted_out_clients/);
  assert.match(bulk,/String\(client\.status\|\|''\)\.toLowerCase\(\)==='deceased'/);

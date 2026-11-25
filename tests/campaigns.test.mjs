@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { CONTACT_OUTCOMES, isScheduledOutcome, campaignToday, timeMinutes, slotIsBooked, appointmentSlots, safeSearchPattern, memberOrders } from '../campaigns-model.js';
 import { createCampaignRepository } from '../campaigns-repository.js';
 import { readFileSync } from 'node:fs';
-test('all campaign outcomes including completion and face-to-face',()=>assert.deepEqual(CONTACT_OUTCOMES.map(v=>v[0]),['no_answer','voicemail','declined','appointment','follow_up','face_to_face','completed']));
+test('all campaign outcomes including completion and face-to-face',()=>assert.deepEqual(CONTACT_OUTCOMES.map(v=>v[0]),['no_answer','busy','voicemail','declined','appointment','follow_up','face_to_face','completed']));
 test('only appointment/follow up require scheduling',()=>{assert.equal(isScheduledOutcome('appointment'),true);assert.equal(isScheduledOutcome('follow_up'),true);assert.equal(isScheduledOutcome('declined'),false);assert.equal(isScheduledOutcome('face_to_face'),false);assert.equal(isScheduledOutcome('completed'),false)});
 test('Central date handles UTC day boundary',()=>assert.equal(campaignToday(new Date('2026-09-12T01:00:00Z')),'2026-09-11'));
 test('time parsing supports database seconds',()=>{assert.equal(timeMinutes('10:30:00'),630);assert.equal(timeMinutes('24:30'),null);assert.equal(timeMinutes('xx'),null)});

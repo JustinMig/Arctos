@@ -4,7 +4,7 @@ import { CONTACT_OUTCOMES, outcomeLabel, isScheduledOutcome } from '../campaigns
 import { campaignUpdateOptions, RETURN_TO_STEP_ONE } from '../campaign-return-step-one.js';
 import { createCampaignRepository } from '../campaigns-repository.js';
 
-test('all seven contact outcomes are available',()=>assert.equal(CONTACT_OUTCOMES.length,7));
+test('all eight contact outcomes are available',()=>assert.equal(CONTACT_OUTCOMES.length,8));
 for(const [status] of CONTACT_OUTCOMES){
   test(`can return to Step 1 from ${status}`,()=>assert(campaignUpdateOptions({contact_status:status}).some(([key])=>key===RETURN_TO_STEP_ONE)));
 }

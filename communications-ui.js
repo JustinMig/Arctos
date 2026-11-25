@@ -1,3 +1,4 @@
+import {openMassText} from './mass-text.js';
 import { syncSms } from './sms-sync.js';
 import { communicationsRendered } from './communications-events.js';
 import { mhRepository, supabase } from './supabase-repository.js';
@@ -123,90 +124,7 @@ async function syncAndRefresh(host, { force = false } = {}) {
   }
 }
 
-function massTextDialog() {
-  const dialog = document.createElement('dialog');
-  dialog.className = 'sms-mass-dialog';
-  dialog.innerHTML = `<div class="sms-mass-frame">
-    <header><div><h2>Mass Text Clients</h2><p>Each client receives a separate text. Recipients never see one another.</p></div><button type="button" class="btn secondary" data-mass-close>Close</button></header>
-    <div class="sms-mass-grid">
-      <section class="sms-recipient-picker"><label class="field"><span>Find Clients</span><input type="search" placeholder="Name, phone, email…" data-mass-search autocomplete="off"></label><div class="sms-recipient-results" data-mass-results></div></section>
-      <section class="sms-mass-compose"><div class="sms-selected-head"><strong>Selected Recipients</strong><span data-mass-selected-count>0</span></div><div class="sms-selected-list" data-mass-selected><p>No clients selected.</p></div><label class="field"><span>Message</span><textarea rows="7" maxlength="1500" placeholder="Type the message to send…" data-mass-body></textarea></label><div class="sms-mass-footer"><span data-mass-char-count>0/1500</span><button type="button" class="btn primary" data-mass-send disabled>Send Mass Text</button></div><div class="sms-mass-status" data-mass-status></div></section>
-    </div>
-  </div>`;
-  document.body.append(dialog);
-  dialog.showModal();
-
-  const selected = new Map();
-  const search = dialog.querySelector('[data-mass-search]');
-  const results = dialog.querySelector('[data-mass-results]');
-  const selectedList = dialog.querySelector('[data-mass-selected]');
-  const selectedCount = dialog.querySelector('[data-mass-selected-count]');
-  const body = dialog.querySelector('[data-mass-body]');
-  const send = dialog.querySelector('[data-mass-send]');
-  const status = dialog.querySelector('[data-mass-status]');
-  let searchToken = 0;
-  let sending = false;
-
-  function drawSelected() {
-    selectedCount.textContent = `${selected.size}/250`;
-    selectedList.innerHTML = selected.size ? Array.from(selected.values()).map(client => `<span class="sms-selected-chip">${esc([client.first_name,client.last_name].filter(Boolean).join(' ') || 'Client')}<button type="button" data-remove-selected="${esc(client.id)}" aria-label="Remove">×</button></span>`).join('') : '<p>No clients selected.</p>';
-    selectedList.querySelectorAll('[data-remove-selected]').forEach(button => button.onclick = () => { selected.delete(button.dataset.removeSelected); drawSelected(); void drawResults(); });
-    send.disabled = !selected.size || !body.value.trim() || sending;
-  }
-
-  async function searchClients() {
-    const token = ++searchToken;
-    results.innerHTML = '<p class="subtle">Searching…</p>';
-    try {
-      const found = await mhRepository.searchClients({ query: search.value.trim(), limit:50 });
-      if (token !== searchToken) return;
-      const rows = found?.rows || [];
-      results.innerHTML = rows.length ? rows.map(client => {
-        const checked = selected.has(client.id);
-        const disabled = !client.phone || String(client.status || '').toLowerCase() === 'deceased';
-        const name = [client.first_name,client.last_name].filter(Boolean).join(' ') || 'Client';
-        return `<label class="sms-recipient-row${disabled ? ' is-disabled' : ''}"><input type="checkbox" data-recipient-id="${esc(client.id)}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span><strong>${esc(name)}</strong><small>${esc(client.phone || 'No phone number')}${String(client.status || '').toLowerCase() === 'deceased' ? ' · Deceased' : ''}</small></span></label>`;
-      }).join('') : '<p class="subtle">No matching clients.</p>';
-      results.querySelectorAll('[data-recipient-id]').forEach(input => input.onchange = () => {
-        const client = rows.find(row => row.id === input.dataset.recipientId);
-        if (!client) return;
-        if (input.checked) {
-          if (selected.size >= 250) { input.checked = false; status.textContent = 'Mass text is limited to 250 clients at a time.'; return; }
-          selected.set(client.id, client);
-        } else selected.delete(client.id);
-        drawSelected();
-      });
-    } catch (error) {
-      if (token === searchToken) results.innerHTML = `<p class="notice error">${esc(error instanceof Error ? error.message : 'Search failed.')}</p>`;
-    }
-  }
-
-  async function drawResults() { await searchClients(); }
-  let debounce = null;
-  search.oninput = () => { window.clearTimeout(debounce); debounce = window.setTimeout(searchClients, 220); };
-  body.oninput = () => { dialog.querySelector('[data-mass-char-count]').textContent = `${body.value.length}/1500`; drawSelected(); };
-  send.onclick = async () => {
-    const message = body.value.trim();
-    if (!message || !selected.size || sending) return;
-    sending = true; drawSelected(); status.textContent = `Sending ${selected.size} separate texts…`;
-    try {
-      const headers = { ...(await smsAuthHeaders()), 'Content-Type':'application/json' };
-      const response = await fetch('/api/twilio-bulk', { method:'POST', headers, body:JSON.stringify({ clientIds:Array.from(selected.keys()), body:message }) });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok && !payload.sent) throw new Error(payload.error || 'Mass text failed.');
-      status.textContent = payload.failed ? `Finished: ${payload.sent} sent, ${payload.failed} failed. ${Array.isArray(payload.failures) ? payload.failures.slice(0,3).join(' • ') : ''}` : `Sent successfully to all ${payload.sent} clients.`;
-      if (payload.sent) body.value = '';
-    } catch (error) {
-      status.textContent = error instanceof Error ? error.message : 'Mass text failed.';
-    } finally {
-      sending = false; drawSelected();
-    }
-  };
-  dialog.querySelector('[data-mass-close]').onclick = () => dialog.close();
-  dialog.addEventListener('cancel', event => { event.preventDefault(); dialog.close(); });
-  dialog.addEventListener('close', () => { window.clearTimeout(debounce); dialog.remove(); });
-  void searchClients();
-}
+function massTextDialog() { return openMassText(); }
 
 function mountCommunications() {
   if (!location.hash.startsWith('#/communications')) {
@@ -228,12 +146,25 @@ function mountCommunications() {
   const firstMount = !host.dataset.mounted;
   if (firstMount) {
     host.dataset.mounted = 'true';
-    host.innerHTML = `<div class="sms-center-head"><div><span class="eyebrow">Twilio</span><h2>Client Text Messages</h2><p>Office number: (662) 572-2425 · Saved Arctos clients · CRM texting activity only</p></div><div class="sms-center-actions"><button type="button" class="btn secondary" data-sms-sync>Sync Replies</button><button type="button" class="btn primary" data-sms-mass>+ Mass Text</button></div></div>
-      <div class="sms-center-metrics"><div><span>Unread Replies</span><strong data-sms-unread-total>—</strong></div><div><span>Client Conversations</span><strong data-sms-conversation-total>—</strong></div><div><span>Twilio</span><strong class="sms-connected">Connected</strong></div></div>
+    host.innerHTML = `<div class="sms-center-head"><div><span class="eyebrow">Twilio</span><h2>Client Text Messages</h2><p data-sms-office-number>Checking office texting connection…</p></div><div class="sms-center-actions"><button type="button" class="btn secondary" data-sms-sync>Sync Replies</button><button type="button" class="btn primary" data-sms-mass>+ Mass Text</button></div></div>
+      <div class="sms-center-metrics"><div><span>Unread Replies</span><strong data-sms-unread-total>—</strong></div><div><span>Client Conversations</span><strong data-sms-conversation-total>—</strong></div><div><span>Twilio</span><strong class="sms-connected" data-sms-connection>Checking…</strong></div></div>
       <div class="sms-center-status" data-sms-center-status>Loading saved Arctos conversations…</div>
       <div class="sms-conversations" data-sms-conversations></div>`;
     host.querySelector('[data-sms-sync]').onclick = () => void syncAndRefresh(host, { force:true });
     host.querySelector('[data-sms-mass]').onclick = massTextDialog;
+    (async()=>{
+      try{
+        const response=await fetch('/api/twilio-config',{headers:await smsAuthHeaders(),cache:'no-store'});
+        const result=await response.json();if(!response.ok)throw Error(result.error||'Texting connection unavailable.');
+        if(!host.isConnected)return;
+        host.querySelector('[data-sms-office-number]').textContent='Office number: '+result.phoneNumber;
+        host.querySelector('[data-sms-connection]').textContent='Connected';
+      }catch(error){
+        if(!host.isConnected)return;
+        host.querySelector('[data-sms-connection]').textContent='Unavailable';
+        host.querySelector('[data-sms-office-number]').textContent=error.message;
+      }
+    })();
   }
 
   // Render the Supabase copy first so opening Communications never waits on

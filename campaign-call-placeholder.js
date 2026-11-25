@@ -1,5 +1,7 @@
+import {callLink} from './phone-dialer.js';
 function enhanceCampaignCallButton(card) {
   if (!(card instanceof Element) || card.dataset.cmpCallPlaceholder === 'true') return;
+  if(card.querySelector('.cmp-badge.is-deceased'))return;
   const person = card.querySelector('.cmp-person');
   const name = person?.querySelector('strong');
   if (!person || !name) return;
@@ -11,17 +13,12 @@ function enhanceCampaignCallButton(card) {
   name.before(line);
   line.append(name);
 
-  const call = document.createElement('button');
-  call.type = 'button';
-  call.className = 'cmp-call-placeholder';
-  call.dataset.cmpCallPlaceholderButton = 'true';
-  call.setAttribute('aria-label', `Call ${name.textContent?.trim() || 'client'}`);
-  call.title = 'Calling integration will be connected later';
-  call.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h4l2 5-3 2a14 14 0 0 0 3 3l2-3 5 2v4c0 2-2 3-4 3C9 20 4 15 4 8c0-2 1-4 3-4Z"/></svg><span>Call</span>';
-  call.addEventListener('click', event => {
-    event.preventDefault();
-    event.stopPropagation();
-  });
+  const phone=person.querySelector(':scope > span')?.textContent||'';
+  const call=callLink(phone,'Call');
+  if(!call)return;
+  call.className='cmp-call-placeholder';
+  call.setAttribute('aria-label','Call '+(name.textContent?.trim()||'client')+' in RingCentral');
+  call.addEventListener('click',event=>event.stopPropagation());
   line.append(call);
 }
 
