@@ -37,3 +37,11 @@ test('photo-only sends, file links and retries use the scoped saved message',asy
    assert.equal(forms.length,2);
  }finally{globalThis.fetch=original;for(const name of Object.keys(process.env))if(!(name in old))delete process.env[name];Object.assign(process.env,old);}
 });
+
+test('RingCentral call links preserve Windows, Mac and iPhone/iPad dialing',async()=>{
+ const {ringCentralHref}=await import('../phone-dialer.js');
+ assert.equal(ringCentralHref('6625550100',{userAgent:'Windows',platform:'Win32'}),'https://app.ringcentral.com/r/call?number=16625550100');
+ assert.equal(ringCentralHref('6625550100',{userAgent:'Macintosh',platform:'MacIntel',maxTouchPoints:0}),'tel:+16625550100');
+ for(const device of [{userAgent:'iPhone like Mac OS X',platform:'iPhone'},{userAgent:'Macintosh',platform:'MacIntel',maxTouchPoints:5}])assert.equal(ringCentralHref('6625550100',device),'https://app.ringcentral.com/r/call?number=16625550100');
+ assert.equal(ringCentralHref('invalid',{userAgent:'Windows'}),'');
+});
