@@ -1,3 +1,4 @@
+import {installMassTextStyles} from './mass-text-styles.js';
 import {supabase} from './supabase-repository.js';
 import {smsAuthHeaders} from './sms-sync.js';
 import './text-attachments.js';
@@ -7,8 +8,28 @@ const scope='arctos';
 const textingAgent='';
 const normalize=v=>{const n=String(v||'').replace(/\D/g,'');return n.length===10?'1'+n:n.length===11&&n[0]==='1'?n:'';};
 export async function openMassText({clients:initial=null,agentId=''}={}){
-  const dialog=document.createElement('dialog');dialog.className='sms-mass-dialog';
-  dialog.innerHTML='<div class="sms-mass-frame"><header class="sms-mass-head"><h2>Mass Text Clients</h2><button class="btn secondary" data-close>Close</button></header><div style="padding:16px;display:grid;gap:12px"><label data-agent-label>Agent <select data-agent></select></label><div><input type="search" data-find placeholder="Find a client"><button class="btn secondary" data-all>Select All</button><button class="btn secondary" data-none>Deselect All</button></div><p data-count role="status"></p><div data-recipients style="max-height:45vh;overflow:auto;display:grid;gap:8px"></div><form><label class="field">Message<textarea name="body" maxlength="1500" rows="5"></textarea></label><div data-file></div><label><input type="checkbox" name="consent" required> I confirm these clients have given permission to receive this message.</label><p data-status role="status" aria-live="polite"></p><button class="btn primary" type="submit" data-send>Send to selected clients</button></form></div></div>';
+  installMassTextStyles();
+  const dialog=document.createElement('dialog');dialog.className='sms-mass-dialog crm-mass-text-dialog';
+  dialog.innerHTML=`<div class="crm-mass-frame">
+    <header class="crm-mass-head"><h2>Mass Text Clients</h2><button type="button" class="btn secondary" data-close>Close</button></header>
+    <div class="crm-mass-layout">
+      <section class="crm-mass-picker" aria-label="Choose recipients">
+        <label class="crm-mass-field" data-agent-label>Agent<select data-agent></select></label>
+        <label class="crm-mass-field">Find a client<input type="search" data-find placeholder="Search name or phone"></label>
+        <div class="crm-mass-tools"><button type="button" class="btn secondary" data-all>Select All</button><button type="button" class="btn secondary" data-none>Deselect All</button></div>
+        <p class="crm-mass-count" data-count role="status"></p>
+        <div class="crm-mass-recipients" data-recipients></div>
+      </section>
+      <form class="crm-mass-compose">
+        <label class="crm-mass-field">Message<textarea name="body" maxlength="1500" rows="5" placeholder="Write your message"></textarea></label>
+        <div data-file></div>
+        <label class="crm-mass-consent"><input type="checkbox" name="consent" required><span>I confirm these clients have given permission to receive this message.</span></label>
+        <p class="crm-mass-status" data-status role="status" aria-live="polite"></p>
+        <button class="btn primary" type="submit" data-send>Send to selected clients</button>
+        <small>Keep this window open until sending finishes.</small>
+      </form>
+    </div>
+  </div>`;
   document.body.append(dialog);dialog.showModal();
   const form=dialog.querySelector('form'),select=dialog.querySelector('[data-agent]'),list=dialog.querySelector('[data-recipients]'),status=dialog.querySelector('[data-status]'),send=dialog.querySelector('[data-send]');
   const attachment=window.CrmTextAttachments.picker(dialog.querySelector('[data-file]'),{scope,headers:smsAuthHeaders});
@@ -29,7 +50,7 @@ export async function openMassText({clients:initial=null,agentId=''}={}){
   }
   function draw(){
     const term=dialog.querySelector('[data-find]').value.trim().toLowerCase();
-    list.innerHTML=rows.filter(c=>!term||[c.first_name,c.last_name,c.phone].join(' ').toLowerCase().includes(term)).map(c=>'<label style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-id="'+esc(c.id)+'"'+(selected.has(c.id)?' checked':'')+(sending||!eligible(c)?' disabled':'')+'><span>'+esc([c.first_name,c.last_name].filter(Boolean).join(' ')||'Client')+' <small>'+esc(c.phone||'No phone')+(!eligible(c)?' · Unavailable for texting':'')+'</small></span></label>').join('')||'<p>No matching clients.</p>';
+    list.innerHTML=rows.filter(c=>!term||[c.first_name,c.last_name,c.phone].join(' ').toLowerCase().includes(term)).map(c=>'<label class="crm-mass-recipient"><input type="checkbox" data-id="'+esc(c.id)+'"'+(selected.has(c.id)?' checked':'')+(sending||!eligible(c)?' disabled':'')+'><span><strong>'+esc([c.first_name,c.last_name].filter(Boolean).join(' ')||'Client')+'</strong><small>'+esc(c.phone||'No phone')+(!eligible(c)?' · Unavailable for texting':'')+'</small></span></label>').join('')||'<p>No matching clients.</p>';
     list.querySelectorAll('input').forEach(b=>b.onchange=()=>{if(b.checked)selected.add(b.dataset.id);else selected.delete(b.dataset.id);update();});
     update();
   }
