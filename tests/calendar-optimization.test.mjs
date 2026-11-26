@@ -44,9 +44,9 @@ test('all standard appointment dialogs block occupied agent times and recheck be
  assert.match(form,/data-booked="true"/);
  assert.match(form,/timeSelect\.disabled = !slotsReady/);
  assert.match(form,/assigned_agent_id.*addEventListener\('change',refreshAppointmentSlots\)/);
- assert.match(form,/slotIsBooked\(t,30,booked,existing\?\.id/);
+ assert.match(form,/slotIsBooked\(t,duration,booked,existing\?\.id/);
  assert.match(form,/await repository\.listEvents\(\{ start: currentDay, end: currentDay \}\)/);
- assert.match(form,/slotIsBooked\(value\.start_time, 30, blocks, existing\?\.id/);
+ assert.match(form,/slotIsBooked\(value\.start_time, duration, blocks, existing\?\.id/);
 });
 test('month grid handles many appointments without filtering the full list per day', async () => {
   const view = await source('views.js');

@@ -32,3 +32,47 @@ test('calendar starts local reads while the upstream calendar is still in flight
   assert.equal(result[1].calendar_source,'arctos_campaign');assert.equal(requests.filter(table=>table==='calendar_event_details').length,1);
  }finally{w.close();}
 });
+
+test('Office and campaign appointments are edited and followed up in their native Arctos row', async () => {
+  const dom = new JSDOM('<body></body>', {runScripts:'outside-only'});
+  const w = dom.window;
+  const row = {id:'local', title:'Initial', event_type:'appointment', status:'scheduled'};
+  const repo = {user:{id:'justin'}};
+  const bridgeCalls = [];
+  try {
+    w.testCalendar = {mhRepository:repo, supabase:{
+      auth:{async getSession(){return {data:{session:{access_token:'SYNTHETIC-INVALID'}}};}},
+      from(table) {
+        let id, changes;
+        const query = {
+          select(){return query;}, eq(column,value){id=value;return query;},
+          update(value){changes=value;return query;}, upsert(){return Promise.resolve({error:null});},
+          delete(){return query;},
+          maybeSingle(){return Promise.resolve({data:id===row.id ? {id} : null,error:null});},
+          single(){
+            assert.equal(table,'appointments');
+            assert.equal(id,row.id);
+            return Promise.resolve({data:{...Object.assign(row,changes)},error:null});
+          }
+        };
+        return query;
+      }
+    }};
+    w.fetch=async(url,options)=>{
+      bridgeCalls.push(options.method);
+      return Response.json({event:{id:'shared',...JSON.parse(options.body)}});
+    };
+    w.eval((await read('calendar-sync.js')).replace(/^import .*;$/m,'const {mhRepository,supabase}=window.testCalendar;').replace('export function installMayerJustinCalendar','window.installCalendar = function'));
+    w.installCalendar();
+    const edited=await repo.saveEvent({event_id:'local',title:'Updated',event_type:'Activity'});
+    assert.equal(edited.title,'Updated');
+    assert.equal(edited.event_type,'activity');
+    const followup=await repo.rescheduleEvent('local','Call back');
+    assert.equal(followup.reschedule_note,'Call back');
+    assert.equal(followup.status,'needs_reschedule');
+    assert.deepEqual(bridgeCalls,[]);
+    await repo.saveEvent({event_id:'shared',title:'Updated shared event'});
+    await repo.rescheduleEvent('shared','Follow up');
+    assert.deepEqual(bridgeCalls,['PATCH','PATCH']);
+  } finally { w.close(); }
+});

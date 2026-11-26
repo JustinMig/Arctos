@@ -1,7 +1,7 @@
 import {openMassText} from './mass-text.js';
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, dateISO, isoDate, monthDays, longDate, timeLabel, sortAppointmentsByStartTime, hydrate, serializable } from './core.js';
 import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js?v=birthday-bulk-text-1';
-import { appointmentSlots, slotIsBooked } from './campaigns-model.js';
+import { appointmentSlots, slotIsBooked, timeMinutes, minuteTime } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
 import { calendarRefreshInterval } from './connection-policy.js';
 import { installClientRecovery } from './client-draft-recovery.js';
@@ -1349,8 +1349,12 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
 
   function openAppointment(key = todayKey(), existing = null, onSaved = null, selectedClient = null) {
     const editing = !!existing?.id;
+    const previousStart = timeMinutes(existing?.start_time);
+    const previousEnd = timeMinutes(existing?.end_time);
+    const timedEnd = previousStart !== null && previousEnd !== null && previousEnd > previousStart;
+    const duration = timedEnd ? previousEnd - previousStart : 30;
     const timeOptions = [['', 'Select appointment time'], ...appointmentSlots().map(t => [t, timeLabel(t)])];
-    const body = `${info}<div class="intro"><strong>${editing ? 'Edit Appointment' : 'Set Appointment'}</strong><p>${editing ? 'Update the saved appointment information.' : 'Schedule an existing client or a new/non-client on the calendar.'}</p></div><form class="appointment-form" autocomplete="off" novalidate><div class="form-grid">${select('assigned_agent_id', 'Agent', [['', connected ? 'Select agent' : 'No agents connected'], ...agents.map(a => [a.id, a.full_name])], !connected)}${select('event_type', 'Type', ['Appointment', 'Activity'])}</div><div class="mode-picker" role="group" aria-label="Appointment person type"><button type="button" class="active" data-mode="existing" aria-pressed="true">EXISTING CLIENT</button><button type="button" data-mode="new" aria-pressed="false">NEW / NON-CLIENT</button></div><input type="hidden" name="person_type" value="existing"><input type="hidden" name="client_id" value=""><div data-existing><label class="field"><span>Client</span><input data-person-search placeholder="Type client name or phone" autocomplete="off"></label><div data-person-results class="lookup-results" aria-live="polite"></div><p data-selected-person class="subtle">No client selected</p></div><div data-new-person hidden><div class="form-grid">${input('person_name', 'New / Non-client Name')}${input('person_phone', 'Phone Number', { type: 'tel' })}</div></div><div class="form-grid">${input('title', 'Appointment / Activity Title', { span: true })}${dateInput('event_date', 'Appointment Date', true)}${select('start_time', 'Appointment Time', timeOptions)}</div><p class="subtle appointment-slot-status" data-appointment-slot-status role="status" aria-live="polite">Checking available appointment times…</p>${textArea('notes', 'Notes (optional)', 'Purpose of appointment or anything to remember')}<p class="subtle">${connected ? 'Unavailable times are disabled. The calendar is checked again before saving.' : 'Availability cannot be checked until scheduling is connected.'}</p></form>`;
+    const body = `${info}<div class="intro"><strong>${editing ? 'Edit Appointment' : 'Set Appointment'}</strong><p>${editing ? 'Update the saved appointment information.' : 'Schedule an existing client or a new/non-client on the calendar.'}</p></div><form class="appointment-form" autocomplete="off" novalidate><div class="form-grid">${select('assigned_agent_id', 'Agent', [['', connected ? 'Select agent' : 'No agents connected'], ...agents.map(a => [a.id, a.full_name])], !connected)}${select('event_type', 'Type', [['appointment','Appointment'], ['activity','Activity'], ...(existing?.event_type === 'follow_up' ? [['follow_up','Follow Up']] : [])])}</div><div class="mode-picker" role="group" aria-label="Appointment person type"><button type="button" class="active" data-mode="existing" aria-pressed="true">EXISTING CLIENT</button><button type="button" data-mode="new" aria-pressed="false">NEW / NON-CLIENT</button></div><input type="hidden" name="person_type" value="existing"><input type="hidden" name="client_id" value=""><div data-existing><label class="field"><span>Client</span><input data-person-search placeholder="Type client name or phone" autocomplete="off"></label><div data-person-results class="lookup-results" aria-live="polite"></div><p data-selected-person class="subtle">No client selected</p></div><div data-new-person hidden><div class="form-grid">${input('person_name', 'New / Non-client Name')}${input('person_phone', 'Phone Number', { type: 'tel' })}</div></div><div class="form-grid">${input('title', 'Appointment / Activity Title', { span: true })}${dateInput('event_date', 'Appointment Date', true)}${select('start_time', 'Appointment Time', timeOptions)}</div><p class="subtle appointment-slot-status" data-appointment-slot-status role="status" aria-live="polite">Checking available appointment times…</p>${textArea('notes', 'Notes (optional)', 'Purpose of appointment or anything to remember')}<p class="subtle">${connected ? 'Unavailable times are disabled. The calendar is checked again before saving.' : 'Availability cannot be checked until scheduling is connected.'}</p></form>`;
     const d = dialogs.open({ title: editing ? 'Edit Appointment' : 'Appointments', hint: editing ? 'Update appointment details' : 'Set an appointment', icon: icon('appointments', true), kind: 'appointment-dialog', body, footer: saveFooter(editing ? 'Save Changes' : 'Add to Calendar').replace('data-save="stay"', 'data-save="close"'), onSave: async form => {
       if (slotLoading || !slotsReady) throw new Error('Check appointment availability before saving.');
       const value = serializable(form);
@@ -1362,7 +1366,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const currentAgent = value.assigned_agent_id || repository.user?.id || '';
       const latest = await repository.listEvents({ start: currentDay, end: currentDay });
       const blocks = latest.filter(row => row.event_date === currentDay && row.assigned_agent_id === currentAgent);
-      if (slotIsBooked(value.start_time, 30, blocks, existing?.id || ''))
+      if (slotIsBooked(value.start_time, duration, blocks, existing?.id || ''))
         throw new Error('That appointment time is unavailable. Choose an open time.');
       // Keep the calendar headline as the person's name. The appointment/
       // activity title describes the purpose and belongs in the details.
@@ -1381,6 +1385,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         value.person_phone = phone;
       }
       if (editing) value.event_id = existing.id;
+      if (timedEnd) value.end_time = minuteTime(timeMinutes(value.start_time) + duration);
       const saved = await repository.saveEvent(value);
       if (!saved?.id) throw new Error('The calendar did not confirm this appointment. Nothing is marked saved.');
       let idField = form.elements.namedItem('event_id');
@@ -1417,10 +1422,10 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         if (request !== slotToken || !d.node.isConnected) return;
         const booked = rows.filter(row => row.event_date === day && row.assigned_agent_id === agent);
         timeSelect.innerHTML = '<option value="">Select an available time</option>' + appointmentSlots().map(t => {
-          const unavailable = slotIsBooked(t,30,booked,existing?.id || '');
+          const unavailable = slotIsBooked(t,duration,booked,existing?.id || '');
           return `<option value="${t}"${unavailable ? ' disabled data-booked="true"' : ''}>${timeLabel(t)}${unavailable ? ' — UNAVAILABLE' : ''}</option>`;
         }).join('');
-        if (previous && !slotIsBooked(previous,30,booked,existing?.id || '')) timeSelect.value = previous;
+        if (previous && !slotIsBooked(previous,duration,booked,existing?.id || '')) timeSelect.value = previous;
         slotsReady = true;
         const count = timeSelect.querySelectorAll('option[data-booked]').length;
         status.textContent = count ? `${count} unavailable times are grayed out. Select an open time.` : 'All listed appointment times are available.';
@@ -1443,7 +1448,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     form.elements.event_date.value = dateText(existing?.event_date || key);
     if (existing) {
       form.elements.assigned_agent_id.value = existing.assigned_agent_id || '';
-      form.elements.event_type.value = existing.event_type || 'Appointment';
+      form.elements.event_type.value = String(existing.event_type || 'appointment').toLowerCase();
       form.elements.title.value = existing.activity_title || '';
       form.elements.start_time.value = String(existing.start_time || '').slice(0, 5);
       form.elements.notes.value = existing.notes || '';

@@ -103,7 +103,7 @@ export function installMayerJustinCalendar() {
       // Render the calendar as soon as the shared calendar API returns.
       // Enrich the linked client IDs without making the user wait for a
       // second, sequential Supabase request on every cold calendar load.
-      const eventIds = [...new Set(events.map(event => event.id).filter(Boolean))];
+      const eventIds = [...new Set(sharedEvents.map(event => event.id).filter(Boolean))];
       if (eventIds.length) {
         void (async () => {
           const { data: links, error } = await supabase
@@ -131,6 +131,8 @@ export function installMayerJustinCalendar() {
   mhRepository.listEvents = async function({ start, end, includeToday = false, includeReschedule = false }) {
     const criteria = { start, end, includeToday, includeReschedule };
     const key = calendarCacheKey(criteria);
+    // Single-day availability checks must see edits saved by Office since the dialog opened.
+    if (start === end) return fetchEvents(criteria);
     const cached = calendarCache.get(key);
     if (cached) {
       if (Date.now() - cached.loadedAt > CALENDAR_CACHE_TTL_MS) {
@@ -141,12 +143,27 @@ export function installMayerJustinCalendar() {
     return fetchEvents(criteria);
   };
 
+  async function findLocalEvent(eventId) {
+    const { data, error } = await supabase.from('appointments').select('id')
+      .eq('id', eventId).maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  async function updateLocalEvent(eventId, changes) {
+    const {data, error} = await supabase.from('appointments').update(changes)
+      .eq('id', eventId).select('*').single();
+    if (error) throw error;
+    invalidateCalendarCache();
+    return { ...data, calendar_source: 'arctos_campaign' };
+  }
+
   mhRepository.saveEvent = async function(value) {
     const payload = {
       client_id: value.client_id || null,
       assigned_agent_id: value.assigned_agent_id || this.user?.id || null,
       title: String(value.title || '').trim() || `Appointment: ${value.person_name || 'Client'}`,
-      event_type: value.event_type || 'appointment',
+      event_type: String(value.event_type || 'appointment').toLowerCase(),
       event_date: value.event_date,
       start_time: value.start_time || null,
       end_time: value.end_time || null,
@@ -154,10 +171,15 @@ export function installMayerJustinCalendar() {
       status: value.status || 'scheduled'
     };
     const eventId = value.event_id || value.id || '';
-    const result = eventId
-      ? await calendarRequest('PATCH', { id: eventId }, payload)
-      : await calendarRequest('POST', {}, payload);
-    const saved = result.event;
+    let saved;
+    if (eventId && await findLocalEvent(eventId)) {
+      saved = await updateLocalEvent(eventId, payload);
+    } else {
+      const result = eventId
+        ? await calendarRequest('PATCH', { id: eventId }, payload)
+        : await calendarRequest('POST', {}, payload);
+      saved = result.event;
+    }
     if (saved?.id) {
       const { error: detailsError } = await supabase.from('calendar_event_details')
         .upsert({event_id:saved.id,activity_title:String(value.activity_title || '').trim(),
@@ -168,7 +190,7 @@ export function installMayerJustinCalendar() {
       saved.person_phone = String(value.person_phone || '').trim();
     }
     invalidateCalendarCache();
-    if (!saved?.id) return saved;
+    if (!saved?.id || saved.calendar_source === 'arctos_campaign') return saved;
 
     if (payload.client_id) {
       const { error } = await supabase
@@ -195,10 +217,7 @@ export function installMayerJustinCalendar() {
     if (!eventId) throw new Error('Missing calendar event ID.');
     // Campaign bookings are stored in Arctos appointments, not the separate
     // Mayer/Justin workspace calendar. Delete from the correct source.
-    const { data: local, error: lookupError } = await supabase
-      .from('appointments').select('id').eq('id', eventId).maybeSingle();
-    if (lookupError) throw lookupError;
-    if (local) {
+    if (await findLocalEvent(eventId)) {
       const { error } = await supabase.from('appointments').delete().eq('id', eventId);
       if (error) throw error;
       invalidateCalendarCache();
@@ -213,15 +232,8 @@ export function installMayerJustinCalendar() {
 
   mhRepository.completeEvent = async function(eventId) {
     // Campaign appointments are saved locally in Arctos, not in Justin's bridge.
-    const { data: local, error: lookupError } = await supabase.from('appointments')
-      .select('*').eq('id',eventId).maybeSingle();
-    if (lookupError) throw lookupError;
-    if (local) {
-      const { data, error } = await supabase.from('appointments')
-        .update({status:'completed'}).eq('id',eventId).select('*').single();
-      if (error) throw error;
-      invalidateCalendarCache();
-      return { ...data, calendar_source:'arctos_campaign' };
+    if (await findLocalEvent(eventId)) {
+      return updateLocalEvent(eventId, { status: 'completed' });
     }
     const result = await calendarRequest('PATCH', { id: eventId }, { action: 'complete' });
     invalidateCalendarCache();
@@ -229,6 +241,11 @@ export function installMayerJustinCalendar() {
   };
 
   mhRepository.rescheduleEvent = async function(eventId, note) {
+    if (await findLocalEvent(eventId)) {
+      const rescheduleNote = String(note || '').trim();
+      if (!rescheduleNote) throw new Error('Enter a reschedule note.');
+      return updateLocalEvent(eventId, { status: 'needs_reschedule', reschedule_note: rescheduleNote });
+    }
     const result = await calendarRequest('PATCH', { id: eventId }, { action: 'reschedule', note });
     invalidateCalendarCache();
     return result.event;
@@ -247,8 +264,8 @@ export function installMayerJustinCalendar() {
   window.addEventListener('focus', () => {
     if (document.querySelector('dialog[open]')) return;
     const now = Date.now();
-    if (now - lastFocusRefresh < CALENDAR_CACHE_TTL_MS) return;
+    if (now - lastFocusRefresh < 1500) return;
     lastFocusRefresh = now;
-    window.MHCalendarSync.refresh();
+    window.MHCalendarSync.refresh({ force: true });
   });
 }
