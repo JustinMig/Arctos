@@ -32,7 +32,7 @@ export function parseMessage(m,phone,to){
  const body=String(m.body||'').trim();
  const link=/^link arctos\s+([0-9a-f]{12})$/i.exec(body);
  if(link)return {...base,kind:'link',code:link[1].toUpperCase()};
- const note=/^make\s+note(?:\s*[:,\-]\s*|\s+)([\s\S]+)$/i.exec(body)?.[1]?.trim();
+ const note=/^note\s*,\s*([\s\S]+)$/i.exec(body)?.[1]?.trim();
  return note&&Array.from(note).length<=1600?{...base,kind:'note',description:note}:null;
 }
 async function collect(s){

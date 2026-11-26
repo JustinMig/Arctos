@@ -73,7 +73,7 @@ function reminderSettings(widget){
    const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>update(fn,b);host.append(b);
   }
   if(s.state==='linked'){
-   info.textContent='Phone ending in '+s.ending+' is linked. Text '+s.number+' a command such as “Make note: Call John about life Wed at 11am.” It appears in Need to Do after the next minute check.';
+   info.textContent='Phone ending in '+s.ending+' is linked. Text '+s.number+' a command such as “Note, Call John about life Wed at 11am.” It appears in Need to Do after the next minute check.';
    button('Unlink phone',()=>api({action:'unlink'}));
   }else if(s.state==='pending'){
    info.textContent='From the phone ending in '+s.ending+', text “Link Arctos '+s.code+'” to '+s.number+' within 15 minutes. Allow a minute for the link to appear.';
