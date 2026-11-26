@@ -201,7 +201,7 @@ async function upsertTwilioMessages(records) {
 
 export async function syncClientMessages(client, userId) {
   const clientPhone = normalizeUsPhone(client?.phone || '');
-  if (!clientPhone) return { synced: 0, reason: 'no_phone' };
+  if (!clientPhone || clientPhone === '+16627504626') return { synced: 0, reason: 'no_phone' };
   const matches = (await getAllClientPhones()).filter(row => normalizeUsPhone(row.phone) === clientPhone);
   if (client?.assigned_agent_id !== ISAIAH_AGENT_ID || matches.length !== 1 || matches[0].id !== client.id) return { synced: 0, reason: 'ambiguous_phone' };
   const { officeNumber } = twilioConfig();
@@ -239,6 +239,7 @@ export async function syncRecentMessages(userId, user) {
   for (const message of messages) {
     const from = normalizeUsPhone(message.from || '');
     const to = normalizeUsPhone(message.to || '');
+    if (from === '+16627504626' || to === '+16627504626') continue;
     if (from !== officeNumber && to !== officeNumber) continue;
     const counterpart = from === officeNumber ? to : from;
     const matches = phoneMap.get(phone10(counterpart)) || [];
@@ -250,6 +251,7 @@ export async function syncRecentMessages(userId, user) {
 }
 
 export async function sendClientSms(client, userId, messageBody, {attachment=null,mediaUrl='',operationId=''}={}) {
+  if (normalizeUsPhone(client?.phone) === '+16627504626') throw Object.assign(new Error('This number is reserved for Arctos.'), { status: 403 });
   if (client?.assigned_agent_id !== ISAIAH_AGENT_ID) throw Object.assign(new Error('Client not found.'), { status: 404 });
   if (String(client.status || '').toLowerCase() === 'deceased') throw Object.assign(new Error('Deceased clients cannot be texted.'), { status: 400 });
   const stopped = await adminRest('/rest/v1/rpc/bulk_sms_opted_out_clients', { method: 'POST', body: { p_ids: [client.id] } });
