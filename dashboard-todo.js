@@ -25,7 +25,9 @@ const styles = `
 .dashboard-todo-row label{display:flex;align-items:center;gap:9px;min-width:0;flex:1;font-size:13px;line-height:1.5}
 .dashboard-todo-row label span{min-width:0;overflow-wrap:anywhere}
 .dashboard-todo-row input{width:18px;height:18px;flex:0 0 18px;accent-color:#427a68;cursor:pointer}
-.dashboard-todo-column.done .dashboard-todo-row label span{text-decoration:line-through;color:#637b75}
+.dashboard-todo-copy{display:grid;gap:2px;min-width:0}
+.dashboard-todo-copy time{font-size:12px;color:#526c79}
+.dashboard-todo-column.done .dashboard-todo-row .dashboard-todo-description{text-decoration:line-through;color:#637b75}
 .dashboard-todo-delete{border:1px solid #dec9ca;color:#8c3c45;background:#fbf3f3;border-radius:7px;padding:6px 9px;font-size:12px;cursor:pointer;min-height:35px}
 .dashboard-todo-empty{padding:14px;color:#697d88;font-size:13px;margin:0}
 .dashboard-todo-status{padding:0 15px 11px;font-size:12px;color:#526c79}
@@ -42,7 +44,14 @@ function markup(){
  '<div class="dashboard-todo-columns"><section class="dashboard-todo-column"><h3>Need to Do <span data-todo-count="need">0</span></h3><div class="dashboard-todo-list" data-todo-list="need"></div></section>'+
  '<section class="dashboard-todo-column done"><h3>Done <span data-todo-count="done">0</span></h3><div class="dashboard-todo-list" data-todo-list="done"></div></section></div><div class="dashboard-todo-status" data-todo-status role="status"></div></section>';
 }
-const rowMarkup=item=>'<div class="dashboard-todo-row"><label><input type="checkbox" data-todo-toggle="'+escapeHtml(item.id)+'"'+(item.is_done?' checked':'')+' aria-label="Mark '+(item.is_done?'not done':'done')+'"><span>'+escapeHtml(item.description)+'</span></label><button type="button" class="dashboard-todo-delete" data-todo-delete="'+escapeHtml(item.id)+'" aria-label="Delete task">Delete</button></div>';
+const addedDate=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric',year:'numeric'});
+function addedDateMarkup(value){
+ if(!value)return '';
+ const date=new Date(value);
+ if(!Number.isFinite(date.getTime()))return '';
+ return '<time datetime="'+date.toISOString()+'">Added '+addedDate.format(date)+'</time>';
+}
+const rowMarkup=item=>'<div class="dashboard-todo-row"><label><input type="checkbox" data-todo-toggle="'+escapeHtml(item.id)+'"'+(item.is_done?' checked':'')+' aria-label="Mark '+(item.is_done?'not done':'done')+'"><span class="dashboard-todo-copy"><span class="dashboard-todo-description">'+escapeHtml(item.description)+'</span>'+addedDateMarkup(item.created_at)+'</span></label><button type="button" class="dashboard-todo-delete" data-todo-delete="'+escapeHtml(item.id)+'" aria-label="Delete task">Delete</button></div>';
 function reminderSettings(widget){
  const panel=document.createElement('details');
  panel.style.padding='8px 15px';
@@ -94,7 +103,7 @@ async function init(widget){
   }
  };
  const load=async()=>{
-  const {data,error}=await supabase.from('dashboard_todos').select('id,description,is_done,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(300);
+  const {data,error}=await supabase.from('dashboard_todos').select('id,description,is_done,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(300);
   if(error){status('Unable to load tasks: '+error.message);return;} items=data||[];draw();status('');
  };
  let busy=false;
