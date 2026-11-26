@@ -1,9 +1,14 @@
 import { mhRepository, supabase } from './supabase-repository.js';
 
 const CALENDAR_CACHE_TTL_MS = 60000;
+const FULL_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const centralDateFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit'
+});
 const calendarCache = new Map();
 const calendarInFlight = new Map();
 let calendarRevision = 0;
+let lastMonthRead = 0;
 
 function calendarCacheKey({ start, end, includeToday = false, includeReschedule = false }) {
   return [start || '', end || '', includeToday ? '1' : '0', includeReschedule ? '1' : '0'].join('|');
@@ -11,6 +16,7 @@ function calendarCacheKey({ start, end, includeToday = false, includeReschedule 
 
 function invalidateCalendarCache() {
   calendarRevision++;
+  lastMonthRead = 0;
   calendarInFlight.clear();
   calendarCache.clear();
 }
@@ -59,7 +65,7 @@ export function installMayerJustinCalendar() {
       const localRequest = localQuery.order('event_date').order('start_time');
       let extraRequest = Promise.resolve({ data:[], error:null });
       if (criteria.includeToday || criteria.includeReschedule) {
-        const centralDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const centralDate = centralDateFormat.format(new Date());
         const filters = [];
         if (criteria.includeToday) filters.push(`event_date.eq.${centralDate}`);
         if (criteria.includeReschedule) filters.push('status.eq.needs_reschedule');
@@ -100,6 +106,7 @@ export function installMayerJustinCalendar() {
       if (revision !== calendarRevision) return fetchEvents(criteria, { background });
       const record = { events, loadedAt: Date.now() };
       calendarCache.set(key, record);
+      if (criteria.start !== criteria.end) lastMonthRead = record.loadedAt;
 
       const notify = list => window.dispatchEvent(new CustomEvent('mig:calendar-refreshed', {
         detail: { ...criteria, events: list }
@@ -266,20 +273,53 @@ export function installMayerJustinCalendar() {
   };
 
   let lastFocusRefresh = 0;
+  let lastSeenRevision;
+  let lastContactRevision;
+  let probe;
+  const onCalendar = () => location.hash.startsWith('#/dashboard') || location.hash.startsWith('#/appointments');
   window.MHCalendarSync = {
     source: 'Mayer CRM · Justin calendar',
-    refresh({ force = false } = {}) {
-      if (force) calendarCache.clear();
-      if (!(location.hash.startsWith('#/dashboard') || location.hash.startsWith('#/appointments'))) return;
-      window.dispatchEvent(new CustomEvent('mig:calendar-refresh-request'));
+    refresh({ force = false, contactsChanged = false } = {}) {
+      if (force) invalidateCalendarCache();
+      if (!onCalendar()) return;
+      window.dispatchEvent(new CustomEvent('mig:calendar-refresh-request', { detail: { contactsChanged } }));
+    },
+    checkForChanges() {
+      const visible = () => document.visibilityState === 'visible' && onCalendar();
+      if (!visible()) return;
+      if (probe) return probe;
+      probe = (async () => {
+        try {
+          const { revision, contactRevision } = await calendarRequest('GET', { revision: '1' });
+          if (!visible()) return;
+          if (typeof revision !== 'string' || !revision) throw new Error('Calendar revision unavailable.');
+          const current = centralDateFormat.format(new Date()) + '/' + revision;
+          const hasContactRevision = typeof contactRevision === 'string' && contactRevision.length > 0;
+          const contactsChanged = hasContactRevision && contactRevision !== lastContactRevision;
+          if (current !== lastSeenRevision || contactsChanged) {
+            lastSeenRevision = current;
+            lastContactRevision = hasContactRevision ? contactRevision : undefined;
+            window.MHCalendarSync.refresh({ force: true, contactsChanged: contactsChanged || !hasContactRevision });
+          } else if (!calendarInFlight.size && Date.now() - lastMonthRead >= FULL_REFRESH_INTERVAL_MS) {
+            window.MHCalendarSync.refresh({ force: true, contactsChanged: !hasContactRevision });
+          }
+        } catch {
+          // Older deployments or a failed revision read keep the original polling behavior.
+          if (visible() && !calendarInFlight.size) window.MHCalendarSync.refresh({ force: true, contactsChanged: true });
+        }
+      })().finally(() => { probe = undefined; });
+      return probe;
     }
   };
 
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void window.MHCalendarSync.checkForChanges();
+  });
   window.addEventListener('focus', () => {
-    if (document.querySelector('dialog[open]')) return;
+    if (document.visibilityState !== 'visible' || document.querySelector('dialog[open]')) return;
     const now = Date.now();
     if (now - lastFocusRefresh < 1500) return;
     lastFocusRefresh = now;
-    window.MHCalendarSync.refresh({ force: true });
+    void window.MHCalendarSync.checkForChanges();
   });
 }

@@ -1,6 +1,6 @@
 import {openMassText} from './mass-text.js';
 import { NAV, CLIENT_TABS, esc, disconnectedRepository, todayKey, parseISO, dateText, dateISO, isoDate, monthDays, longDate, timeLabel, sortAppointmentsByStartTime, hydrate, serializable } from './core.js';
-import { clientSearchMarkup, clientResultsMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js?v=birthday-bulk-text-1';
+import { clientSearchMarkup, clientResultsMarkup, clientResultMarkup, clientResultContent, clientSortDirectionOptions, clientSortDescription } from './client-search.js?v=birthday-bulk-text-1';
 import { appointmentSlots, slotIsBooked, timeMinutes, minuteTime } from './campaigns-model.js';
 import { Dialogs } from './dialogs.js';
 import { calendarRefreshInterval } from './connection-policy.js';
@@ -15,6 +15,7 @@ import { shell, TOOLS, icon, empty, note, pending, saveFooter, options, input, d
 export function createWorkspace(root, repository = disconnectedRepository, { ensureClientFeatures, ensureCampaignFeatures, ensureLeadFeatures, ensureQuickFeatures } = {}) {
   if (!(root instanceof HTMLElement)) throw new TypeError('Arctos needs an application root.');
   const dialogs = new Dialogs();
+  let resultsDraw = 0;
   let campaignFeature = null, campaignModule = null;
   let workFeature = null, workModule = null;
   async function workQueue() {
@@ -450,17 +451,13 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   }
   // Mass Text selection matches the Campaigns checkbox workflow and persists
   // across searches and pages. The server revalidates every selected client.
+  function canTextClient(client){
+    return String(client.status||'').toLowerCase()!=='deceased'&&/^1?\d{10}$/.test(String(client.phone||'').replace(/\D/g,''));
+  }
   function enhanceMassTextResults(host,rows=[]){
     if(!host?.isConnected)return;
-    host.querySelector('[data-sms-selection-bar]')?.remove();
-    host.querySelectorAll('.sms-select-row').forEach(wrapper=>{
-      const button=wrapper.querySelector('button.client-result[data-client-id]');
-      if(button)wrapper.replaceWith(button);
-    });
     const active=state.massText.mode;
     root.querySelector('[data-start-mass-text]')?.classList.toggle('is-selected',active);
-    const campaignBar=host.querySelector('[data-cmp-selectionbar]');
-    if(campaignBar)campaignBar.hidden=active;
     if(!active)return;
     const selected=state.massText.selected;
     const bar=document.createElement('div');
@@ -476,36 +473,38 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       bar.querySelector('[data-sms-compose]').disabled=!selected.size;
     };
     const checkboxes=[];
-    host.querySelectorAll('button.client-result[data-client-id]').forEach(button=>{
-      const c=rows.find(row=>row.id===button.dataset.clientId);
-      if(!c)return;
-      const wrap=document.createElement('div');wrap.className='sms-select-row';
-      const label=document.createElement('label');label.className='sms-select-check';
-      const checkbox=document.createElement('input');checkbox.type='checkbox';
-      checkbox.checked=selected.has(c.id);
-      checkbox.disabled=String(c.status||'').toLowerCase()==='deceased'||!/^1?\d{10}$/.test(String(c.phone||'').replace(/\D/g,''));
-      checkbox.setAttribute('aria-label','Select '+[c.first_name,c.last_name].filter(Boolean).join(' ')+' for texting');
-      label.append(checkbox);button.before(wrap);wrap.append(label,button);checkboxes.push({checkbox,c});
-      checkbox.onchange=()=>{
-
-        if(checkbox.checked)selected.set(c.id,c);else selected.delete(c.id);
-        update();
-      };
-    });
+    const byId=new Map(rows.map(client=>[String(client.id),client]));
+    function bindRows(container){
+      container.querySelectorAll('button.client-result[data-client-id]').forEach(button=>{
+        const client=byId.get(button.dataset.clientId);
+        if(!client)return;
+        const wrap=document.createElement('div');wrap.className='sms-select-row';
+        const label=document.createElement('label');label.className='sms-select-check';
+        const checkbox=document.createElement('input');checkbox.type='checkbox';
+        checkbox.disabled=!canTextClient(client);
+        checkbox.checked=selected.has(client.id);
+        checkbox.setAttribute('aria-label','Select '+[client.first_name,client.last_name].filter(Boolean).join(' ')+' for texting');
+        label.append(checkbox);button.before(wrap);wrap.append(label,button);checkboxes.push(checkbox);
+        checkbox.onchange=()=>{
+          if(checkbox.checked)selected.set(client.id,client);else selected.delete(client.id);
+          update();
+        };
+      });
+    }
+    bindRows(host);
     bar.querySelector('[data-sms-select-all]').onclick=()=>{
-      for(const {checkbox,c} of checkboxes){
-        if(checkbox.disabled)continue;
-        selected.set(c.id,c);checkbox.checked=true;
-      }
+      for(const client of rows)if(canTextClient(client))selected.set(client.id,client);
+      for(const checkbox of checkboxes)checkbox.checked=!checkbox.disabled;
       update();
     };
     bar.querySelector('[data-sms-clear]').onclick=()=>{
-      selected.clear();checkboxes.forEach(({checkbox})=>checkbox.checked=false);update();
+      selected.clear();checkboxes.forEach(checkbox=>checkbox.checked=false);update();
     };
     bar.querySelector('[data-sms-compose]').onclick=()=>openMassTextComposer();
     bar.querySelector('[data-sms-done]').onclick=()=>{
       state.massText.mode=false;selected.clear();drawResults();
     };
+    return bindRows;
   }
   function openMassTextComposer(){
     const people=[...state.massText.selected.values()];
@@ -543,8 +542,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       try{
         state.search.query='';form.elements.query.value='';
         state.search.agent=form.elements.namedItem('agent').value;
-        await searchClients(false);
-        while(state.search.nextCursor&&!state.search.error&&!state.destroyed)await searchClients(true);
+        await searchClients(false,true);
       }finally{button.disabled=false;}
     });
     form.querySelector('[data-reset-search]').onclick = () => {
@@ -564,26 +562,31 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     });
     drawResults();
   }
-  async function searchClients(more = false) {
+  async function searchClients(more = false, showAll = false) {
     const s = state.search;
     if (more && (s.loading || !s.nextCursor || !s.applied)) return;
     const criteria = more ? { ...s.applied } : { query: s.query.trim(), product: s.product, agent: s.agent, sortBy: s.sortBy, sortDirection: s.sortDirection };
     const token = ++s.token;
-    const cursor = more ? s.nextCursor : null;
+    let cursor = more ? s.nextCursor : null;
     if (!more) { s.rows = null; s.nextCursor = null; }
     s.error = ''; s.message = ''; s.loading = false;
     if (!more) s.applied = criteria;
     s.loading = true; s.message = 'Searching…'; drawResults();
+    const byId = new Map((s.rows || []).map(row => [row.id,row]));
     try {
-      const result = await repository.searchClients({ ...criteria, limit: 50, cursor });
-      if (token !== s.token || state.destroyed) return;
-      if (!result || !Array.isArray(result.rows)) throw new Error('Client search returned an invalid response.');
-      const rows = more ? [...(s.rows || []), ...result.rows] : result.rows;
-      s.rows = [...new Map(rows.map(row => [row.id, row])).values()];
-      s.nextCursor = result.nextCursor || null;
+      do {
+        const result = await repository.searchClients({ ...criteria, limit: 50, cursor, showAll });
+        if (token !== s.token || state.destroyed) return;
+        if (!result || !Array.isArray(result.rows)) throw new Error('Client search returned an invalid response.');
+        for (const row of result.rows) byId.set(row.id,row);
+        cursor = result.nextCursor || null;
+        s.nextCursor = cursor;
+      } while (showAll && cursor);
+      s.rows = [...byId.values()];
       s.message = (s.rows.length ? `${s.rows.length} result${s.rows.length === 1 ? '' : 's'} displayed` : 'No matching clients found.') + ` • ${clientSortDescription(criteria.sortBy, criteria.sortDirection)}`;
     } catch (e) {
       if (token !== s.token || state.destroyed) return;
+      if (byId.size) s.rows = [...byId.values()];
       s.error = connected ? e.message || 'Search failed. Please retry.' : 'Search is not connected to the new database yet. No clients were loaded from the original CRM.';
       s.message = '';
     } finally {
@@ -599,34 +602,60 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     const toolbar = root.querySelector('[data-client-result-toolbar]');
     if (toolbar) toolbar.hidden = !state.search.applied;
     host.setAttribute('aria-busy', String(state.search.loading));
-    host.innerHTML = clientResultsMarkup(state.search);
-    host.querySelectorAll('[data-client-id]').forEach(button => button.onclick = () => openClient(button.dataset.clientId));
+    const rows = state.search.rows || [];
+    const chunkSize = 75;
+    host.innerHTML = clientResultsMarkup({ ...state.search, rows: rows.slice(0,chunkSize) });
+    host.onclick = event => {
+      const button = event.target.closest?.('button.client-result[data-client-id]');
+      if (button) openClient(button.dataset.clientId);
+    };
     host.querySelector('[data-more]')?.addEventListener('click', () => searchClients(true));
-    if (repository.campaigns) {
-      const token = state.search.token;
+    const bindSmsRows = enhanceMassTextResults(host,rows);
+    const list = host.querySelector('.client-results-list');
+    const draw = ++resultsDraw;
+    const current = () => draw === resultsDraw && host.isConnected && !state.destroyed;
+    function finish() {
+      if (!repository.campaigns) return;
       campaigns().then(feature => {
-        if (host.isConnected && token === state.search.token && !state.destroyed) {
-          feature.enhanceSearch(host, state.search.rows || []);
-          enhanceMassTextResults(host,state.search.rows || []);
-        }
-      }).catch(()=>enhanceMassTextResults(host,state.search.rows || []));
+        if (!current()) return;
+        feature.enhanceSearch(host,rows);
+        if (state.massText.mode) host.querySelector('[data-cmp-exit-selection]')?.click();
+        const campaignBar = host.querySelector('[data-cmp-selectionbar]');
+        if (campaignBar) campaignBar.hidden = state.massText.mode;
+      }).catch(()=>{});
     }
-    enhanceMassTextResults(host,state.search.rows || []);
+    let offset = chunkSize;
+    function appendChunk() {
+      if (!current()) return;
+      const template = document.createElement('template');
+      template.innerHTML = rows.slice(offset,offset+chunkSize).map(clientResultMarkup).join('');
+      bindSmsRows?.(template.content);
+      list.append(template.content);
+      offset += chunkSize;
+      if (offset < rows.length) window.requestAnimationFrame(appendChunk);
+      else finish();
+    }
+    if (list && offset < rows.length) window.requestAnimationFrame(appendChunk);
+    else finish();
   }
   function patchClient(saved) {
     campaignFeature?.refreshClient(saved);
     const isDeceased = String(saved.status||'').toLowerCase()==='deceased';
+    if (state.massText.selected.has(saved.id)) {
+      const updated = {...state.massText.selected.get(saved.id),...saved};
+      if (canTextClient(updated)) state.massText.selected.set(saved.id,updated);
+      else state.massText.selected.delete(saved.id);
+    }
     if (state.search.rows) {
       state.search.rows = state.search.rows.map(row=>row.id===saved.id?{...row,...saved}:row)
         .filter(row=>String(row.status||'').toLowerCase()!=='deceased');
       const row = root.querySelector(`#client-results [data-client-id="${CSS.escape(saved.id)}"]`);
       const record = state.search.rows.find(item=>item.id===saved.id);
-      if (row && record) row.innerHTML = clientResultContent(record);
-      else if (row) row.remove();
       if (isDeceased && !state.search.rows.length && state.search.applied) {
         state.search.message='No matching active clients found.';
-        drawResults();
       }
+      if (state.massText.mode || isDeceased || (record && !row)) drawResults();
+      else if (row && record) row.innerHTML = clientResultContent(record);
     }
     if (state.archive.open) void loadDeceasedClients(false);
     if (state.birthdays.open) void loadBirthdays();
@@ -880,6 +909,9 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
         skipUnchangedLicense: form.dataset.auditExistingClient === 'true' && form.dataset.auditSensitiveDirty !== 'true'
       });
       if (!saved?.id) throw new Error('The save was not confirmed by the database. Your changes remain open.');
+      if (['first_name','last_name','phone','email'].some(field => saved[field] !== record[field])) {
+        for (const dialog of dialogs.stack) dialog.refreshCalendarContacts?.(saved.id);
+      }
       record = saved;
       // Keep the footer's Text Client / Call Data actions linked to the
       // saved client even when this dialog began as a new, unsaved record.
@@ -1252,21 +1284,45 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       }
     };
 
+    // Keep displayed contact details during revalidation and ignore superseded responses.
+    const currentContacts = new Set();
+    const pendingContacts = new Map();
     const loadClients = async () => {
       const entries = sortAppointmentsByStartTime(state.events.filter(matchesMode));
       const completed = mode === 'reschedule' ? [] : state.events.filter(event => event.event_date === key && event.status === 'completed');
       const ids = [...new Set([...entries,...completed].map(event => event.client_id).filter(Boolean))];
-      const missing = ids.filter(id => !clients.has(id));
+      const missing = ids.filter(id => !currentContacts.has(id) && !pendingContacts.has(id));
       if (!missing.length) return;
-      await Promise.all(missing.map(async id => {
-        clients.set(id, null);
-        try { clients.set(id, await repository.getClient(id)); }
-        catch { clients.delete(id); }
-      }));
-      if (!d.node.isConnected) return;
-      renderCards();
+      const request = {};
+      for (const id of missing) pendingContacts.set(id,request);
+      try {
+        const summaries = await repository.getCalendarClientSummaries(missing);
+        if (!d.node.isConnected) return;
+        const byId = new Map(summaries.map(client => [client.id,client]));
+        for (const id of missing) {
+          if (pendingContacts.get(id) !== request) continue;
+          clients.set(id,byId.get(id) || null);
+          currentContacts.add(id);
+        }
+        renderCards();
+      } catch {
+        // An offline lookup retries on the next refresh, preserving the last visible details.
+      } finally {
+        for (const id of missing) if (pendingContacts.get(id) === request) pendingContacts.delete(id);
+      }
     };
 
+    d.refreshCalendarContacts = id => {
+      if (id) {
+        if (!currentContacts.has(id) && !pendingContacts.has(id) && !clients.has(id)) return;
+        currentContacts.delete(id);
+        pendingContacts.delete(id);
+      } else {
+        currentContacts.clear();
+        pendingContacts.clear();
+      }
+      void loadClients();
+    };
     d.refreshCalendarDay = () => {
       renderCards();
       void loadClients();
@@ -1879,8 +1935,11 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       root.querySelector('.menu-toggle')?.setAttribute('aria-expanded', 'false');
     }
   };
-  const refreshVisibleCalendar = () => {
+  const refreshVisibleCalendar = event => {
     if (state.destroyed || !root.querySelector('#calendar-host')) return;
+    if (event?.detail?.contactsChanged) {
+      for (const dialog of dialogs.stack) dialog.refreshCalendarContacts?.();
+    }
     state.calendarLoadedAt = 0;
     drawCalendar({ force: true });
   };
@@ -1908,7 +1967,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     if (state.route !== 'dashboard' && state.route !== 'appointments') return;
     if (Date.now() - lastCalendarPoll < calendarRefreshInterval(navigator.connection, navigator.onLine)) return;
     lastCalendarPoll = Date.now();
-    window.MHCalendarSync?.refresh({ force: true });
+    void window.MHCalendarSync?.checkForChanges();
   }, 15000);
   window.addEventListener('mig:calendar-refresh-request', refreshVisibleCalendar);
   window.addEventListener('mig:calendar-refreshed', applyCalendarRefresh);

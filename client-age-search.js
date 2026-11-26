@@ -22,8 +22,8 @@ function applyProductFilter(query, product) {
 }
 
 export function makeClientSearch(db, { now = () => new Date() } = {}) {
-  return async function searchClients({ query = '', product = '', agent = '', birthYear = '', sortBy = 'name', sortDirection, limit = 50, cursor = null } = {}) {
-    const pageSize = Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 50);
+  return async function searchClients({ query = '', product = '', agent = '', birthYear = '', sortBy = 'name', sortDirection, limit = 50, cursor = null, showAll = false } = {}) {
+    const pageSize = showAll ? 500 : Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 50);
     const offsetValue = Number(cursor);
     const offset = Number.isSafeInteger(offsetValue) && offsetValue >= 0 ? offsetValue : 0;
     let q = db.from('client_search_results').select(CLIENT_RESULT_FIELDS);

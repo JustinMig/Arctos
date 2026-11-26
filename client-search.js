@@ -41,8 +41,8 @@ export function clientSearchOrders(sortBy, sortDirection) {
   return order;
 }
 export function makeClientSearch(db, { now = () => new Date() } = {}) {
-  return async function searchClients({ query = '', product = '', agent = '', birthYear = '', sortBy = 'name', sortDirection, limit = 50, cursor = null } = {}) {
-    const pageSize = Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 50);
+  return async function searchClients({ query = '', product = '', agent = '', birthYear = '', sortBy = 'name', sortDirection, limit = 50, cursor = null, showAll = false } = {}) {
+    const pageSize = showAll ? 500 : Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 50);
     const offsetValue = Number(cursor);
     const offset = Number.isSafeInteger(offsetValue) && offsetValue >= 0 ? offsetValue : 0;
     let q = db.from('client_search_results').select(CLIENT_RESULT_FIELDS);
@@ -170,8 +170,11 @@ export function clientResultContent(client) {
     <span class="client-result-cell"><span class="client-detail-label">Date Added</span>${added.iso ? `<time data-client-added datetime="${esc(added.iso)}">${esc(added.date)}</time>` : '<span data-client-added>Not recorded</span>'}${added.time ? `<small class="client-added-time">${esc(added.time)}</small>` : ''}</span>
     <span class="client-result-arrow" aria-hidden="true">›</span>`;
 }
+export function clientResultMarkup(client) {
+  return `<button type="button" class="client-result client-result-detailed" data-client-id="${esc(client.id)}" aria-haspopup="dialog">${clientResultContent(client)}</button>`;
+}
 export function clientResultsMarkup(s) {
   const status = `${s.error ? `<div class="notice error" role="alert">${esc(s.error)}</div>` : ''}${s.message ? `<p class="result-status">${esc(s.message)}</p>` : ''}`;
   if (!s.rows?.length) return status;
-  return `${status}<div class="client-results-list client-results-detailed">${s.rows.map(client => `<button type="button" class="client-result client-result-detailed" data-client-id="${esc(client.id)}" aria-haspopup="dialog">${clientResultContent(client)}</button>`).join('')}</div>${s.nextCursor ? `<button class="btn secondary" type="button" data-more${s.loading ? ' disabled' : ''}>${s.loading ? 'Loading…' : 'Load more'}</button>` : ''}`;
+  return `${status}<div class="client-results-list client-results-detailed">${s.rows.map(clientResultMarkup).join('')}</div>${s.nextCursor ? `<button class="btn secondary" type="button" data-more${s.loading ? ' disabled' : ''}>${s.loading ? 'Loading…' : 'Load more'}</button>` : ''}`;
 }

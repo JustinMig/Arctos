@@ -95,6 +95,17 @@ export const mhRepository = {
     return { rows: data || [], nextCursor: null };
   },
 
+  async getCalendarClientSummaries(ids) {
+    const clients = [];
+    for (let start = 0; start < ids.length; start += 75) {
+      const { data, error } = await supabase.from('clients')
+        .select('id,first_name,last_name,phone,email').in('id', ids.slice(start, start + 75));
+      if (error) throw error;
+      clients.push(...(data || []));
+    }
+    return clients;
+  },
+
   async getClient(id) {
     const [client, medicare, health, life, retirement] = await Promise.all([
       one(supabase.from('clients').select('*').eq('id', id)),
