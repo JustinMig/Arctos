@@ -43,6 +43,44 @@ function markup(){
  '<section class="dashboard-todo-column done"><h3>Done <span data-todo-count="done">0</span></h3><div class="dashboard-todo-list" data-todo-list="done"></div></section></div><div class="dashboard-todo-status" data-todo-status role="status"></div></section>';
 }
 const rowMarkup=item=>'<div class="dashboard-todo-row"><label><input type="checkbox" data-todo-toggle="'+escapeHtml(item.id)+'"'+(item.is_done?' checked':'')+' aria-label="Mark '+(item.is_done?'not done':'done')+'"><span>'+escapeHtml(item.description)+'</span></label><button type="button" class="dashboard-todo-delete" data-todo-delete="'+escapeHtml(item.id)+'" aria-label="Delete task">Delete</button></div>';
+function reminderSettings(widget){
+ const panel=document.createElement('details');
+ panel.style.padding='8px 15px';
+ panel.innerHTML='<summary>Text reminders</summary><div data-reminder-settings></div>';
+ widget.querySelector('[data-todo-form]').after(panel);
+ const host=panel.querySelector('[data-reminder-settings]');
+ async function api(body){
+  const {data:{session}}=await supabase.auth.getSession();
+  if(!session)throw Error('Sign in to link your phone.');
+  const response=await fetch('/api/text-reminders',{method:body?'POST':'GET',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Could not load reminder settings.');
+  return data;
+ }
+ function render(s){
+  host.replaceChildren();
+  const info=document.createElement('p');host.append(info);
+  function button(label,fn){
+   const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>update(fn,b);host.append(b);
+  }
+  if(s.state==='linked'){
+   info.textContent='Phone ending in '+s.ending+' is linked. Text '+s.number+' a command such as “Make note: Call John about life Wed at 11am.” It appears in Need to Do after the next minute check.';
+   button('Unlink phone',()=>api({action:'unlink'}));
+  }else if(s.state==='pending'){
+   info.textContent='From the phone ending in '+s.ending+', text “Link Arctos '+s.code+'” to '+s.number+' within 15 minutes. Allow a minute for the link to appear.';
+   button('Check link',()=>api());button('Cancel link',()=>api({action:'unlink'}));
+  }else{
+   info.textContent='Link the personal mobile number you will use to send reminders.';
+   const input=document.createElement('input');input.type='tel';input.autocomplete='tel';input.placeholder='Your mobile number';input.setAttribute('aria-label','Your mobile number');host.append(input);
+   button('Link my phone',()=>api({action:'link',phone:input.value}));
+  }
+ }
+ async function update(fn,b){
+  if(b)b.disabled=true;
+  try{render(await fn());}catch(e){let msg=host.querySelector('[role=status]');if(!msg){msg=document.createElement('p');msg.setAttribute('role','status');host.append(msg);}msg.textContent=e.message;}finally{if(b)b.disabled=false;}
+ }
+ panel.ontoggle=()=>{if(panel.open)void update(()=>api());};
+}
 async function init(widget){
  const {data:{user},error:userError}=await supabase.auth.getUser();
  if(userError || !user){widget.querySelector('[data-todo-status]').textContent='Sign in to manage your tasks.';return;}
@@ -81,6 +119,13 @@ async function init(widget){
   const {error}=await supabase.from('dashboard_todos').update({is_done:checked,completed_at:checked?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq('id',id).eq('user_id',user.id);
   busy=false;if(error){status('Could not update task: '+error.message);checkbox.checked=!checked;return;}await load();
  });
+ if(user.id==='9ca80b13-42e7-46eb-9ad8-c0bb700c6ba9'){
+  reminderSettings(widget);
+  const interval=window.setInterval(()=>{
+   if(!widget.isConnected){window.clearInterval(interval);return;}
+   if(!busy&&!document.hidden)void load();
+  },45000);
+ }
  await load();
 }
 function mount(){
