@@ -3,12 +3,15 @@ import { mhRepository, supabase } from './supabase-repository.js';
 const CALENDAR_CACHE_TTL_MS = 60000;
 const calendarCache = new Map();
 const calendarInFlight = new Map();
+let calendarRevision = 0;
 
 function calendarCacheKey({ start, end, includeToday = false, includeReschedule = false }) {
   return [start || '', end || '', includeToday ? '1' : '0', includeReschedule ? '1' : '0'].join('|');
 }
 
 function invalidateCalendarCache() {
+  calendarRevision++;
+  calendarInFlight.clear();
   calendarCache.clear();
 }
 
@@ -42,6 +45,7 @@ export function installMayerJustinCalendar() {
     const key = calendarCacheKey(criteria);
     if (calendarInFlight.has(key)) return calendarInFlight.get(key);
 
+    const revision = calendarRevision;
     const request = (async () => {
       const sharedRequest = calendarRequest('GET', {
         start: criteria.start,
@@ -92,6 +96,8 @@ export function installMayerJustinCalendar() {
         }
       }
       events.sort((a, b) => `${a.event_date || ''} ${a.start_time || ''}`.localeCompare(`${b.event_date || ''} ${b.start_time || ''}`));
+      // A request started before an edit must not replace the post-edit state.
+      if (revision !== calendarRevision) return fetchEvents(criteria, { background });
       const record = { events, loadedAt: Date.now() };
       calendarCache.set(key, record);
 
@@ -122,7 +128,9 @@ export function installMayerJustinCalendar() {
         })().catch(error => console.warn('Calendar client links could not be refreshed.', error));
       }
       return events;
-    })().finally(() => calendarInFlight.delete(key));
+    })().finally(() => {
+      if (calendarInFlight.get(key) === request) calendarInFlight.delete(key);
+    });
 
     calendarInFlight.set(key, request);
     return request;
@@ -144,15 +152,16 @@ export function installMayerJustinCalendar() {
   };
 
   async function findLocalEvent(eventId) {
-    const { data, error } = await supabase.from('appointments').select('id')
+    const { data, error } = await supabase.from('appointments').select('id,status,event_date,start_time')
       .eq('id', eventId).maybeSingle();
     if (error) throw error;
     return data;
   }
 
-  async function updateLocalEvent(eventId, changes) {
-    const {data, error} = await supabase.from('appointments').update(changes)
-      .eq('id', eventId).select('*').single();
+  async function updateLocalEvent(eventId, changes, expectedStatus) {
+    let query = supabase.from('appointments').update(changes).eq('id', eventId);
+    if (expectedStatus) query = query.eq('status', expectedStatus);
+    const {data, error} = await query.select('*').single();
     if (error) throw error;
     invalidateCalendarCache();
     return { ...data, calendar_source: 'arctos_campaign' };
@@ -167,13 +176,18 @@ export function installMayerJustinCalendar() {
       event_date: value.event_date,
       start_time: value.start_time || null,
       end_time: value.end_time || null,
-      notes: value.notes || null,
-      status: value.status || 'scheduled'
+      notes: value.notes || null
     };
     const eventId = value.event_id || value.id || '';
+    if (!eventId) payload.status = 'scheduled';
+    const local = eventId && await findLocalEvent(eventId);
     let saved;
-    if (eventId && await findLocalEvent(eventId)) {
-      saved = await updateLocalEvent(eventId, payload);
+    if (local) {
+      const newSlot = local.event_date !== payload.event_date ||
+        String(local.start_time || '').slice(0, 5) !== String(payload.start_time || '').slice(0, 5);
+      const rescheduling = local.status === 'needs_reschedule' && newSlot;
+      if (rescheduling) payload.status = 'scheduled';
+      saved = await updateLocalEvent(eventId, payload, rescheduling ? 'needs_reschedule' : null);
     } else {
       const result = eventId
         ? await calendarRequest('PATCH', { id: eventId }, payload)
@@ -218,7 +232,7 @@ export function installMayerJustinCalendar() {
     // Campaign bookings are stored in Arctos appointments, not the separate
     // Mayer/Justin workspace calendar. Delete from the correct source.
     if (await findLocalEvent(eventId)) {
-      const { error } = await supabase.from('appointments').delete().eq('id', eventId);
+      const { error } = await supabase.from('appointments').delete().eq('id', eventId).select('id').single();
       if (error) throw error;
       invalidateCalendarCache();
       window.dispatchEvent(new CustomEvent('mig:calendar-refresh-request'));
@@ -255,7 +269,7 @@ export function installMayerJustinCalendar() {
   window.MHCalendarSync = {
     source: 'Mayer CRM · Justin calendar',
     refresh({ force = false } = {}) {
-      if (force) invalidateCalendarCache();
+      if (force) calendarCache.clear();
       if (!(location.hash.startsWith('#/dashboard') || location.hash.startsWith('#/appointments'))) return;
       window.dispatchEvent(new CustomEvent('mig:calendar-refresh-request'));
     }

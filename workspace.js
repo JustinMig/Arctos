@@ -1049,6 +1049,7 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
   function renderVisibleCalendar() {
     const host=root.querySelector('#calendar-host');
     if(!host || !host.isConnected)return;
+    for (const dialog of dialogs.stack) dialog.refreshCalendarDay?.();
     // A month grid contains 35-42 date cells. Do not render or bind them
     // while the dashboard's calendar is closed.
     const collapsed=state.route==='dashboard' && !root.querySelector('[data-daily-calendar]')?.open;
@@ -1170,7 +1171,15 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     });
 
     const host = d.node.querySelector('[data-day-events]');
-    let clients = new Map();
+    const clients = new Map();
+    const renderedCards = new Map();
+    function updateCards(container, markup) {
+      if (renderedCards.get(container) === markup) return;
+      const expanded = new Set(Array.from(container.querySelectorAll('[data-event-id][open]'), card => card.dataset.eventId));
+      renderedCards.set(container, markup);
+      container.innerHTML = markup;
+      for (const card of container.querySelectorAll('[data-event-id]')) card.open = expanded.has(card.dataset.eventId);
+    }
 
     const appointmentName = (event, client = null) => {
       const clientName = [client?.first_name, client?.last_name].filter(Boolean).join(' ').trim();
@@ -1230,16 +1239,16 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
     const renderCards = () => {
       if (!host?.isConnected) return;
       const entries = sortAppointmentsByStartTime(state.events.filter(matchesMode));
-      host.innerHTML = entries.length
+      updateCards(host, entries.length
         ? entries.map(cardMarkup).join('')
-        : empty(connected ? 'Nothing scheduled' : 'No appointments loaded', connected ? 'Use Add Appointment / Activity to schedule this day.' : 'Scheduling and reschedule queues require the standalone backend.');
+        : empty(connected ? 'Nothing scheduled' : 'No appointments loaded', connected ? 'Use Add Appointment / Activity to schedule this day.' : 'Scheduling and reschedule queues require the standalone backend.'));
       const completedBox = d.node.querySelector('[data-day-completed]');
       if (completedBox) {
         const completed = sortAppointmentsByStartTime(state.events.filter(event => event.event_date === key && event.status === 'completed'));
         completedBox.querySelector('[data-completed-count]').textContent = String(completed.length);
-        completedBox.querySelector('[data-completed-events]').innerHTML = completed.length
+        updateCards(completedBox.querySelector('[data-completed-events]'), completed.length
           ? completed.map(cardMarkup).join('')
-          : '<p class="day-completed-empty">No completed appointments for this day.</p>';
+          : '<p class="day-completed-empty">No completed appointments for this day.</p>');
       }
     };
 
@@ -1247,17 +1256,22 @@ export function createWorkspace(root, repository = disconnectedRepository, { ens
       const entries = sortAppointmentsByStartTime(state.events.filter(matchesMode));
       const completed = mode === 'reschedule' ? [] : state.events.filter(event => event.event_date === key && event.status === 'completed');
       const ids = [...new Set([...entries,...completed].map(event => event.client_id).filter(Boolean))];
-      const rows = await Promise.all(ids.map(async id => {
-        try { return [id, await repository.getClient(id)]; }
-        catch { return [id, null]; }
+      const missing = ids.filter(id => !clients.has(id));
+      if (!missing.length) return;
+      await Promise.all(missing.map(async id => {
+        clients.set(id, null);
+        try { clients.set(id, await repository.getClient(id)); }
+        catch { clients.delete(id); }
       }));
       if (!d.node.isConnected) return;
-      clients = new Map(rows);
       renderCards();
     };
 
-    renderCards();
-    void loadClients();
+    d.refreshCalendarDay = () => {
+      renderCards();
+      void loadClients();
+    };
+    d.refreshCalendarDay();
 
     d.node.addEventListener('click', async event => {
       const card = event.target.closest?.('[data-event-id]');

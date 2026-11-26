@@ -43,15 +43,16 @@ test('Office and campaign appointments are edited and followed up in their nativ
     w.testCalendar = {mhRepository:repo, supabase:{
       auth:{async getSession(){return {data:{session:{access_token:'SYNTHETIC-INVALID'}}};}},
       from(table) {
-        let id, changes;
+        let id, changes, expectedStatus;
         const query = {
-          select(){return query;}, eq(column,value){id=value;return query;},
+          select(){return query;}, eq(column,value){if(column==='id')id=value;else if(column==='status')expectedStatus=value;return query;},
           update(value){changes=value;return query;}, upsert(){return Promise.resolve({error:null});},
           delete(){return query;},
-          maybeSingle(){return Promise.resolve({data:id===row.id ? {id} : null,error:null});},
+          maybeSingle(){return Promise.resolve({data:id===row.id ? {...row} : null,error:null});},
           single(){
             assert.equal(table,'appointments');
             assert.equal(id,row.id);
+            if(expectedStatus)assert.equal(row.status,expectedStatus);
             return Promise.resolve({data:{...Object.assign(row,changes)},error:null});
           }
         };
@@ -70,9 +71,75 @@ test('Office and campaign appointments are edited and followed up in their nativ
     const followup=await repo.rescheduleEvent('local','Call back');
     assert.equal(followup.reschedule_note,'Call back');
     assert.equal(followup.status,'needs_reschedule');
+    const moved=await repo.saveEvent({event_id:'local',title:'Rebooked',event_date:'2026-11-26',start_time:'09:00'});
+    assert.equal(moved.status,'scheduled');
+    await repo.completeEvent('local');
+    const afterEdit=await repo.saveEvent({event_id:'local',title:'Updated notes',status:'scheduled'});
+    assert.equal(afterEdit.status,'completed','An edit from a stale form cannot reopen a completed appointment.');
     assert.deepEqual(bridgeCalls,[]);
     await repo.saveEvent({event_id:'shared',title:'Updated shared event'});
     await repo.rescheduleEvent('shared','Follow up');
     assert.deepEqual(bridgeCalls,['PATCH','PATCH']);
   } finally { w.close(); }
+});
+
+test('refresh started before a completion cannot cache the earlier status',async()=>{
+  const dom=new JSDOM('<body></body>',{runScripts:'outside-only'}),w=dom.window,repo={};
+  const month={start:'2026-11-01',end:'2026-11-30'};
+  let status='scheduled',release;
+  try{
+    w.testCalendar={mhRepository:repo,supabase:{
+      auth:{getSession:async()=>({data:{session:{access_token:'synthetic'}}})},
+      from(){const q={maybeSingle:async()=>({data:null}),then:resolve=>resolve({data:[]})};
+        for(const method of ['select','eq','gte','lte','order','in'])q[method]=()=>q;
+        return q;}
+    }};
+    w.fetch=async(url,options)=>{
+      const before=status;
+      if(options.method==='PATCH'){status='completed';return Response.json({event:{id:'e',status}});}
+      if(!release)await new Promise(resolve=>{release=resolve;});
+      return Response.json({events:[{id:'e',status:before,event_date:'2026-11-20'}]});
+    };
+    w.eval((await read('calendar-sync.js')).replace(/^import .*;$/m,'const {mhRepository,supabase}=window.testCalendar;').replace('export function installMayerJustinCalendar','window.installCalendar = function'));
+    w.installCalendar();
+    const before=repo.listEvents(month);await tick();
+    await repo.completeEvent('e');release();
+    assert.equal((await before)[0].status,'completed');
+    assert.equal((await repo.listEvents(month))[0].status,'completed');
+  }finally{w.close();}
+});
+
+test('an open day moves Office completions into Completed and reflects changes and deletions',async t=>{
+  const {build}=await import('esbuild');
+  const root=new URL('../',import.meta.url).pathname;
+  const bundle=await build({stdin:{contents:"import {createWorkspace} from './workspace.js'; window.workspace=createWorkspace(document.getElementById('app'),window.repo);",resolveDir:root},bundle:true,format:'iife',write:false,logLevel:'silent',
+    plugins:[{name:'synthetic-calendar',setup(b){
+      b.onResolve({filter:/supabase-(repository|client)\.js(?:\?|$)/},()=>({path:'db',namespace:'fixture'}));
+      b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const supabase={};export const mhRepository=window.repo;export const initialAuthUrl="";'}));
+      b.onResolve({filter:/^\.\.?\/.*\?/},args=>({path:new URL(args.path.split('?')[0],'file://'+args.resolveDir+'/').pathname}));
+    }}]});
+  const dom=new JSDOM('<main id="app"></main>',{url:'https://synthetic.invalid/#/dashboard',runScripts:'outside-only',pretendToBeVisual:true});
+  const w=dom.window,doc=w.document;
+  w.CSS={escape:String};w.scrollTo=()=>{};
+  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+  w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+  const today=new Date(),day=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),'12'].join('-');
+  let records=[{id:'synthetic-event',event_date:day,title:'Initial',event_type:'appointment',status:'scheduled',start_time:'10:00'}];
+  w.repo={connected:true,user:{id:'synthetic'},agents:[],listEvents:async()=>records};
+  w.eval(bundle.outputFiles[0].text);
+  t.after(()=>{w.workspace.destroy();w.close();});
+  await tick();
+  doc.querySelector('[data-daily-calendar]').open=true;
+  await tick();
+  doc.querySelector('[data-day="'+day+'"]').click();
+  const active=doc.querySelector('[data-day-events]'),completed=doc.querySelector('[data-completed-events]');
+  assert.match(active.textContent,/Initial/);
+  const refresh=async()=>{w.dispatchEvent(new w.Event('mig:calendar-refresh-request'));await tick();};
+  records=[{...records[0],title:'Office change'}];await refresh();
+  assert.match(active.textContent,/Office change/);
+  records=[{...records[0],status:'completed'}];await refresh();
+  assert.equal(active.querySelectorAll('[data-event-id]').length,0);
+  assert.match(completed.textContent,/Office change/);
+  records=[];await refresh();
+  assert.equal(completed.querySelectorAll('[data-event-id]').length,0);
 });
